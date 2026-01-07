@@ -556,22 +556,26 @@ CREATE TRIGGER update_contracts_updated_at BEFORE UPDATE ON contracts FOR EACH R
 CREATE TRIGGER update_family_memberships_updated_at BEFORE UPDATE ON family_memberships FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- Handle new user signup (create profile)
-CREATE OR REPLACE FUNCTION handle_new_user()
+CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO profiles (id, email, full_name)
+  INSERT INTO public.profiles (id, email, full_name)
   VALUES (
     NEW.id,
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email)
-  );
+    COALESCE(NEW.email, ''),
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email, 'Unknown')
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  RAISE WARNING 'Profile creation failed for user %: %', NEW.id, SQLERRM;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- =====================
 -- ROW LEVEL SECURITY
@@ -610,37 +614,52 @@ ALTER TABLE platform_payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE visitor_sessions ENABLE ROW LEVEL SECURITY;
 
+-- Helper function to safely get user's school_id
+CREATE OR REPLACE FUNCTION get_user_school_id()
+RETURNS UUID AS $$
+  SELECT school_id FROM profiles WHERE id = auth.uid()
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
+
+-- Helper function to check if user is admin
+CREATE OR REPLACE FUNCTION is_user_admin()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
+
 -- Profiles policies
 CREATE POLICY "Users can view profiles in same school" ON profiles
   FOR SELECT USING (
     auth.uid() = id OR
-    school_id IN (SELECT school_id FROM profiles WHERE id = auth.uid()) OR
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+    school_id = get_user_school_id() OR
+    is_user_admin()
   );
 
 CREATE POLICY "Users can update own profile" ON profiles
   FOR UPDATE USING (auth.uid() = id);
 
+CREATE POLICY "Users can insert own profile" ON profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
 -- Schools policies
 CREATE POLICY "Anyone can view schools" ON schools FOR SELECT USING (true);
 
 CREATE POLICY "Owners can update own school" ON schools
-  FOR UPDATE USING (owner_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+  FOR UPDATE USING (owner_id = auth.uid() OR is_user_admin());
 
 CREATE POLICY "Admin can insert schools" ON schools
-  FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+  FOR INSERT WITH CHECK (is_user_admin());
 
 -- Posts policies
 CREATE POLICY "Users can view posts in same school" ON posts
   FOR SELECT USING (
     deleted_at IS NULL AND
-    school_id IN (SELECT school_id FROM profiles WHERE id = auth.uid())
+    school_id = get_user_school_id()
   );
 
 CREATE POLICY "Users can create posts in own school" ON posts
   FOR INSERT WITH CHECK (
     author_id = auth.uid() AND
-    school_id IN (SELECT school_id FROM profiles WHERE id = auth.uid())
+    school_id = get_user_school_id()
   );
 
 CREATE POLICY "Users can update own posts" ON posts
@@ -649,7 +668,7 @@ CREATE POLICY "Users can update own posts" ON posts
 CREATE POLICY "Owners and authors can delete posts" ON posts
   FOR DELETE USING (
     author_id = auth.uid() OR
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'owner' OR role = 'admin'))
+    is_user_admin()
   );
 
 -- Belt ranks policies (viewable by all, managed by owners/admins)
@@ -658,16 +677,14 @@ CREATE POLICY "Anyone can view belt ranks" ON belt_ranks FOR SELECT USING (true)
 CREATE POLICY "Owners can manage school belt ranks" ON belt_ranks
   FOR ALL USING (
     is_default = true OR
-    school_id IN (SELECT s.id FROM schools s JOIN profiles p ON s.owner_id = p.id WHERE p.id = auth.uid()) OR
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+    is_user_admin()
   );
 
 -- Events policies
 CREATE POLICY "Users can view published events in school" ON events
   FOR SELECT USING (
-    (is_published = true AND school_id IN (SELECT school_id FROM profiles WHERE id = auth.uid())) OR
-    EXISTS (SELECT 1 FROM profiles p JOIN schools s ON s.owner_id = p.id WHERE p.id = auth.uid() AND s.id = events.school_id) OR
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+    (is_published = true AND school_id = get_user_school_id()) OR
+    is_user_admin()
   );
 
 -- Notifications policies

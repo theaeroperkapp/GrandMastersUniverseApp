@@ -17,7 +17,11 @@
       "Bash(git commit:*)",
       "Bash(gh repo create:*)",
       "Bash(git push:*)",
-      "Bash(gh repo delete:*)"
+      "Bash(gh repo delete:*)",
+      "Bash(vercel link:*)",
+      "Bash(vercel --yes:*)",
+      "Bash(vercel:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }
