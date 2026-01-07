@@ -143,7 +143,7 @@ export function Navbar({ user, unreadNotifications, unreadMessages }: NavbarProp
                       <p className="text-xs text-gray-500 capitalize">{user.role}</p>
                     </div>
                     <Link
-                      href={`/profile/${user.id}`}
+                      href="/profile"
                       className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       onClick={() => setIsProfileOpen(false)}
                     >
