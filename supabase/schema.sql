@@ -421,6 +421,10 @@ CREATE TABLE waitlist (
   email TEXT NOT NULL UNIQUE,
   school_name TEXT NOT NULL,
   phone TEXT,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  notes TEXT,
+  reviewed_at TIMESTAMPTZ,
+  reviewed_by UUID REFERENCES profiles(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

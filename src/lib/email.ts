@@ -1,13 +1,36 @@
 import nodemailer from 'nodemailer'
 import { APP_NAME, APP_URL } from './constants'
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
-  },
-})
+// Create OAuth2 transporter for Gmail
+const createTransporter = async () => {
+  // Check if OAuth2 credentials are available
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REFRESH_TOKEN) {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        type: 'OAuth2',
+        user: process.env.EMAIL_USER,
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+      },
+    })
+  }
+
+  // Fallback to basic auth (for development/testing)
+  if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+    })
+  }
+
+  // Return null if no email credentials configured
+  return null
+}
 
 interface EmailOptions {
   to: string
@@ -17,19 +40,93 @@ interface EmailOptions {
 
 export async function sendEmail({ to, subject, html }: EmailOptions) {
   try {
+    const transporter = await createTransporter()
+
+    if (!transporter) {
+      console.warn('Email not configured - skipping email send to:', to)
+      return { success: false, reason: 'Email not configured' }
+    }
+
     await transporter.sendMail({
       from: `${APP_NAME} <${process.env.EMAIL_USER}>`,
       to,
       subject,
       html,
     })
+
+    return { success: true }
   } catch (error) {
     console.error('Email send error:', error)
-    throw error
+    return { success: false, reason: error instanceof Error ? error.message : 'Unknown error' }
   }
 }
 
-// Email Templates
+// Waitlist Email Templates
+export function getWaitlistApprovalEmail(name: string, schoolName: string) {
+  return {
+    subject: `Your Application Has Been Approved - ${APP_NAME}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #dc2626; margin: 0;">${APP_NAME}</h1>
+        </div>
+        <h2 style="color: #1a1a1a;">Congratulations, ${name}!</h2>
+        <p style="color: #4a4a4a; line-height: 1.6;">
+          Great news! Your application for <strong>${schoolName}</strong> has been approved.
+        </p>
+        <p style="color: #4a4a4a; line-height: 1.6;">
+          You can now set up your martial arts school on our platform and start managing your students, classes, and more!
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${APP_URL}/signup?approved=true" style="display: inline-block; background-color: #dc2626; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+            Get Started Now
+          </a>
+        </div>
+        <p style="color: #4a4a4a; line-height: 1.6;">
+          If you have any questions, simply reply to this email and we'll be happy to help!
+        </p>
+        <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 30px 0;">
+        <p style="color: #9a9a9a; font-size: 12px; text-align: center;">
+          ${APP_NAME} - Empowering Martial Arts Schools
+        </p>
+      </div>
+    `,
+  }
+}
+
+export function getWaitlistRejectionEmail(name: string, schoolName: string) {
+  return {
+    subject: `Update on Your ${APP_NAME} Application`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #dc2626; margin: 0;">${APP_NAME}</h1>
+        </div>
+        <h2 style="color: #1a1a1a;">Hello ${name},</h2>
+        <p style="color: #4a4a4a; line-height: 1.6;">
+          Thank you for your interest in ${APP_NAME} for <strong>${schoolName}</strong>.
+        </p>
+        <p style="color: #4a4a4a; line-height: 1.6;">
+          After reviewing your application, we're unable to proceed at this time. This could be due to:
+        </p>
+        <ul style="color: #4a4a4a; line-height: 1.8;">
+          <li>Incomplete information provided</li>
+          <li>We're currently at capacity in your region</li>
+          <li>The application didn't meet our current requirements</li>
+        </ul>
+        <p style="color: #4a4a4a; line-height: 1.6;">
+          If you believe this decision was made in error or have additional information to share, please reply to this email.
+        </p>
+        <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 30px 0;">
+        <p style="color: #9a9a9a; font-size: 12px; text-align: center;">
+          ${APP_NAME} - Empowering Martial Arts Schools
+        </p>
+      </div>
+    `,
+  }
+}
+
+// Member Approval Email Templates
 export function getApprovalEmail(userName: string, schoolName: string) {
   return {
     subject: `Welcome to ${schoolName}!`,
