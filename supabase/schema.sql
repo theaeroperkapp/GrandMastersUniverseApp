@@ -731,3 +731,20 @@ CREATE POLICY "Service role has full access to visitor_sessions" ON visitor_sess
 -- Public insert for contact and waitlist
 CREATE POLICY "Anyone can submit contact form" ON contact_submissions FOR INSERT WITH CHECK (true);
 CREATE POLICY "Anyone can join waitlist" ON waitlist FOR INSERT WITH CHECK (true);
+
+-- Admin policies for platform management
+CREATE POLICY "Admin can view all waitlist" ON waitlist FOR SELECT USING (is_user_admin());
+CREATE POLICY "Admin can update waitlist" ON waitlist FOR UPDATE USING (is_user_admin());
+CREATE POLICY "Admin can delete waitlist" ON waitlist FOR DELETE USING (is_user_admin());
+
+CREATE POLICY "Admin can view all contact_submissions" ON contact_submissions FOR SELECT USING (is_user_admin());
+CREATE POLICY "Admin can update contact_submissions" ON contact_submissions FOR UPDATE USING (is_user_admin());
+
+CREATE POLICY "Admin can view all profiles" ON profiles FOR SELECT USING (is_user_admin());
+CREATE POLICY "Admin can view all student_profiles" ON student_profiles FOR SELECT USING (is_user_admin());
+CREATE POLICY "Admin can view all families" ON families FOR SELECT USING (is_user_admin());
+CREATE POLICY "Admin can view all schools" ON schools FOR SELECT USING (is_user_admin());
+
+CREATE POLICY "Admin can view platform_payments" ON platform_payments FOR SELECT USING (is_user_admin());
+CREATE POLICY "Admin can view user_sessions" ON user_sessions FOR SELECT USING (is_user_admin());
+CREATE POLICY "Admin can view visitor_sessions" ON visitor_sessions FOR SELECT USING (is_user_admin());

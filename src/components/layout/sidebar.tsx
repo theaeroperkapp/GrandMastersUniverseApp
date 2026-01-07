@@ -9,6 +9,7 @@ import {
   Calendar,
   GraduationCap,
   ClipboardCheck,
+  ClipboardList,
   CalendarDays,
   DollarSign,
   FileText,
@@ -60,6 +61,7 @@ export function Sidebar({ role }: SidebarProps) {
     { href: '/admin/user-activity', label: 'User Activity', icon: <ClipboardCheck className="h-5 w-5" /> },
     { href: '/admin/visitor-analytics', label: 'Visitors', icon: <Users className="h-5 w-5" /> },
     { href: '/admin/contact-submissions', label: 'Contacts', icon: <FileText className="h-5 w-5" /> },
+    { href: '/admin/waitlist', label: 'Waitlist', icon: <ClipboardList className="h-5 w-5" /> },
     { href: '/admin/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
   ]
 
