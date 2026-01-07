@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import toast from 'react-hot-toast'
+import { Camera, Loader2 } from 'lucide-react'
 
 interface Profile {
   id: string
@@ -20,7 +21,9 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [fullName, setFullName] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetchProfile()
@@ -66,6 +69,58 @@ export default function ProfilePage() {
     setSaving(false)
   }
 
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (!validTypes.includes(file.type)) {
+      toast.error('Please upload a JPEG, PNG, WebP, or GIF image')
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB')
+      return
+    }
+
+    setUploadingAvatar(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+
+      const response = await fetch('/api/profile/avatar', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Upload failed')
+      }
+
+      const { avatar_url } = await response.json()
+      setProfile(prev => prev ? { ...prev, avatar_url } : null)
+      toast.success('Profile picture updated')
+    } catch (error) {
+      console.error('Avatar upload error:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to upload image')
+    } finally {
+      setUploadingAvatar(false)
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
   if (loading) {
     return <div className="p-8">Loading profile...</div>
   }
@@ -82,7 +137,48 @@ export default function ProfilePage() {
         <CardHeader>
           <CardTitle>Profile Information</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          {/* Avatar Upload */}
+          <div className="flex flex-col items-center">
+            <div className="relative">
+              <div
+                onClick={handleAvatarClick}
+                className="w-32 h-32 rounded-full overflow-hidden bg-gray-200 cursor-pointer hover:opacity-80 transition-opacity flex items-center justify-center border-4 border-gray-100 shadow-lg"
+              >
+                {uploadingAvatar ? (
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                ) : profile.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt={profile.full_name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-4xl font-bold text-gray-400">
+                    {profile.full_name?.charAt(0)?.toUpperCase() || '?'}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={handleAvatarClick}
+                disabled={uploadingAvatar}
+                className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors shadow-md disabled:opacity-50"
+              >
+                <Camera className="h-4 w-4" />
+              </button>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <p className="text-sm text-gray-500 mt-2">
+              Click to upload a new photo
+            </p>
+          </div>
+
           <div>
             <Label htmlFor="email">Email</Label>
             <Input
