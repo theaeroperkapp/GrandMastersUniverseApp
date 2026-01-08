@@ -115,14 +115,13 @@ export interface EventInput {
   title: string
   description?: string | null
   event_type: string
-  event_date: string
-  start_time?: string | null
-  end_time?: string | null
+  start_date: string
+  end_date?: string | null
   location?: string | null
-  registration_fee?: number | null
-  max_participants?: number | null
+  fee?: number | null
+  max_capacity?: number | null
   registration_deadline?: string | null
-  is_public?: boolean
+  is_published?: boolean
 }
 
 const VALID_EVENT_TYPES = ['seminar', 'tournament', 'belt_testing', 'social', 'other']
@@ -146,31 +145,23 @@ export function validateEventInput(input: EventInput): ValidationResult {
     errors.push({ field: 'event_type', message: `Event type must be one of: ${VALID_EVENT_TYPES.join(', ')}` })
   }
 
-  if (!input.event_date) {
-    errors.push({ field: 'event_date', message: 'Event date is required' })
-  }
-
-  if (input.start_time && !isValidTime(input.start_time)) {
-    errors.push({ field: 'start_time', message: 'Invalid start time format' })
-  }
-
-  if (input.end_time && !isValidTime(input.end_time)) {
-    errors.push({ field: 'end_time', message: 'Invalid end time format' })
+  if (!input.start_date) {
+    errors.push({ field: 'start_date', message: 'Start date is required' })
   }
 
   if (input.location && !isValidLength(input.location, 0, 300)) {
     errors.push({ field: 'location', message: 'Location must be under 300 characters' })
   }
 
-  if (input.registration_fee !== null && input.registration_fee !== undefined) {
-    if (typeof input.registration_fee !== 'number' || input.registration_fee < 0 || input.registration_fee > 10000) {
-      errors.push({ field: 'registration_fee', message: 'Registration fee must be between 0 and 10000' })
+  if (input.fee !== null && input.fee !== undefined) {
+    if (typeof input.fee !== 'number' || input.fee < 0 || input.fee > 1000000) {
+      errors.push({ field: 'fee', message: 'Fee must be between 0 and 1000000 cents' })
     }
   }
 
-  if (input.max_participants !== null && input.max_participants !== undefined) {
-    if (!Number.isInteger(input.max_participants) || input.max_participants < 1 || input.max_participants > 10000) {
-      errors.push({ field: 'max_participants', message: 'Max participants must be between 1 and 10000' })
+  if (input.max_capacity !== null && input.max_capacity !== undefined) {
+    if (!Number.isInteger(input.max_capacity) || input.max_capacity < 1 || input.max_capacity > 10000) {
+      errors.push({ field: 'max_capacity', message: 'Max capacity must be between 1 and 10000' })
     }
   }
 

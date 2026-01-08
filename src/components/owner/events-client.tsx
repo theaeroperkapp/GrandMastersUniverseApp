@@ -28,15 +28,13 @@ interface Event {
   title: string
   description: string | null
   event_type: string
-  event_date: string
-  start_time: string | null
-  end_time: string | null
+  start_date: string
+  end_date: string | null
   location: string | null
-  registration_fee: number | null
-  max_participants: number | null
+  fee: number | null
+  max_capacity: number | null
   registration_deadline: string | null
-  is_public: boolean
-  status: string
+  is_published: boolean
   created_at: string
   registrations?: { count: number }[]
 }
@@ -79,32 +77,33 @@ export function EventsClient({ initialEvents, students, schoolId }: EventsClient
     title: '',
     description: '',
     event_type: 'tournament',
-    event_date: '',
-    start_time: '',
-    end_time: '',
+    start_date: '',
+    end_date: '',
     location: '',
-    registration_fee: '',
-    max_participants: '',
+    fee: '',
+    max_capacity: '',
     registration_deadline: '',
-    is_public: true,
+    is_published: false,
   })
 
   const openCreateModal = () => {
     setEditingEvent(null)
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 7)
+    const nextWeek = new Date()
+    nextWeek.setDate(nextWeek.getDate() + 7)
+    nextWeek.setHours(9, 0, 0, 0)
+    const endDate = new Date(nextWeek)
+    endDate.setHours(17, 0, 0, 0)
     setFormData({
       title: '',
       description: '',
       event_type: 'tournament',
-      event_date: tomorrow.toISOString().split('T')[0],
-      start_time: '09:00',
-      end_time: '17:00',
+      start_date: nextWeek.toISOString().slice(0, 16),
+      end_date: endDate.toISOString().slice(0, 16),
       location: '',
-      registration_fee: '',
-      max_participants: '',
+      fee: '',
+      max_capacity: '',
       registration_deadline: '',
-      is_public: true,
+      is_published: false,
     })
     setIsModalOpen(true)
   }
@@ -115,14 +114,13 @@ export function EventsClient({ initialEvents, students, schoolId }: EventsClient
       title: event.title,
       description: event.description || '',
       event_type: event.event_type,
-      event_date: event.event_date,
-      start_time: event.start_time?.slice(0, 5) || '',
-      end_time: event.end_time?.slice(0, 5) || '',
+      start_date: event.start_date?.slice(0, 16) || '',
+      end_date: event.end_date?.slice(0, 16) || '',
       location: event.location || '',
-      registration_fee: event.registration_fee?.toString() || '',
-      max_participants: event.max_participants?.toString() || '',
-      registration_deadline: event.registration_deadline || '',
-      is_public: event.is_public,
+      fee: event.fee?.toString() || '',
+      max_capacity: event.max_capacity?.toString() || '',
+      registration_deadline: event.registration_deadline?.slice(0, 16) || '',
+      is_published: event.is_published,
     })
     setIsModalOpen(true)
   }
@@ -143,14 +141,13 @@ export function EventsClient({ initialEvents, students, schoolId }: EventsClient
         title: formData.title,
         description: formData.description || null,
         event_type: formData.event_type,
-        event_date: formData.event_date,
-        start_time: formData.start_time || null,
-        end_time: formData.end_time || null,
+        start_date: formData.start_date,
+        end_date: formData.end_date || null,
         location: formData.location || null,
-        registration_fee: formData.registration_fee ? parseFloat(formData.registration_fee) : null,
-        max_participants: formData.max_participants ? parseInt(formData.max_participants) : null,
+        fee: formData.fee ? parseInt(formData.fee) * 100 : null, // Convert to cents
+        max_capacity: formData.max_capacity ? parseInt(formData.max_capacity) : null,
         registration_deadline: formData.registration_deadline || null,
-        is_public: formData.is_public,
+        is_published: formData.is_published,
       }
 
       const url = editingEvent ? `/api/events/${editingEvent.id}` : '/api/events'
@@ -257,7 +254,7 @@ export function EventsClient({ initialEvents, students, schoolId }: EventsClient
   }
 
   const getStatusBadge = (event: Event) => {
-    const eventDate = new Date(event.event_date)
+    const eventDate = new Date(event.start_date)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
@@ -270,8 +267,8 @@ export function EventsClient({ initialEvents, students, schoolId }: EventsClient
     }
   }
 
-  const upcomingEvents = events.filter(e => new Date(e.event_date) >= new Date())
-  const pastEvents = events.filter(e => new Date(e.event_date) < new Date())
+  const upcomingEvents = events.filter(e => new Date(e.start_date) >= new Date())
+  const pastEvents = events.filter(e => new Date(e.start_date) < new Date())
 
   return (
     <>
@@ -323,13 +320,12 @@ export function EventsClient({ initialEvents, students, schoolId }: EventsClient
                         <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                           <span className="flex items-center gap-1">
                             <Calendar className="h-4 w-4" />
-                            {formatDate(event.event_date)}
+                            {formatDate(event.start_date)}
                           </span>
-                          {event.start_time && (
+                          {event.end_date && (
                             <span className="flex items-center gap-1">
                               <Clock className="h-4 w-4" />
-                              {formatTime(event.start_time)}
-                              {event.end_time && ` - ${formatTime(event.end_time)}`}
+                              Until {formatDate(event.end_date)}
                             </span>
                           )}
                           {event.location && (
@@ -338,16 +334,16 @@ export function EventsClient({ initialEvents, students, schoolId }: EventsClient
                               {event.location}
                             </span>
                           )}
-                          {event.registration_fee && (
+                          {event.fee && (
                             <span className="flex items-center gap-1">
                               <DollarSign className="h-4 w-4" />
-                              ${event.registration_fee}
+                              ${(event.fee / 100).toFixed(2)}
                             </span>
                           )}
-                          {event.max_participants && (
+                          {event.max_capacity && (
                             <span className="flex items-center gap-1">
                               <Users className="h-4 w-4" />
-                              {event.registrations?.[0]?.count || 0}/{event.max_participants}
+                              {event.registrations?.[0]?.count || 0}/{event.max_capacity}
                             </span>
                           )}
                         </div>
@@ -394,7 +390,7 @@ export function EventsClient({ initialEvents, students, schoolId }: EventsClient
                         {EVENT_TYPES.find(t => t.value === event.event_type)?.label}
                       </Badge>
                     </div>
-                    <span className="text-sm text-gray-500">{formatDate(event.event_date)}</span>
+                    <span className="text-sm text-gray-500">{formatDate(event.start_date)}</span>
                   </div>
                 </div>
               ))}
@@ -449,36 +445,25 @@ export function EventsClient({ initialEvents, students, schoolId }: EventsClient
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="event_date">Event Date *</Label>
+              <Label htmlFor="start_date">Start Date & Time *</Label>
               <Input
-                id="event_date"
-                type="date"
-                value={formData.event_date}
-                onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
+                id="start_date"
+                type="datetime-local"
+                value={formData.start_date}
+                onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
                 required
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="start_time">Start Time</Label>
-              <Input
-                id="start_time"
-                type="time"
-                value={formData.start_time}
-                onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="end_time">End Time</Label>
-              <Input
-                id="end_time"
-                type="time"
-                value={formData.end_time}
-                onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="end_date">End Date & Time</Label>
+            <Input
+              id="end_date"
+              type="datetime-local"
+              value={formData.end_date}
+              onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+            />
           </div>
 
           <div className="space-y-2">
@@ -493,25 +478,25 @@ export function EventsClient({ initialEvents, students, schoolId }: EventsClient
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="registration_fee">Registration Fee ($)</Label>
+              <Label htmlFor="fee">Registration Fee ($)</Label>
               <Input
-                id="registration_fee"
+                id="fee"
                 type="number"
                 min="0"
-                step="0.01"
-                value={formData.registration_fee}
-                onChange={(e) => setFormData({ ...formData, registration_fee: e.target.value })}
-                placeholder="0.00"
+                step="1"
+                value={formData.fee}
+                onChange={(e) => setFormData({ ...formData, fee: e.target.value })}
+                placeholder="0"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="max_participants">Max Participants</Label>
+              <Label htmlFor="max_capacity">Max Capacity</Label>
               <Input
-                id="max_participants"
+                id="max_capacity"
                 type="number"
                 min="1"
-                value={formData.max_participants}
-                onChange={(e) => setFormData({ ...formData, max_participants: e.target.value })}
+                value={formData.max_capacity}
+                onChange={(e) => setFormData({ ...formData, max_capacity: e.target.value })}
                 placeholder="Unlimited"
               />
             </div>
@@ -521,7 +506,7 @@ export function EventsClient({ initialEvents, students, schoolId }: EventsClient
             <Label htmlFor="registration_deadline">Registration Deadline</Label>
             <Input
               id="registration_deadline"
-              type="date"
+              type="datetime-local"
               value={formData.registration_deadline}
               onChange={(e) => setFormData({ ...formData, registration_deadline: e.target.value })}
             />
@@ -530,12 +515,12 @@ export function EventsClient({ initialEvents, students, schoolId }: EventsClient
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
-              id="is_public"
-              checked={formData.is_public}
-              onChange={(e) => setFormData({ ...formData, is_public: e.target.checked })}
+              id="is_published"
+              checked={formData.is_published}
+              onChange={(e) => setFormData({ ...formData, is_published: e.target.checked })}
               className="rounded"
             />
-            <Label htmlFor="is_public">Make this event public (visible to non-members)</Label>
+            <Label htmlFor="is_published">Publish this event (make visible to students)</Label>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
@@ -558,8 +543,8 @@ export function EventsClient({ initialEvents, students, schoolId }: EventsClient
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
             Select students to register for this event.
-            {selectedEvent?.registration_fee && (
-              <span className="font-medium"> Fee: ${selectedEvent.registration_fee} per student</span>
+            {selectedEvent?.fee && (
+              <span className="font-medium"> Fee: ${(selectedEvent.fee / 100).toFixed(2)} per student</span>
             )}
           </p>
 
@@ -599,13 +584,13 @@ export function EventsClient({ initialEvents, students, schoolId }: EventsClient
             ))}
           </div>
 
-          {selectedStudents.length > 0 && selectedEvent?.registration_fee && (
+          {selectedStudents.length > 0 && selectedEvent?.fee && (
             <div className="p-3 bg-gray-100 rounded-lg">
               <p className="font-medium">
-                Total: ${(selectedEvent.registration_fee * selectedStudents.length).toFixed(2)}
+                Total: ${((selectedEvent.fee / 100) * selectedStudents.length).toFixed(2)}
               </p>
               <p className="text-sm text-gray-600">
-                {selectedStudents.length} student(s) x ${selectedEvent.registration_fee}
+                {selectedStudents.length} student(s) x ${(selectedEvent.fee / 100).toFixed(2)}
               </p>
             </div>
           )}

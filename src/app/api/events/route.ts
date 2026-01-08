@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('events')
       .select('*, registrations:event_registrations(count)')
-      .order('event_date', { ascending: true })
+      .order('start_date', { ascending: true })
 
     if (schoolId) {
       query = query.eq('school_id', schoolId)
@@ -65,14 +65,13 @@ export async function POST(request: NextRequest) {
       title,
       description,
       event_type,
-      event_date,
-      start_time,
-      end_time,
+      start_date,
+      end_date,
       location,
-      registration_fee,
-      max_participants,
+      fee,
+      max_capacity,
       registration_deadline,
-      is_public,
+      is_published,
     } = body
 
     // Sanitize inputs
@@ -81,14 +80,13 @@ export async function POST(request: NextRequest) {
       title: sanitizeString(title),
       description: description ? sanitizeString(description) : null,
       event_type: sanitizeString(event_type),
-      event_date: sanitizeString(event_date),
-      start_time: start_time ? sanitizeString(start_time) : null,
-      end_time: end_time ? sanitizeString(end_time) : null,
+      start_date: sanitizeString(start_date),
+      end_date: end_date ? sanitizeString(end_date) : null,
       location: location ? sanitizeString(location) : null,
-      registration_fee: registration_fee !== undefined ? Number(registration_fee) : null,
-      max_participants: max_participants !== undefined ? Number(max_participants) : null,
+      fee: fee !== undefined ? Number(fee) : null,
+      max_capacity: max_capacity !== undefined ? Number(max_capacity) : null,
       registration_deadline: registration_deadline ? sanitizeString(registration_deadline) : null,
-      is_public: is_public ?? true,
+      is_published: is_published ?? false,
     }
 
     // Validate inputs
@@ -104,16 +102,13 @@ export async function POST(request: NextRequest) {
         title: sanitizedInput.title,
         description: sanitizedInput.description,
         event_type: sanitizedInput.event_type,
-        event_date: sanitizedInput.event_date,
-        start_time: sanitizedInput.start_time,
-        end_time: sanitizedInput.end_time,
+        start_date: sanitizedInput.start_date,
+        end_date: sanitizedInput.end_date,
         location: sanitizedInput.location,
-        registration_fee: sanitizedInput.registration_fee,
-        max_participants: sanitizedInput.max_participants,
+        fee: sanitizedInput.fee,
+        max_capacity: sanitizedInput.max_capacity,
         registration_deadline: sanitizedInput.registration_deadline,
-        is_public: sanitizedInput.is_public,
-        status: 'upcoming',
-        created_by: user.id,
+        is_published: sanitizedInput.is_published,
       })
       .select()
       .single()

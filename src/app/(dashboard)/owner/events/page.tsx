@@ -34,14 +34,13 @@ export default async function EventsPage() {
     .from('events')
     .select('*, registrations:event_registrations(count)')
     .eq('school_id', profileData.school_id)
-    .order('event_date', { ascending: true })
+    .order('start_date', { ascending: true })
 
   // Get students for registration
   const { data: students } = await supabase
     .from('student_profiles')
     .select('*, profile:profiles(id, full_name, avatar_url)')
     .eq('school_id', profileData.school_id)
-    .eq('is_active', true)
 
   return (
     <div className="space-y-6">

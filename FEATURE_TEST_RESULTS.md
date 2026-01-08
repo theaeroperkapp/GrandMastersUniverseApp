@@ -336,7 +336,7 @@
 - None identified
 
 ### High Priority
-1. **Type Mismatch:** `database.ts` types don't match actual schema for events table (has `event_date/start_time/end_time` but DB has `start_date/end_date`)
+- ~~**Type Mismatch:** `database.ts` types don't match actual schema for events table~~ **FIXED** - Updated types and code to use correct column names (`start_date/end_date`, `fee`, `max_capacity`, `is_published`)
 
 ### Medium Priority
 1. **Facebook Sharing:** Not tested (requires manual testing)
@@ -370,14 +370,11 @@
    - Contract signing workflow
    - Attendance check-in (QR/PIN)
 
-2. **Fix Type Mismatches:**
-   - Update `src/types/database.ts` to match actual schema
-
-3. **Configure for Production:**
+2. **Configure for Production:**
    - Set up email credentials (EMAIL_USER, EMAIL_PASSWORD)
    - Configure Stripe webhook endpoint
    - Test on real devices (mobile responsive)
 
 ---
 
-*Last Updated: January 8, 2026*
+*Last Updated: January 7, 2026 - Type mismatches fixed*

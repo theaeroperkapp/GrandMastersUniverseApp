@@ -435,17 +435,14 @@ export interface Database {
           title: string
           description: string | null
           event_type: 'seminar' | 'tournament' | 'belt_testing' | 'social' | 'other'
-          event_date: string
-          start_time: string | null
-          end_time: string | null
+          start_date: string
+          end_date: string | null
           location: string | null
-          max_participants: number | null
-          registration_fee: number | null
+          max_capacity: number | null
+          fee: number | null
           registration_deadline: string | null
-          is_public: boolean
-          status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled'
+          is_published: boolean
           image_url: string | null
-          created_by: string | null
           created_at: string
           updated_at: string
         }
@@ -455,17 +452,14 @@ export interface Database {
           title: string
           description?: string | null
           event_type: 'seminar' | 'tournament' | 'belt_testing' | 'social' | 'other'
-          event_date: string
-          start_time?: string | null
-          end_time?: string | null
+          start_date: string
+          end_date?: string | null
           location?: string | null
-          max_participants?: number | null
-          registration_fee?: number | null
+          max_capacity?: number | null
+          fee?: number | null
           registration_deadline?: string | null
-          is_public?: boolean
-          status?: 'upcoming' | 'ongoing' | 'completed' | 'cancelled'
+          is_published?: boolean
           image_url?: string | null
-          created_by?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -475,17 +469,14 @@ export interface Database {
           title?: string
           description?: string | null
           event_type?: 'seminar' | 'tournament' | 'belt_testing' | 'social' | 'other'
-          event_date?: string
-          start_time?: string | null
-          end_time?: string | null
+          start_date?: string
+          end_date?: string | null
           location?: string | null
-          max_participants?: number | null
-          registration_fee?: number | null
+          max_capacity?: number | null
+          fee?: number | null
           registration_deadline?: string | null
-          is_public?: boolean
-          status?: 'upcoming' | 'ongoing' | 'completed' | 'cancelled'
+          is_published?: boolean
           image_url?: string | null
-          created_by?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -905,30 +896,30 @@ export interface Database {
       notifications: {
         Row: {
           id: string
-          user_id: string
-          type: 'comment' | 'like' | 'mention' | 'message' | 'announcement' | 'approval' | 'promotion' | 'event' | 'info'
+          profile_id: string
+          type: 'comment' | 'like' | 'mention' | 'message' | 'announcement' | 'approval' | 'promotion' | 'event'
           title: string
-          message: string
+          content: string
           related_id: string | null
           is_read: boolean
           created_at: string
         }
         Insert: {
           id?: string
-          user_id: string
-          type?: 'comment' | 'like' | 'mention' | 'message' | 'announcement' | 'approval' | 'promotion' | 'event' | 'info'
+          profile_id: string
+          type?: 'comment' | 'like' | 'mention' | 'message' | 'announcement' | 'approval' | 'promotion' | 'event'
           title: string
-          message: string
+          content: string
           related_id?: string | null
           is_read?: boolean
           created_at?: string
         }
         Update: {
           id?: string
-          user_id?: string
-          type?: 'comment' | 'like' | 'mention' | 'message' | 'announcement' | 'approval' | 'promotion' | 'event' | 'info'
+          profile_id?: string
+          type?: 'comment' | 'like' | 'mention' | 'message' | 'announcement' | 'approval' | 'promotion' | 'event'
           title?: string
-          message?: string
+          content?: string
           related_id?: string | null
           is_read?: boolean
           created_at?: string
