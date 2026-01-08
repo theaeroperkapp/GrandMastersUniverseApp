@@ -54,12 +54,23 @@ export default async function ClassesPage() {
     .in('role', ['owner', 'parent', 'student'])
     .eq('is_approved', true)
 
-  // Get belt ranks for this school
-  const { data: belts } = await adminClient
+  // Get default belts
+  const { data: defaultBelts } = await adminClient
+    .from('belt_ranks')
+    .select('id, name, color, display_order')
+    .eq('is_default', true)
+    .order('display_order')
+
+  // Get custom belts for this school
+  const { data: customBelts } = await adminClient
     .from('belt_ranks')
     .select('id, name, color, display_order')
     .eq('school_id', profileData.school_id)
+    .eq('is_default', false)
     .order('display_order')
+
+  // Combine both, with default belts first
+  const belts = [...(defaultBelts || []), ...(customBelts || [])]
 
   return (
     <div className="space-y-6">
