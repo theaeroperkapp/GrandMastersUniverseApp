@@ -110,6 +110,7 @@ export default async function AdminSchoolsPage() {
                   <Link
                     href={`/admin/schools/${school.id}/features`}
                     className="p-2 rounded-lg hover:bg-gray-100"
+                    prefetch={false}
                   >
                     <Settings className="h-5 w-5 text-gray-500" />
                   </Link>
