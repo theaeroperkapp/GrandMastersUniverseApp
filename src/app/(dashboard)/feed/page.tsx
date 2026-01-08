@@ -13,7 +13,7 @@ export default async function FeedPage() {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('*, schools(*)')
+    .select('*, schools:schools!fk_profiles_school(*)')
     .eq('id', user.id)
     .single()
 

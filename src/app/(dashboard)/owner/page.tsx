@@ -30,7 +30,7 @@ export default async function OwnerDashboardPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('*, schools(*)')
+    .select('*, schools:schools!fk_profiles_school(*)')
     .eq('id', user.id)
     .single()
 
