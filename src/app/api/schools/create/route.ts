@@ -1,23 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
     const adminClient = createAdminClient()
 
-    // Get the current user
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { name, subdomain, email } = await request.json()
+    const { name, subdomain, email, userId } = await request.json()
 
     // Validate required fields
-    if (!name || !subdomain || !email) {
+    if (!name || !subdomain || !email || !userId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    // Validate userId is a valid UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(userId)) {
+      return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 })
     }
 
     // Verify the email is in the approved waitlist
@@ -53,7 +51,7 @@ export async function POST(request: NextRequest) {
       .insert({
         name: name.trim(),
         subdomain: subdomain.toLowerCase().trim(),
-        owner_id: user.id,
+        owner_id: userId,
         subscription_status: 'trial',
         trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
         monthly_post_limit: 100,
@@ -77,7 +75,7 @@ export async function POST(request: NextRequest) {
         role: 'owner',
         is_approved: true,
       } as never)
-      .eq('id', user.id)
+      .eq('id', userId)
 
     if (profileError) {
       console.error('Profile update error:', profileError)

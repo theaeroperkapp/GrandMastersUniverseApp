@@ -144,6 +144,7 @@ function OwnerSignupForm() {
           name: schoolName,
           subdomain: subdomain.toLowerCase(),
           email: email,
+          userId: authData.user.id,
         }),
       })
 
