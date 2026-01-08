@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Pagination } from '@/components/ui/pagination'
 import { Bell, Check, Trash2 } from 'lucide-react'
 
 interface Notification {
@@ -16,15 +17,16 @@ interface Notification {
   created_at: string
 }
 
+const ITEMS_PER_PAGE = 10
+
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
 
-  useEffect(() => {
-    fetchNotifications()
-  }, [])
-
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async (page: number) => {
+    setLoading(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -33,16 +35,37 @@ export default function NotificationsPage() {
       return
     }
 
+    // Get total count
+    const { count } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+
+    setTotalCount(count || 0)
+
+    // Get paginated data
+    const from = (page - 1) * ITEMS_PER_PAGE
+    const to = from + ITEMS_PER_PAGE - 1
+
     const { data } = await supabase
       .from('notifications')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
+      .range(from, to)
 
     if (data) {
       setNotifications(data as Notification[])
     }
     setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    fetchNotifications(currentPage)
+  }, [currentPage, fetchNotifications])
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
   }
 
   const markAsRead = async (id: string) => {
@@ -80,10 +103,18 @@ export default function NotificationsPage() {
       .delete()
       .eq('id', id)
 
+    // Refresh to get updated count and pagination
+    setTotalCount(prev => prev - 1)
     setNotifications(notifications.filter(n => n.id !== id))
+
+    // If page is now empty, go to previous page
+    if (notifications.length === 1 && currentPage > 1) {
+      setCurrentPage(prev => prev - 1)
+    }
   }
 
   const unreadCount = notifications.filter(n => !n.is_read).length
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE)
 
   if (loading) {
     return (
@@ -143,50 +174,60 @@ export default function NotificationsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {notifications.map((notification) => (
-            <Card
-              key={notification.id}
-              className={notification.is_read ? 'bg-gray-50' : 'border-blue-200 bg-blue-50/30'}
-            >
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      {!notification.is_read && (
-                        <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                      )}
-                      <h3 className="font-medium">{notification.title}</h3>
+        <>
+          <div className="space-y-3">
+            {notifications.map((notification) => (
+              <Card
+                key={notification.id}
+                className={notification.is_read ? 'bg-gray-50' : 'border-blue-200 bg-blue-50/30'}
+              >
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        {!notification.is_read && (
+                          <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                        )}
+                        <h3 className="font-medium">{notification.title}</h3>
+                      </div>
+                      <p className="text-gray-600 mt-1">{notification.message}</p>
+                      <p className="text-xs text-gray-400 mt-2">
+                        {new Date(notification.created_at).toLocaleString()}
+                      </p>
                     </div>
-                    <p className="text-gray-600 mt-1">{notification.message}</p>
-                    <p className="text-xs text-gray-400 mt-2">
-                      {new Date(notification.created_at).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="flex gap-2 ml-4">
-                    {!notification.is_read && (
+                    <div className="flex gap-2 ml-4">
+                      {!notification.is_read && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => markAsRead(notification.id)}
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => markAsRead(notification.id)}
+                        onClick={() => deleteNotification(notification.id)}
+                        className="text-red-500 hover:text-red-600"
                       >
-                        <Check className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteNotification(notification.id)}
-                      className="text-red-500 hover:text-red-600"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            totalItems={totalCount}
+            itemsPerPage={ITEMS_PER_PAGE}
+          />
+        </>
       )}
     </div>
   )

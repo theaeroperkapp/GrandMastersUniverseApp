@@ -9,7 +9,10 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import toast from 'react-hot-toast'
+import { Pagination } from '@/components/ui/pagination'
 import { Check, X, Mail, Trash2, Clock, AlertCircle } from 'lucide-react'
+
+const ITEMS_PER_PAGE = 10
 
 interface WaitlistEntry {
   id: string
@@ -34,6 +37,7 @@ export default function WaitlistPage() {
   const [processing, setProcessing] = useState(false)
   const [sendNotification, setSendNotification] = useState(true)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Close modal on Escape key
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -159,6 +163,16 @@ export default function WaitlistPage() {
 
     return matchesSearch && matchesFilter
   })
+
+  // Pagination
+  const totalPages = Math.ceil(filteredEntries.length / ITEMS_PER_PAGE)
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+  const paginatedEntries = filteredEntries.slice(startIndex, startIndex + ITEMS_PER_PAGE)
+
+  // Reset page when filter or search changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, filter])
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -308,8 +322,9 @@ export default function WaitlistPage() {
           </CardContent>
         </Card>
       ) : (
+        <>
         <div className="space-y-4">
-          {filteredEntries.map((entry) => (
+          {paginatedEntries.map((entry) => (
             <Card key={entry.id} className={entry.status === 'pending' ? 'border-yellow-200' : ''}>
               <CardContent className="p-4">
                 <div className="flex justify-between items-start">
@@ -375,6 +390,15 @@ export default function WaitlistPage() {
             </Card>
           ))}
         </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredEntries.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+        />
+        </>
       )}
 
       {/* Approval/Rejection Modal */}

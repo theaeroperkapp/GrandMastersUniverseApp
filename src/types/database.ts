@@ -76,9 +76,12 @@ export interface Database {
           owner_id: string
           stripe_account_id: string | null
           stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           subscription_status: 'trial' | 'active' | 'past_due' | 'canceled' | 'grace_period'
+          subscription_plan: string | null
           trial_ends_at: string | null
           subscription_ends_at: string | null
+          current_period_end: string | null
           monthly_post_limit: number
           announcement_limit: number
           created_at: string
@@ -99,9 +102,12 @@ export interface Database {
           owner_id: string
           stripe_account_id?: string | null
           stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           subscription_status?: 'trial' | 'active' | 'past_due' | 'canceled' | 'grace_period'
+          subscription_plan?: string | null
           trial_ends_at?: string | null
           subscription_ends_at?: string | null
+          current_period_end?: string | null
           monthly_post_limit?: number
           announcement_limit?: number
           created_at?: string
@@ -122,9 +128,12 @@ export interface Database {
           owner_id?: string
           stripe_account_id?: string | null
           stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           subscription_status?: 'trial' | 'active' | 'past_due' | 'canceled' | 'grace_period'
+          subscription_plan?: string | null
           trial_ends_at?: string | null
           subscription_ends_at?: string | null
+          current_period_end?: string | null
           monthly_post_limit?: number
           announcement_limit?: number
           created_at?: string
@@ -302,6 +311,7 @@ export interface Database {
           end_time: string
           instructor_id: string | null
           max_capacity: number | null
+          location: string | null
           belt_requirement_id: string | null
           is_active: boolean
           created_at: string
@@ -317,6 +327,7 @@ export interface Database {
           end_time: string
           instructor_id?: string | null
           max_capacity?: number | null
+          location?: string | null
           belt_requirement_id?: string | null
           is_active?: boolean
           created_at?: string
@@ -332,6 +343,7 @@ export interface Database {
           end_time?: string
           instructor_id?: string | null
           max_capacity?: number | null
+          location?: string | null
           belt_requirement_id?: string | null
           is_active?: boolean
           created_at?: string
@@ -423,14 +435,17 @@ export interface Database {
           title: string
           description: string | null
           event_type: 'seminar' | 'tournament' | 'belt_testing' | 'social' | 'other'
-          start_date: string
-          end_date: string | null
+          event_date: string
+          start_time: string | null
+          end_time: string | null
           location: string | null
-          max_capacity: number | null
-          fee: number | null
+          max_participants: number | null
+          registration_fee: number | null
           registration_deadline: string | null
-          is_published: boolean
+          is_public: boolean
+          status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled'
           image_url: string | null
+          created_by: string | null
           created_at: string
           updated_at: string
         }
@@ -440,14 +455,17 @@ export interface Database {
           title: string
           description?: string | null
           event_type: 'seminar' | 'tournament' | 'belt_testing' | 'social' | 'other'
-          start_date: string
-          end_date?: string | null
+          event_date: string
+          start_time?: string | null
+          end_time?: string | null
           location?: string | null
-          max_capacity?: number | null
-          fee?: number | null
+          max_participants?: number | null
+          registration_fee?: number | null
           registration_deadline?: string | null
-          is_published?: boolean
+          is_public?: boolean
+          status?: 'upcoming' | 'ongoing' | 'completed' | 'cancelled'
           image_url?: string | null
+          created_by?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -457,14 +475,17 @@ export interface Database {
           title?: string
           description?: string | null
           event_type?: 'seminar' | 'tournament' | 'belt_testing' | 'social' | 'other'
-          start_date?: string
-          end_date?: string | null
+          event_date?: string
+          start_time?: string | null
+          end_time?: string | null
           location?: string | null
-          max_capacity?: number | null
-          fee?: number | null
+          max_participants?: number | null
+          registration_fee?: number | null
           registration_deadline?: string | null
-          is_published?: boolean
+          is_public?: boolean
+          status?: 'upcoming' | 'ongoing' | 'completed' | 'cancelled'
           image_url?: string | null
+          created_by?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -884,30 +905,30 @@ export interface Database {
       notifications: {
         Row: {
           id: string
-          profile_id: string
-          type: 'comment' | 'like' | 'mention' | 'message' | 'announcement' | 'approval' | 'promotion' | 'event'
+          user_id: string
+          type: 'comment' | 'like' | 'mention' | 'message' | 'announcement' | 'approval' | 'promotion' | 'event' | 'info'
           title: string
-          content: string
+          message: string
           related_id: string | null
           is_read: boolean
           created_at: string
         }
         Insert: {
           id?: string
-          profile_id: string
-          type: 'comment' | 'like' | 'mention' | 'message' | 'announcement' | 'approval' | 'promotion' | 'event'
+          user_id: string
+          type?: 'comment' | 'like' | 'mention' | 'message' | 'announcement' | 'approval' | 'promotion' | 'event' | 'info'
           title: string
-          content: string
+          message: string
           related_id?: string | null
           is_read?: boolean
           created_at?: string
         }
         Update: {
           id?: string
-          profile_id?: string
-          type?: 'comment' | 'like' | 'mention' | 'message' | 'announcement' | 'approval' | 'promotion' | 'event'
+          user_id?: string
+          type?: 'comment' | 'like' | 'mention' | 'message' | 'announcement' | 'approval' | 'promotion' | 'event' | 'info'
           title?: string
-          content?: string
+          message?: string
           related_id?: string | null
           is_read?: boolean
           created_at?: string
@@ -952,6 +973,10 @@ export interface Database {
           email: string
           school_name: string
           phone: string | null
+          status: 'pending' | 'approved' | 'rejected'
+          notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           created_at: string
         }
         Insert: {
@@ -960,6 +985,10 @@ export interface Database {
           email: string
           school_name: string
           phone?: string | null
+          status?: 'pending' | 'approved' | 'rejected'
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           created_at?: string
         }
         Update: {
@@ -968,6 +997,10 @@ export interface Database {
           email?: string
           school_name?: string
           phone?: string | null
+          status?: 'pending' | 'approved' | 'rejected'
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           created_at?: string
         }
       }

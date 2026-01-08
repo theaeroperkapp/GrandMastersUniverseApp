@@ -33,10 +33,11 @@ interface NavbarProps {
   unreadMessages: number
 }
 
-export function Navbar({ user, unreadNotifications, unreadMessages }: NavbarProps) {
+export function Navbar({ user, unreadNotifications: initialUnreadNotifications, unreadMessages }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [notificationCount, setNotificationCount] = useState(initialUnreadNotifications)
   const pathname = usePathname()
   const router = useRouter()
 
@@ -45,6 +46,75 @@ export function Navbar({ user, unreadNotifications, unreadMessages }: NavbarProp
     setIsMenuOpen(false)
     setIsProfileOpen(false)
   }, [pathname])
+
+  // Subscribe to real-time notification updates
+  useEffect(() => {
+    const supabase = createClient()
+
+    // Subscribe to new notifications
+    const channel = supabase
+      .channel('notifications-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          // New notification received - increment count
+          setNotificationCount(prev => prev + 1)
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          // Notification updated - refresh count if marked as read
+          const newData = payload.new as { is_read: boolean }
+          if (newData.is_read) {
+            setNotificationCount(prev => Math.max(0, prev - 1))
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          // Notification deleted - decrement if it was unread
+          // We can't know if it was unread, so refresh from server
+          fetchNotificationCount()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user.id])
+
+  // Fetch current notification count
+  const fetchNotificationCount = async () => {
+    const supabase = createClient()
+    const { count } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('is_read', false)
+
+    setNotificationCount(count || 0)
+  }
 
   // Handle Escape key to close menus
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -149,9 +219,9 @@ export function Navbar({ user, unreadNotifications, unreadMessages }: NavbarProp
               className="relative p-2 rounded-full hover:bg-gray-100 transition-colors"
             >
               <Bell className="h-5 w-5 text-gray-600" />
-              {unreadNotifications > 0 && (
+              {notificationCount > 0 && (
                 <span className="absolute top-0 right-0 h-4 w-4 bg-red-600 text-white text-xs rounded-full flex items-center justify-center">
-                  {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                  {notificationCount > 9 ? '9+' : notificationCount}
                 </span>
               )}
             </Link>
