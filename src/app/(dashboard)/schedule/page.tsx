@@ -58,11 +58,13 @@ export default function SchedulePage() {
     if (!user) return
 
     // Get user's school_id
-    const { data: profile } = await supabase
+    const { data: profileData } = await supabase
       .from('profiles')
       .select('school_id')
       .eq('id', user.id)
       .single()
+
+    const profile = profileData as { school_id: string | null } | null
 
     if (!profile?.school_id) {
       setLoading(false)

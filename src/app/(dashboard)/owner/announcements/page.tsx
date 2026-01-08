@@ -124,8 +124,8 @@ export default function AnnouncementsPage() {
 
     try {
       if (editingAnnouncement) {
-        const { error } = await supabase
-          .from('announcements')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await (supabase.from('announcements') as any)
           .update({
             title: formData.title,
             content: formData.content,
@@ -138,8 +138,8 @@ export default function AnnouncementsPage() {
         if (error) throw error
         toast.success('Announcement updated successfully')
       } else {
-        const { error } = await supabase
-          .from('announcements')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await (supabase.from('announcements') as any)
           .insert({
             school_id: schoolId,
             author_id: userId,
@@ -168,8 +168,8 @@ export default function AnnouncementsPage() {
     const supabase = createClient()
 
     try {
-      const { error } = await supabase
-        .from('announcements')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('announcements') as any)
         .update({ is_published: !announcement.is_published })
         .eq('id', announcement.id)
 
@@ -189,8 +189,8 @@ export default function AnnouncementsPage() {
     const supabase = createClient()
 
     try {
-      const { error } = await supabase
-        .from('announcements')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('announcements') as any)
         .delete()
         .eq('id', id)
 

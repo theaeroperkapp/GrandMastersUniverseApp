@@ -65,7 +65,7 @@ export default function EventsPage() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [registering, setRegistering] = useState(false)
-  const [userProfile, setUserProfile] = useState<{ id: string; role: string; family_id: string | null } | null>(null)
+  const [userProfile, setUserProfile] = useState<{ id: string; role: string; family_id: string | null; school_id: string | null } | null>(null)
   const [studentProfileId, setStudentProfileId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -79,11 +79,13 @@ export default function EventsPage() {
     if (!user) return
 
     // Get user profile
-    const { data: profile, error: profileError } = await supabase
+    const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('id, role, family_id, school_id')
       .eq('id', user.id)
       .single()
+
+    const profile = profileData as { id: string; role: string; family_id: string | null; school_id: string | null } | null
 
     console.log('User profile:', profile, 'Error:', profileError)
 
@@ -102,11 +104,13 @@ export default function EventsPage() {
     setUserProfile(profile)
 
     // Get student profile ID if exists
-    const { data: studentProfile } = await supabase
+    const { data: studentProfileData } = await supabase
       .from('student_profiles')
       .select('id')
       .eq('profile_id', user.id)
       .single()
+
+    const studentProfile = studentProfileData as { id: string } | null
 
     if (studentProfile) {
       setStudentProfileId(studentProfile.id)
@@ -143,7 +147,7 @@ export default function EventsPage() {
     setLoading(false)
   }
 
-  const handleEventClick = (event: Event) => {
+  const handleEventClick = (event: { id: string }) => {
     const fullEvent = events.find(e => e.id === event.id)
     if (fullEvent) {
       setSelectedEvent(fullEvent)

@@ -160,8 +160,8 @@ export default function BillingPage() {
       const priceInCents = Math.round(parseFloat(membershipForm.price) * 100)
 
       if (editingMembership) {
-        const { error } = await supabase
-          .from('memberships')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await (supabase.from('memberships') as any)
           .update({
             name: membershipForm.name,
             description: membershipForm.description || null,
@@ -174,8 +174,8 @@ export default function BillingPage() {
         if (error) throw error
         toast.success('Membership updated successfully')
       } else {
-        const { error } = await supabase
-          .from('memberships')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await (supabase.from('memberships') as any)
           .insert({
             school_id: schoolId,
             name: membershipForm.name,
@@ -204,8 +204,8 @@ export default function BillingPage() {
     const supabase = createClient()
 
     try {
-      const { error } = await supabase
-        .from('memberships')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('memberships') as any)
         .update({ is_active: !membership.is_active })
         .eq('id', membership.id)
 
@@ -225,8 +225,8 @@ export default function BillingPage() {
     const supabase = createClient()
 
     try {
-      const { error } = await supabase
-        .from('memberships')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('memberships') as any)
         .delete()
         .eq('id', id)
 
@@ -260,8 +260,8 @@ export default function BillingPage() {
     try {
       const amountInCents = Math.round(parseFloat(chargeForm.amount) * 100)
 
-      const { error } = await supabase
-        .from('custom_charges')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('custom_charges') as any)
         .insert({
           school_id: schoolId,
           family_id: chargeForm.family_id,
@@ -288,8 +288,8 @@ export default function BillingPage() {
     const supabase = createClient()
 
     try {
-      const { error } = await supabase
-        .from('custom_charges')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('custom_charges') as any)
         .update({ status: newStatus })
         .eq('id', chargeId)
 

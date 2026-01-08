@@ -44,11 +44,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user with this email already exists
-    const { data: existingUser } = await (adminClient as ReturnType<typeof createAdminClient>)
+    const { data: existingUserData } = await (adminClient as ReturnType<typeof createAdminClient>)
       .from('profiles')
       .select('id, school_id')
       .eq('email', email.toLowerCase())
       .single()
+
+    const existingUser = existingUserData as { id: string; school_id: string | null } | null
 
     if (existingUser) {
       // User exists - check if they're already in this school
@@ -57,8 +59,8 @@ export async function POST(request: NextRequest) {
       }
 
       // Update their school and role
-      const { error: updateError } = await (adminClient as ReturnType<typeof createAdminClient>)
-        .from('profiles')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: updateError } = await (adminClient.from('profiles') as any)
         .update({
           school_id: school_id,
           role: role,
@@ -79,12 +81,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Get school name for the email
-    const { data: school } = await supabase
+    const { data: schoolData } = await supabase
       .from('schools')
       .select('name')
       .eq('id', school_id)
       .single()
 
+    const school = schoolData as { name: string } | null
     const schoolName = school?.name || 'the school'
 
     // Generate a unique invite token

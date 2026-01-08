@@ -37,11 +37,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the member being updated
-    const { data: member } = await (adminClient as ReturnType<typeof createAdminClient>)
+    const { data: memberData } = await (adminClient as ReturnType<typeof createAdminClient>)
       .from('profiles')
       .select('id, full_name, school_id, role')
       .eq('id', member_id)
       .single()
+
+    const member = memberData as { id: string; full_name: string | null; school_id: string | null; role: string } | null
 
     if (!member) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 })
@@ -59,8 +61,8 @@ export async function POST(request: NextRequest) {
 
     // Handle remove action (demote to student)
     if (action === 'remove') {
-      const { error: updateError } = await (adminClient as ReturnType<typeof createAdminClient>)
-        .from('profiles')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: updateError } = await (adminClient.from('profiles') as any)
         .update({ role: 'student', sub_roles: [] })
         .eq('id', member_id)
 
@@ -83,8 +85,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Missing role' }, { status: 400 })
       }
 
-      const { error: updateError } = await (adminClient as ReturnType<typeof createAdminClient>)
-        .from('profiles')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: updateError } = await (adminClient.from('profiles') as any)
         .update({
           role: role,
           sub_roles: sub_roles || [],

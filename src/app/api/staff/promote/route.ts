@@ -43,11 +43,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the member being promoted
-    const { data: member } = await (adminClient as ReturnType<typeof createAdminClient>)
+    const { data: memberData } = await (adminClient as ReturnType<typeof createAdminClient>)
       .from('profiles')
       .select('id, full_name, email, role, school_id')
       .eq('id', member_id)
       .single()
+
+    const member = memberData as { id: string; full_name: string; email: string; role: string; school_id: string | null } | null
 
     if (!member) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 })
@@ -59,18 +61,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Get school name
-    const { data: school } = await supabase
+    const { data: schoolData } = await supabase
       .from('schools')
       .select('name')
       .eq('id', school_id)
       .single()
 
+    const school = schoolData as { name: string } | null
     const schoolName = school?.name || 'the school'
     const roleName = role === 'admin' ? 'Admin' : 'Instructor'
 
     // Update the member's role
-    const { error: updateError } = await (adminClient as ReturnType<typeof createAdminClient>)
-      .from('profiles')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: updateError } = await (adminClient.from('profiles') as any)
       .update({
         role: role,
         sub_roles: sub_roles || [],
@@ -85,8 +88,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create in-app notification for the promoted member
-    const { error: notificationError } = await (adminClient as ReturnType<typeof createAdminClient>)
-      .from('notifications')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: notificationError } = await (adminClient.from('notifications') as any)
       .insert({
         profile_id: member_id,
         type: 'promotion',

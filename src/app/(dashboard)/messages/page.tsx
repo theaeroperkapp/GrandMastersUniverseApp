@@ -163,18 +163,20 @@ export default function MessagesPage() {
     setCurrentUserId(user.id)
 
     // Get user's school_id
-    const { data: profile } = await supabase
+    const { data: profileData } = await supabase
       .from('profiles')
       .select('school_id')
       .eq('id', user.id)
       .single()
+
+    const profile = profileData as { school_id: string | null } | null
 
     if (profile?.school_id) {
       setSchoolId(profile.school_id)
     }
 
     // Fetch conversations where user is participant
-    const { data: convos, error } = await supabase
+    const { data: convosData, error } = await supabase
       .from('conversations')
       .select('*')
       .or(`participant_one.eq.${user.id},participant_two.eq.${user.id}`)
@@ -185,6 +187,8 @@ export default function MessagesPage() {
       setLoading(false)
       return
     }
+
+    const convos = convosData as { id: string; participant_one: string; participant_two: string; last_message_at: string | null; created_at: string }[] | null
 
     if (!convos || convos.length === 0) {
       setConversations([])
@@ -197,26 +201,32 @@ export default function MessagesPage() {
       c.participant_one === user.id ? c.participant_two : c.participant_one
     )
 
-    const { data: profiles } = await supabase
+    const { data: profilesData } = await supabase
       .from('profiles')
       .select('id, full_name, email, role, avatar_url')
       .in('id', otherParticipantIds)
 
+    const profiles = profilesData as Profile[] | null
+
     // Get last message for each conversation
     const conversationIds = convos.map(c => c.id)
-    const { data: lastMessages } = await supabase
+    const { data: lastMessagesData } = await supabase
       .from('messages')
       .select('*')
       .in('conversation_id', conversationIds)
       .order('created_at', { ascending: false })
 
+    const lastMessages = lastMessagesData as Message[] | null
+
     // Get unread counts
-    const { data: unreadCounts } = await supabase
+    const { data: unreadCountsData } = await supabase
       .from('messages')
       .select('conversation_id')
       .in('conversation_id', conversationIds)
       .eq('is_read', false)
       .neq('sender_id', user.id)
+
+    const unreadCounts = unreadCountsData as { conversation_id: string }[] | null
 
     // Build enriched conversations
     const enrichedConversations = convos.map(convo => {
@@ -240,7 +250,7 @@ export default function MessagesPage() {
   const fetchMessages = async (conversationId: string) => {
     const supabase = createClient()
 
-    const { data: msgs, error } = await supabase
+    const { data: msgsData, error } = await supabase
       .from('messages')
       .select('*')
       .eq('conversation_id', conversationId)
@@ -251,13 +261,17 @@ export default function MessagesPage() {
       return
     }
 
+    const msgs = msgsData as Message[] | null
+
     // Get sender profiles
     if (msgs && msgs.length > 0) {
       const senderIds = [...new Set(msgs.map(m => m.sender_id))]
-      const { data: senders } = await supabase
+      const { data: sendersData } = await supabase
         .from('profiles')
         .select('id, full_name, email, role, avatar_url')
         .in('id', senderIds)
+
+      const senders = sendersData as Profile[] | null
 
       const enrichedMessages = msgs.map(msg => ({
         ...msg,
@@ -275,8 +289,8 @@ export default function MessagesPage() {
 
     const supabase = createClient()
 
-    await supabase
-      .from('messages')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase.from('messages') as any)
       .update({ is_read: true })
       .eq('conversation_id', conversationId)
       .neq('sender_id', currentUserId)
@@ -298,8 +312,8 @@ export default function MessagesPage() {
     const supabase = createClient()
 
     try {
-      const { data: msg, error } = await supabase
-        .from('messages')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: msg, error } = await (supabase.from('messages') as any)
         .insert({
           conversation_id: selectedConversation.id,
           sender_id: currentUserId,
@@ -311,8 +325,8 @@ export default function MessagesPage() {
       if (error) throw error
 
       // Update conversation's last_message_at
-      await supabase
-        .from('conversations')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from('conversations') as any)
         .update({ last_message_at: new Date().toISOString() })
         .eq('id', selectedConversation.id)
 
@@ -355,11 +369,13 @@ export default function MessagesPage() {
     const supabase = createClient()
 
     // Check if conversation already exists
-    const { data: existing } = await supabase
+    const { data: existingData } = await supabase
       .from('conversations')
       .select('*')
       .or(`and(participant_one.eq.${currentUserId},participant_two.eq.${memberId}),and(participant_one.eq.${memberId},participant_two.eq.${currentUserId})`)
       .single()
+
+    const existing = existingData as Conversation | null
 
     if (existing) {
       // Select existing conversation
@@ -373,8 +389,8 @@ export default function MessagesPage() {
     }
 
     // Create new conversation
-    const { data: newConvo, error } = await supabase
-      .from('conversations')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: newConvoData, error } = await (supabase.from('conversations') as any)
       .insert({
         participant_one: currentUserId,
         participant_two: memberId,
@@ -387,6 +403,8 @@ export default function MessagesPage() {
       toast.error('Failed to start conversation')
       return
     }
+
+    const newConvo = newConvoData as Conversation
 
     const member = schoolMembers.find(m => m.id === memberId)
     setSelectedConversation({

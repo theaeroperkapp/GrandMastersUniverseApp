@@ -31,11 +31,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user's profile to verify school
-    const { data: profile } = await supabase
+    const { data: profileData } = await supabase
       .from('profiles')
       .select('school_id')
       .eq('id', user.id)
       .single()
+
+    const profile = profileData as { school_id: string | null } | null
 
     if (!profile?.school_id) {
       return NextResponse.json({ error: 'No school associated' }, { status: 400 })

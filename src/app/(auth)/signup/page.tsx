@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import toast from 'react-hot-toast'
 
-export default function SignupPage() {
+function SignupForm() {
   const searchParams = useSearchParams()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
@@ -231,5 +231,20 @@ export default function SignupPage() {
         </CardFooter>
       </form>
     </Card>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl">Create Account</CardTitle>
+          <CardDescription>Loading...</CardDescription>
+        </CardHeader>
+      </Card>
+    }>
+      <SignupForm />
+    </Suspense>
   )
 }

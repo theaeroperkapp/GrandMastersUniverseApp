@@ -92,11 +92,13 @@ export default function MyClassesPage() {
     if (!user) return
 
     // Get user's student profile
-    const { data: studentProfile } = await supabase
+    const { data: studentProfileData } = await supabase
       .from('student_profiles')
       .select('id, school_id')
       .eq('profile_id', user.id)
       .single()
+
+    const studentProfile = studentProfileData as { id: string; school_id: string } | null
 
     if (!studentProfile) {
       // User doesn't have a student profile yet
