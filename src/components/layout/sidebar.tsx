@@ -20,6 +20,9 @@ import {
   CreditCard,
   Menu,
   X,
+  BarChart3,
+  Mail,
+  Activity,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/types/database'
@@ -49,6 +52,8 @@ export function Sidebar({ role }: SidebarProps) {
     { href: '/owner/events', label: 'Events', icon: <CalendarDays className="h-5 w-5" /> },
     { href: '/owner/billing', label: 'Billing', icon: <DollarSign className="h-5 w-5" /> },
     { href: '/owner/contracts', label: 'Contracts', icon: <FileText className="h-5 w-5" /> },
+    { href: '/owner/reports', label: 'Reports', icon: <BarChart3 className="h-5 w-5" /> },
+    { href: '/owner/email-templates', label: 'Email Blast', icon: <Mail className="h-5 w-5" /> },
     { href: '/owner/announcements', label: 'Announcements', icon: <Megaphone className="h-5 w-5" /> },
     { href: '/owner/staff', label: 'Staff', icon: <Users className="h-5 w-5" /> },
     { href: '/owner/subscription', label: 'Subscription', icon: <CreditCard className="h-5 w-5" /> },
@@ -66,6 +71,8 @@ export function Sidebar({ role }: SidebarProps) {
     { href: '/admin/visitor-analytics', label: 'Visitors', icon: <Users className="h-5 w-5" /> },
     { href: '/admin/contact-submissions', label: 'Contacts', icon: <FileText className="h-5 w-5" /> },
     { href: '/admin/waitlist', label: 'Waitlist', icon: <ClipboardList className="h-5 w-5" /> },
+    { href: '/admin/email-templates', label: 'Email Blast', icon: <Mail className="h-5 w-5" /> },
+    { href: '/admin/logs', label: 'System Logs', icon: <Activity className="h-5 w-5" /> },
     { href: '/admin/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
   ]
 
