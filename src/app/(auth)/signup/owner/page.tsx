@@ -145,6 +145,7 @@ function OwnerSignupForm() {
           subdomain: subdomain.toLowerCase(),
           email: email,
           userId: authData.user.id,
+          fullName: fullName,
         }),
       })
 

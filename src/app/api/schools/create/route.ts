@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
   try {
     const adminClient = createAdminClient()
 
-    const { name, subdomain, email, userId } = await request.json()
+    const { name, subdomain, email, userId, fullName } = await request.json()
 
     // Validate required fields
     if (!name || !subdomain || !email || !userId) {
@@ -16,6 +16,31 @@ export async function POST(request: NextRequest) {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     if (!uuidRegex.test(userId)) {
       return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 })
+    }
+
+    // Check if profile exists, if not create it (in case trigger didn't fire)
+    const { data: existingProfile } = await adminClient
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .single()
+
+    if (!existingProfile) {
+      // Create the profile since it doesn't exist
+      const { error: createProfileError } = await adminClient
+        .from('profiles')
+        .insert({
+          id: userId,
+          email: email.toLowerCase(),
+          full_name: fullName || name, // Use provided name or school name as fallback
+          role: 'student', // Will be updated to owner after school creation
+          is_approved: false,
+        } as never)
+
+      if (createProfileError) {
+        console.error('Profile creation error:', createProfileError)
+        return NextResponse.json({ error: 'Failed to create user profile' }, { status: 500 })
+      }
     }
 
     // Verify the email is in the approved waitlist
