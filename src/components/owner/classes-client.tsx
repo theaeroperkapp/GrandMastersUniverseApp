@@ -272,7 +272,7 @@ export function ClassesClient({ initialClasses, instructors, schoolId }: Classes
             <Input id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Brief description" />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="day_of_week">Day of Week *</Label>
               <select id="day_of_week" value={formData.day_of_week} onChange={(e) => setFormData({ ...formData, day_of_week: parseInt(e.target.value) })} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" required>
@@ -289,7 +289,7 @@ export function ClassesClient({ initialClasses, instructors, schoolId }: Classes
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="start_time">Start Time *</Label>
               <Input id="start_time" type="time" value={formData.start_time} onChange={(e) => setFormData({ ...formData, start_time: e.target.value })} required />
@@ -300,7 +300,7 @@ export function ClassesClient({ initialClasses, instructors, schoolId }: Classes
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="max_capacity">Max Capacity</Label>
               <Input id="max_capacity" type="number" min="1" value={formData.max_capacity} onChange={(e) => setFormData({ ...formData, max_capacity: e.target.value })} placeholder="e.g., 20" />

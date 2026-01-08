@@ -226,41 +226,41 @@ export default function WaitlistPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Waitlist</h1>
-          <p className="text-gray-500">{entries.length} total entries</p>
+          <h1 className="text-xl md:text-2xl font-bold">Waitlist</h1>
+          <p className="text-gray-500 text-sm">{entries.length} total entries</p>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
         <Card
           className={`cursor-pointer hover:bg-yellow-50 transition-colors ${filter === 'pending' ? 'ring-2 ring-yellow-400' : ''}`}
           onClick={() => setFilter('pending')}
         >
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-yellow-600">{pendingCount}</p>
-            <p className="text-sm text-gray-500">Pending</p>
+          <CardContent className="p-2 sm:p-4 text-center">
+            <p className="text-xl sm:text-2xl font-bold text-yellow-600">{pendingCount}</p>
+            <p className="text-xs sm:text-sm text-gray-500">Pending</p>
           </CardContent>
         </Card>
         <Card
           className={`cursor-pointer hover:bg-green-50 transition-colors ${filter === 'approved' ? 'ring-2 ring-green-400' : ''}`}
           onClick={() => setFilter('approved')}
         >
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-green-600">{approvedCount}</p>
-            <p className="text-sm text-gray-500">Approved</p>
+          <CardContent className="p-2 sm:p-4 text-center">
+            <p className="text-xl sm:text-2xl font-bold text-green-600">{approvedCount}</p>
+            <p className="text-xs sm:text-sm text-gray-500">Approved</p>
           </CardContent>
         </Card>
         <Card
           className={`cursor-pointer hover:bg-red-50 transition-colors ${filter === 'rejected' ? 'ring-2 ring-red-400' : ''}`}
           onClick={() => setFilter('rejected')}
         >
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-red-600">{rejectedCount}</p>
-            <p className="text-sm text-gray-500">Rejected</p>
+          <CardContent className="p-2 sm:p-4 text-center">
+            <p className="text-xl sm:text-2xl font-bold text-red-600">{rejectedCount}</p>
+            <p className="text-xs sm:text-sm text-gray-500">Rejected</p>
           </CardContent>
         </Card>
       </div>
@@ -326,23 +326,23 @@ export default function WaitlistPage() {
         <div className="space-y-4">
           {paginatedEntries.map((entry) => (
             <Card key={entry.id} className={entry.status === 'pending' ? 'border-yellow-200' : ''}>
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1 flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-lg">{entry.name}</h3>
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-semibold text-base sm:text-lg">{entry.name}</h3>
                       {getStatusBadge(entry.status)}
                     </div>
-                    <p className="text-gray-600 font-medium">{entry.school_name}</p>
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                    <p className="text-gray-600 font-medium text-sm sm:text-base truncate">{entry.school_name}</p>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm text-gray-500">
                       <a
                         href={`mailto:${entry.email}`}
-                        className="flex items-center gap-1 hover:text-blue-600"
+                        className="flex items-center gap-1 hover:text-blue-600 truncate"
                       >
-                        <Mail className="h-4 w-4" />
-                        {entry.email}
+                        <Mail className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{entry.email}</span>
                       </a>
-                      {entry.phone && <span>{entry.phone}</span>}
+                      {entry.phone && <span className="text-xs sm:text-sm">{entry.phone}</span>}
                     </div>
                     <p className="text-xs text-gray-400">
                       Applied: {new Date(entry.created_at).toLocaleString()}
@@ -353,25 +353,25 @@ export default function WaitlistPage() {
                       </p>
                     )}
                   </div>
-                  <div className="flex gap-2 ml-4">
+                  <div className="flex gap-2 shrink-0">
                     {entry.status === 'pending' ? (
                       <>
                         <Button
                           size="sm"
-                          className="bg-green-600 hover:bg-green-700"
+                          className="bg-green-600 hover:bg-green-700 flex-1 sm:flex-none"
                           onClick={() => openModal(entry, 'approve')}
                         >
-                          <Check className="h-4 w-4 mr-1" />
-                          Approve
+                          <Check className="h-4 w-4 sm:mr-1" />
+                          <span className="hidden sm:inline">Approve</span>
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-1 sm:flex-none"
                           onClick={() => openModal(entry, 'reject')}
                         >
-                          <X className="h-4 w-4 mr-1" />
-                          Reject
+                          <X className="h-4 w-4 sm:mr-1" />
+                          <span className="hidden sm:inline">Reject</span>
                         </Button>
                       </>
                     ) : (

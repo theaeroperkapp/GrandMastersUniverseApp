@@ -607,7 +607,7 @@ I waive any right to inspect or approve the finished product or the copy that ma
           <div className="space-y-4">
             <div className="p-4 bg-gray-50 rounded-lg">
               <h3 className="font-semibold mb-2">{viewingContract.template?.title}</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-gray-500">Student:</span>
                   <p className="font-medium">{viewingContract.student?.profile?.full_name}</p>

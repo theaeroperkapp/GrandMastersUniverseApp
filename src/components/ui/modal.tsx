@@ -9,7 +9,7 @@ interface ModalProps {
   onClose: () => void
   title?: string
   children: ReactNode
-  size?: 'sm' | 'md' | 'lg' | 'xl'
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
 }
 
 const sizes = {
@@ -17,6 +17,7 @@ const sizes = {
   md: 'max-w-md',
   lg: 'max-w-lg',
   xl: 'max-w-xl',
+  full: 'max-w-4xl',
 }
 
 export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
@@ -39,29 +40,29 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       <div
         className="fixed inset-0 bg-black/50"
         onClick={onClose}
       />
       <div
         className={cn(
-          'relative z-50 w-full mx-4 bg-white rounded-lg shadow-lg animate-in',
+          'relative z-50 w-full bg-white rounded-lg shadow-lg animate-in max-h-[90vh] flex flex-col',
           sizes[size]
         )}
       >
         {title && (
-          <div className="flex items-center justify-between p-4 border-b">
-            <h2 className="text-lg font-semibold">{title}</h2>
+          <div className="flex items-center justify-between p-3 sm:p-4 border-b shrink-0">
+            <h2 className="text-base sm:text-lg font-semibold pr-8">{title}</h2>
             <button
               onClick={onClose}
-              className="p-1 rounded-md hover:bg-gray-100 transition-colors"
+              className="absolute right-3 top-3 p-1 rounded-md hover:bg-gray-100 transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
         )}
-        <div className="p-4">{children}</div>
+        <div className="p-3 sm:p-4 overflow-y-auto">{children}</div>
       </div>
     </div>
   )
