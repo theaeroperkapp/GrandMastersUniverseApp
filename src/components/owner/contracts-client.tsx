@@ -44,7 +44,6 @@ interface SignedContract {
   signed_by: string
   signed_at: string
   signature_data: string
-  ip_address?: string
   contract: {
     name: string
     title: string | null
@@ -350,12 +349,7 @@ I waive any right to inspect or approve the finished product or the copy that ma
     doc.text(`Email: ${signedContract.signer?.email || 'N/A'}`, margin, yPos)
     yPos += 6
     doc.text(`Date: ${formatDate(signedContract.signed_at)}`, margin, yPos)
-    yPos += 6
-    if (signedContract.ip_address) {
-      doc.text(`IP Address: ${signedContract.ip_address}`, margin, yPos)
-      yPos += 6
-    }
-    yPos += 10
+    yPos += 16
 
     // Signature image
     if (signedContract.signature_data) {
