@@ -114,19 +114,6 @@ function OwnerSignupForm() {
         return
       }
 
-      // Check if subdomain is available
-      const { data: existingSchool } = await supabase
-        .from('schools')
-        .select('id')
-        .eq('subdomain', subdomain.toLowerCase())
-        .single()
-
-      if (existingSchool) {
-        toast.error('This subdomain is already taken. Please choose another.')
-        setIsLoading(false)
-        return
-      }
-
       // Create the user account
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
@@ -149,44 +136,26 @@ function OwnerSignupForm() {
         return
       }
 
-      // Create the school
-      const { data: school, error: schoolError } = await supabase
-        .from('schools')
-        .insert({
+      // Create the school using the API (bypasses RLS)
+      const schoolResponse = await fetch('/api/schools/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: schoolName,
           subdomain: subdomain.toLowerCase(),
-          owner_id: authData.user.id,
-          subscription_status: 'trial',
-          trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-          monthly_post_limit: 100,
-          announcement_limit: 50,
-        } as never)
-        .select()
-        .single()
+          email: email,
+        }),
+      })
 
-      if (schoolError) {
-        console.error('School creation error:', schoolError)
-        toast.error('Failed to create school: ' + schoolError.message)
+      const schoolResult = await schoolResponse.json()
+
+      if (!schoolResponse.ok) {
+        console.error('School creation error:', schoolResult.error)
+        toast.error(schoolResult.error || 'Failed to create school')
         return
       }
 
-      // Update the user's profile with school_id, role as owner, and set as approved
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          school_id: (school as { id: string }).id,
-          role: 'owner',
-          is_approved: true,
-        } as never)
-        .eq('id', authData.user.id)
-
-      if (profileError) {
-        console.error('Profile update error:', profileError)
-        // Show error but still redirect - account was created
-        toast.error('Account created but profile setup incomplete. Please contact support if you have issues.')
-      } else {
-        toast.success('Account and school created! Please check your email to confirm your account.')
-      }
+      toast.success('Account and school created! Please check your email to confirm your account.')
 
       router.push('/login')
     } catch (err) {
