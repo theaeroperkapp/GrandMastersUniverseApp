@@ -19,6 +19,8 @@ import {
   BookOpen,
   Users,
   TrendingUp,
+  CreditCard,
+  HelpCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/types/database'
@@ -291,6 +293,22 @@ export function Navbar({ user, unreadNotifications: initialUnreadNotifications, 
                     >
                       <Users className="h-4 w-4" />
                       My Family
+                    </Link>
+                    <Link
+                      href="/payments"
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setIsProfileOpen(false)}
+                    >
+                      <CreditCard className="h-4 w-4" />
+                      Payments
+                    </Link>
+                    <Link
+                      href="/help"
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setIsProfileOpen(false)}
+                    >
+                      <HelpCircle className="h-4 w-4" />
+                      Help
                     </Link>
                     <Link
                       href="/settings"
