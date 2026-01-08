@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -17,6 +18,8 @@ import {
   Award,
   Settings,
   CreditCard,
+  Menu,
+  X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/types/database'
@@ -33,6 +36,7 @@ interface NavItem {
 
 export function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const ownerLinks: NavItem[] = [
     { href: '/owner', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" /> },
@@ -71,25 +75,83 @@ export function Sidebar({ role }: SidebarProps) {
     return null
   }
 
+  // Only show sidebar on owner/admin pages
+  const showSidebar = pathname.startsWith('/owner') || pathname.startsWith('/admin')
+  if (!showSidebar) {
+    return null
+  }
+
   return (
-    <aside className="hidden lg:block w-64 border-r bg-gray-50 min-h-[calc(100vh-4rem)]">
-      <nav className="p-4 space-y-1">
-        {links.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={cn(
-              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-              pathname === link.href
-                ? 'bg-red-50 text-red-600'
-                : 'text-gray-600 hover:bg-gray-100'
-            )}
-          >
-            {link.icon}
-            {link.label}
-          </Link>
-        ))}
-      </nav>
-    </aside>
+    <>
+      {/* Mobile Menu Button - Fixed at bottom */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="lg:hidden fixed bottom-4 right-4 z-50 bg-red-600 text-white p-3 rounded-full shadow-lg hover:bg-red-700 transition-colors"
+        aria-label="Toggle navigation menu"
+      >
+        {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+      </button>
+
+      {/* Mobile Sidebar Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Mobile Sidebar */}
+      <aside
+        className={cn(
+          'lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white border-r transform transition-transform duration-200 ease-in-out',
+          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        )}
+      >
+        <div className="p-4 border-b">
+          <h2 className="font-semibold text-lg">
+            {pathname.startsWith('/admin') ? 'Admin Menu' : 'Owner Menu'}
+          </h2>
+        </div>
+        <nav className="p-4 space-y-1 overflow-y-auto max-h-[calc(100vh-5rem)]">
+          {links.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                pathname === link.href
+                  ? 'bg-red-50 text-red-600'
+                  : 'text-gray-600 hover:bg-gray-100'
+              )}
+            >
+              {link.icon}
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+      </aside>
+
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:block w-64 border-r bg-gray-50 min-h-[calc(100vh-4rem)]">
+        <nav className="p-4 space-y-1">
+          {links.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                pathname === link.href
+                  ? 'bg-red-50 text-red-600'
+                  : 'text-gray-600 hover:bg-gray-100'
+              )}
+            >
+              {link.icon}
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+      </aside>
+    </>
   )
 }
