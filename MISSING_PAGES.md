@@ -9,7 +9,7 @@ This document tracks pages and features that should exist but are not yet implem
 | ~~Schedule~~ | ~~`/schedule`~~ | ~~HIGH~~ | ~~View weekly class schedule for the school~~ DONE |
 | ~~My Classes~~ | ~~`/my-classes`~~ | ~~HIGH~~ | ~~View enrolled classes and upcoming sessions~~ DONE |
 | My Progress | `/my-progress` | MEDIUM | Belt progression history, attendance record |
-| My Family | `/my-family` | MEDIUM | Manage family members (for parents) |
+| ~~My Family~~ | ~~`/my-family`~~ | ~~MEDIUM~~ | ~~Manage family members (for parents)~~ DONE |
 | Payments | `/payments` | LOW | View payment history and invoices |
 | ~~Messages~~ | ~~`/messages`~~ | ~~LOW~~ | ~~Direct messaging with instructors~~ DONE |
 
@@ -40,7 +40,7 @@ This document tracks pages and features that should exist but are not yet implem
 
 | Page | Route | Priority | Description |
 |------|-------|----------|-------------|
-| User Settings | `/settings` | MEDIUM | User preferences, notification settings |
+| ~~User Settings~~ | ~~`/settings`~~ | ~~MEDIUM~~ | ~~User preferences, notification settings~~ DONE |
 | Help/FAQ | `/help` | LOW | Help documentation and FAQ |
 
 ## API Routes Needed
@@ -75,6 +75,8 @@ This document tracks pages and features that should exist but are not yet implem
 - [x] **Events Calendar** (`/events`) - Student view of school events
 - [x] **Staff Invite API** (`/api/staff/invite`) - Send staff invitation emails
 - [x] **Messaging RLS Policies** - Row-level security for conversations and messages
+- [x] **My Family Page** (`/my-family`) - View family members, parents, and students with belt info
+- [x] **User Settings Page** (`/settings`) - Profile editing, notification preferences, password change
 
 ---
 
