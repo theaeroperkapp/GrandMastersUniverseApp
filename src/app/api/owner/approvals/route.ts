@@ -4,9 +4,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail, getApprovalEmail, getDenialEmail } from '@/lib/email'
 
 export async function POST(request: NextRequest) {
+  console.log('=== Approvals API called ===')
   try {
     const supabase = await createClient()
     const adminClient = createAdminClient()
+    console.log('Clients created')
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -25,37 +27,61 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    const { user_id, action, school_id } = await request.json()
+    const body = await request.json()
+    const { user_id, action, school_id } = body
+    console.log('Request body:', { user_id, action, school_id })
 
     if (!user_id || !action) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     // Get the pending user
-    const { data: pendingUser } = await (adminClient as any)
+    console.log('Fetching pending user...')
+    const { data: pendingUser, error: fetchError } = await adminClient
       .from('profiles')
-      .select('*, schools(name)')
+      .select('*')
       .eq('id', user_id)
-      .eq('school_id', school_id)
       .single()
 
-    const pendingUserData = pendingUser as { full_name: string; email: string; schools: { name: string } | null } | null
-    if (!pendingUserData) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    console.log('Fetch result:', { pendingUser, fetchError })
+    if (fetchError) {
+      console.error('Fetch pending user error:', fetchError)
+      return NextResponse.json({ error: 'Failed to fetch user' }, { status: 500 })
     }
 
-    const schoolName = pendingUserData.schools?.name || 'your school'
+    const pendingUserData = pendingUser as { full_name: string; email: string; school_id: string | null } | null
+    if (!pendingUserData) {
+      console.log('User not found in database')
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+    console.log('Found user:', pendingUserData.full_name, pendingUserData.email)
+
+    // Get school name separately
+    let schoolName = 'your school'
+    if (school_id) {
+      const { data: school } = await adminClient
+        .from('schools')
+        .select('name')
+        .eq('id', school_id)
+        .single()
+      if (school) {
+        schoolName = (school as { name: string }).name
+      }
+    }
 
     if (action === 'approve') {
-      // Update user to approved
-      const { error: updateError } = await (adminClient as any)
+      // Update user to approved and ensure school_id is set
+      const { error: updateError } = await adminClient
         .from('profiles')
-        .update({ is_approved: true })
+        .update({
+          is_approved: true,
+          school_id: school_id || pendingUserData.school_id
+        })
         .eq('id', user_id)
 
       if (updateError) {
         console.error('Approval error:', updateError)
-        return NextResponse.json({ error: 'Failed to approve user' }, { status: 500 })
+        return NextResponse.json({ error: `Failed to approve user: ${updateError.message}` }, { status: 500 })
       }
 
       // Send approval email
@@ -72,7 +98,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Create notification
-      await (adminClient as any).from('notifications').insert({
+      await adminClient.from('notifications').insert({
         profile_id: user_id,
         type: 'approval',
         title: 'Account Approved',
@@ -94,18 +120,18 @@ export async function POST(request: NextRequest) {
       }
 
       // Delete the profile
-      const { error: deleteError } = await (adminClient as any)
+      const { error: deleteError } = await adminClient
         .from('profiles')
         .delete()
         .eq('id', user_id)
 
       if (deleteError) {
         console.error('Delete error:', deleteError)
-        return NextResponse.json({ error: 'Failed to deny user' }, { status: 500 })
+        return NextResponse.json({ error: `Failed to deny user: ${deleteError.message}` }, { status: 500 })
       }
 
       // Delete the auth user
-      await (adminClient as any).auth.admin.deleteUser(user_id)
+      await adminClient.auth.admin.deleteUser(user_id)
 
       return NextResponse.json({ success: true })
     }

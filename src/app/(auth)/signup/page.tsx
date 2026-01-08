@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,14 +11,39 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import toast from 'react-hot-toast'
 
 export default function SignupPage() {
+  const searchParams = useSearchParams()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [schoolCode, setSchoolCode] = useState('')
+  const [schoolName, setSchoolName] = useState<string | null>(null)
   const [accountType, setAccountType] = useState<'parent' | 'student'>('parent')
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+
+  // Check for school code in URL parameters
+  useEffect(() => {
+    const codeFromUrl = searchParams.get('code')
+    if (codeFromUrl) {
+      setSchoolCode(codeFromUrl)
+      // Verify and show school name
+      verifySchoolCode(codeFromUrl)
+    }
+  }, [searchParams])
+
+  const verifySchoolCode = async (code: string) => {
+    const supabase = createClient()
+    const { data: school } = await supabase
+      .from('schools')
+      .select('name')
+      .eq('subdomain', code.toLowerCase())
+      .single()
+
+    if (school) {
+      setSchoolName((school as { name: string }).name)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -97,12 +122,24 @@ export default function SignupPage() {
               type="text"
               placeholder="Enter your school's code"
               value={schoolCode}
-              onChange={(e) => setSchoolCode(e.target.value)}
+              onChange={(e) => {
+                setSchoolCode(e.target.value)
+                setSchoolName(null)
+                if (e.target.value.length >= 3) {
+                  verifySchoolCode(e.target.value)
+                }
+              }}
               required
             />
-            <p className="text-xs text-gray-500">
-              Ask your school for their unique code
-            </p>
+            {schoolName ? (
+              <p className="text-xs text-green-600 font-medium">
+                ✓ Joining: {schoolName}
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500">
+                Ask your school for their unique code
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

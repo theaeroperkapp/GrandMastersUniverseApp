@@ -10,7 +10,9 @@ import {
   DollarSign,
   CalendarDays,
   TrendingUp,
+  Share2,
 } from 'lucide-react'
+import InviteMembersCard from '@/components/owner/invite-members-card'
 
 interface ProfileWithSchool {
   id: string
@@ -18,6 +20,7 @@ interface ProfileWithSchool {
   school_id: string | null
   schools: {
     name: string
+    subdomain: string
     subscription_status: string
     trial_ends_at: string | null
   } | null
@@ -164,6 +167,14 @@ export default async function OwnerDashboardPage() {
           </Link>
         ))}
       </div>
+
+      {/* Invite Members Card */}
+      {profileData.schools?.subdomain && (
+        <InviteMembersCard
+          schoolCode={profileData.schools.subdomain}
+          schoolName={profileData.schools.name}
+        />
+      )}
 
       {/* Quick Actions */}
       <Card>
