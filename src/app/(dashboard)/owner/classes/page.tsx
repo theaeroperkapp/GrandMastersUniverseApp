@@ -1,6 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { ClassesClient } from '@/components/owner/classes-client'
+
+// Disable caching to always fetch fresh data
+export const dynamic = 'force-dynamic'
 
 interface ProfileData {
   role: string
@@ -9,6 +13,7 @@ interface ProfileData {
 
 export default async function ClassesPage() {
   const supabase = await createClient()
+  const adminClient = createAdminClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -29,16 +34,20 @@ export default async function ClassesPage() {
     redirect('/feed')
   }
 
-  // Get class schedules for this school
-  const { data: classes } = await supabase
+  // Get class schedules for this school (use admin client to bypass RLS)
+  const { data: classes, error: classesError } = await adminClient
     .from('class_schedules')
     .select('*')
     .eq('school_id', profileData.school_id)
     .order('day_of_week')
     .order('start_time')
 
+  if (classesError) {
+    console.error('Error fetching classes:', classesError)
+  }
+
   // Get instructors (owners and staff with instructor role)
-  const { data: instructors } = await supabase
+  const { data: instructors } = await adminClient
     .from('profiles')
     .select('id, full_name, avatar_url')
     .eq('school_id', profileData.school_id)

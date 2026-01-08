@@ -8,6 +8,8 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
     const adminClient = createAdminClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const anyAdminClient = adminClient as any
     console.log('Clients created')
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -37,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     // Get the pending user
     console.log('Fetching pending user...')
-    const { data: pendingUser, error: fetchError } = await adminClient
+    const { data: pendingUser, error: fetchError } = await anyAdminClient
       .from('profiles')
       .select('*')
       .eq('id', user_id)
@@ -59,7 +61,7 @@ export async function POST(request: NextRequest) {
     // Get school name separately
     let schoolName = 'your school'
     if (school_id) {
-      const { data: school } = await adminClient
+      const { data: school } = await anyAdminClient
         .from('schools')
         .select('name')
         .eq('id', school_id)
@@ -70,13 +72,57 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'approve') {
-      // Update user to approved and ensure school_id is set
-      const { error: updateError } = await adminClient
+      // Get the full user profile to check role
+      const { data: fullProfile } = await anyAdminClient
         .from('profiles')
-        .update({
-          is_approved: true,
-          school_id: school_id || pendingUserData.school_id
-        })
+        .select('role')
+        .eq('id', user_id)
+        .single()
+
+      const userRole = (fullProfile as { role: string } | null)?.role
+
+      // If user is a parent, create a family for them
+      let familyId: string | null = null
+      if (userRole === 'parent') {
+        // Create family name from user's last name or full name
+        const nameParts = pendingUserData.full_name.split(' ')
+        const familyName = nameParts.length > 1
+          ? `${nameParts[nameParts.length - 1]} Family`
+          : `${pendingUserData.full_name}'s Family`
+
+        const { data: newFamily, error: familyError } = await anyAdminClient
+          .from('families')
+          .insert({
+            school_id: school_id || pendingUserData.school_id,
+            primary_holder_id: user_id,
+            name: familyName,
+            billing_email: pendingUserData.email,
+          })
+          .select('id')
+          .single()
+
+        if (familyError) {
+          console.error('Family creation error:', familyError)
+          // Don't fail the approval if family creation fails
+        } else if (newFamily) {
+          familyId = newFamily.id
+        }
+      }
+
+      // Update user to approved and ensure school_id is set
+      const updateData: Record<string, unknown> = {
+        is_approved: true,
+        school_id: school_id || pendingUserData.school_id
+      }
+
+      // Link parent to their new family
+      if (familyId) {
+        updateData.family_id = familyId
+      }
+
+      const { error: updateError } = await anyAdminClient
+        .from('profiles')
+        .update(updateData)
         .eq('id', user_id)
 
       if (updateError) {
@@ -98,7 +144,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Create notification
-      await adminClient.from('notifications').insert({
+      await anyAdminClient.from('notifications').insert({
         profile_id: user_id,
         type: 'approval',
         title: 'Account Approved',
@@ -120,7 +166,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Delete the profile
-      const { error: deleteError } = await adminClient
+      const { error: deleteError } = await anyAdminClient
         .from('profiles')
         .delete()
         .eq('id', user_id)
@@ -131,7 +177,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Delete the auth user
-      await adminClient.auth.admin.deleteUser(user_id)
+      await anyAdminClient.auth.admin.deleteUser(user_id)
 
       return NextResponse.json({ success: true })
     }

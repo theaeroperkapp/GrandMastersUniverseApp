@@ -1,9 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { BeltsClient } from '@/components/owner/belts-client'
 
+// Disable caching to always fetch fresh data
+export const dynamic = 'force-dynamic'
+
 export default async function BeltsPage() {
   const supabase = await createClient()
+  const adminClient = createAdminClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -24,15 +29,15 @@ export default async function BeltsPage() {
     redirect('/feed')
   }
 
-  // Get default belts
-  const { data: defaultBelts } = await supabase
+  // Get default belts (use admin client to bypass RLS)
+  const { data: defaultBelts } = await adminClient
     .from('belt_ranks')
     .select('*')
     .eq('is_default', true)
     .order('display_order')
 
   // Get custom belts for this school
-  const { data: customBelts } = await supabase
+  const { data: customBelts } = await adminClient
     .from('belt_ranks')
     .select('*')
     .eq('school_id', profileData.school_id)

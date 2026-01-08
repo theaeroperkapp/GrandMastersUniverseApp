@@ -21,7 +21,7 @@ interface ClassSchedule {
   end_time: string
   instructor_id: string | null
   max_capacity: number | null
-  location: string | null
+  belt_requirement_id: string | null
   is_active: boolean
   created_at: string
 }
@@ -57,14 +57,13 @@ export function ClassesClient({ initialClasses, instructors, schoolId }: Classes
     end_time: '10:00',
     instructor_id: '',
     max_capacity: '',
-    location: '',
   })
 
   const openCreateModal = () => {
     setEditingClass(null)
     setFormData({
       name: '', description: '', day_of_week: 1, start_time: '09:00',
-      end_time: '10:00', instructor_id: '', max_capacity: '', location: '',
+      end_time: '10:00', instructor_id: '', max_capacity: '',
     })
     setIsModalOpen(true)
   }
@@ -79,7 +78,6 @@ export function ClassesClient({ initialClasses, instructors, schoolId }: Classes
       end_time: cls.end_time.slice(0, 5),
       instructor_id: cls.instructor_id || '',
       max_capacity: cls.max_capacity?.toString() || '',
-      location: cls.location || '',
     })
     setIsModalOpen(true)
   }
@@ -98,7 +96,6 @@ export function ClassesClient({ initialClasses, instructors, schoolId }: Classes
         end_time: formData.end_time,
         instructor_id: formData.instructor_id || null,
         max_capacity: formData.max_capacity ? parseInt(formData.max_capacity) : null,
-        location: formData.location || null,
       }
 
       const url = editingClass ? `/api/classes/${editingClass.id}` : '/api/classes'
@@ -222,7 +219,6 @@ export function ClassesClient({ initialClasses, instructors, schoolId }: Classes
                                 </span>
                               )}
                               {instructor && <span>Instructor: {instructor.full_name}</span>}
-                              {cls.location && <span>Location: {cls.location}</span>}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -300,15 +296,9 @@ export function ClassesClient({ initialClasses, instructors, schoolId }: Classes
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="max_capacity">Max Capacity</Label>
-              <Input id="max_capacity" type="number" min="1" value={formData.max_capacity} onChange={(e) => setFormData({ ...formData, max_capacity: e.target.value })} placeholder="e.g., 20" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <Input id="location" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} placeholder="e.g., Main Dojo" />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="max_capacity">Max Capacity</Label>
+            <Input id="max_capacity" type="number" min="1" value={formData.max_capacity} onChange={(e) => setFormData({ ...formData, max_capacity: e.target.value })} placeholder="e.g., 20" />
           </div>
 
           <div className="flex justify-end gap-3 pt-4">

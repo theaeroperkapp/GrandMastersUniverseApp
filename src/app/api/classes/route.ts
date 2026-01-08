@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { school_id, name, description, day_of_week, start_time, end_time, instructor_id, max_capacity, location } = body
+    const { school_id, name, description, day_of_week, start_time, end_time, instructor_id, max_capacity, belt_requirement_id } = body
 
     // Sanitize inputs
     const sanitizedInput = {
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       end_time: sanitizeString(end_time),
       instructor_id: instructor_id ? sanitizeString(instructor_id) : null,
       max_capacity: max_capacity ? parseInt(max_capacity) : null,
-      location: location ? sanitizeString(location) : null,
+      belt_requirement_id: belt_requirement_id ? sanitizeString(belt_requirement_id) : null,
     }
 
     // Validate inputs
@@ -81,7 +81,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: formatValidationErrors(validation.errors) }, { status: 400 })
     }
 
-    const { data: newClass, error } = await (adminClient as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const anyAdminClient = adminClient as any
+
+    const { data: newClass, error } = await anyAdminClient
       .from('class_schedules')
       .insert({
         school_id: sanitizedInput.school_id,
@@ -92,7 +95,7 @@ export async function POST(request: NextRequest) {
         end_time: sanitizedInput.end_time,
         instructor_id: sanitizedInput.instructor_id,
         max_capacity: sanitizedInput.max_capacity,
-        location: sanitizedInput.location,
+        belt_requirement_id: sanitizedInput.belt_requirement_id,
         is_active: true,
       })
       .select()

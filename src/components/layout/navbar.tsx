@@ -16,6 +16,7 @@ import {
   Settings,
   ChevronDown,
   Loader2,
+  BookOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/types/database'
@@ -264,6 +265,14 @@ export function Navbar({ user, unreadNotifications: initialUnreadNotifications, 
                     >
                       <User className="h-4 w-4" />
                       Profile
+                    </Link>
+                    <Link
+                      href="/my-classes"
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setIsProfileOpen(false)}
+                    >
+                      <BookOpen className="h-4 w-4" />
+                      My Classes
                     </Link>
                     <Link
                       href="/settings"

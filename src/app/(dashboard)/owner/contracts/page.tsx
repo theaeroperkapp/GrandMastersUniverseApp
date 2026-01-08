@@ -29,9 +29,9 @@ export default async function ContractsPage() {
     redirect('/feed')
   }
 
-  // Get contract templates for this school
-  const { data: templates } = await supabase
-    .from('contract_templates')
+  // Get contracts for this school
+  const { data: contracts } = await supabase
+    .from('contracts')
     .select('*')
     .eq('school_id', profileData.school_id)
     .order('created_at', { ascending: false })
@@ -39,8 +39,7 @@ export default async function ContractsPage() {
   // Get signed contracts
   const { data: signedContracts } = await supabase
     .from('signed_contracts')
-    .select('*, template:contract_templates(title, contract_type), signer:profiles(full_name), student:student_profiles(*, profile:profiles(full_name))')
-    .eq('school_id', profileData.school_id)
+    .select('*, contract:contracts(name, title, contract_type), signer:profiles(full_name)')
     .order('signed_at', { ascending: false })
     .limit(50)
 
@@ -59,7 +58,7 @@ export default async function ContractsPage() {
       </div>
 
       <ContractsClient
-        templates={templates || []}
+        contracts={contracts || []}
         signedContracts={signedContracts || []}
         students={students || []}
         schoolId={profileData.school_id}

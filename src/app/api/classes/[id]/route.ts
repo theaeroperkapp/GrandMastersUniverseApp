@@ -30,9 +30,21 @@ export async function PATCH(
 
     const body = await request.json()
 
-    const { data: updatedClass, error } = await (adminClient as any)
+    // Only allow updating specific fields
+    const allowedFields = ['name', 'description', 'day_of_week', 'start_time', 'end_time', 'instructor_id', 'max_capacity', 'belt_requirement_id', 'is_active']
+    const updateData: Record<string, unknown> = {}
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        updateData[field] = body[field]
+      }
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const anyAdminClient = adminClient as any
+
+    const { data: updatedClass, error } = await anyAdminClient
       .from('class_schedules')
-      .update(body)
+      .update(updateData)
       .eq('id', id)
       .select()
       .single()
@@ -75,7 +87,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    const { error } = await (adminClient as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const anyAdminClient = adminClient as any
+
+    const { error } = await anyAdminClient
       .from('class_schedules')
       .delete()
       .eq('id', id)

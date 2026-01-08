@@ -11,11 +11,10 @@ interface SchoolData {
   id: string
   name: string
   stripe_customer_id: string | null
-  stripe_subscription_id: string | null
+  stripe_account_id: string | null
   subscription_status: string
-  subscription_plan: string | null
   trial_ends_at: string | null
-  current_period_end: string | null
+  subscription_ends_at: string | null
 }
 
 export default async function SubscriptionPage() {
@@ -43,7 +42,7 @@ export default async function SubscriptionPage() {
   // Get school subscription info
   const { data: school } = await supabase
     .from('schools')
-    .select('id, name, stripe_customer_id, stripe_subscription_id, subscription_status, subscription_plan, trial_ends_at, current_period_end')
+    .select('id, name, stripe_customer_id, stripe_account_id, subscription_status, trial_ends_at, subscription_ends_at')
     .eq('id', profileData.school_id)
     .single()
 

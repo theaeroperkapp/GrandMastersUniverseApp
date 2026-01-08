@@ -749,6 +749,115 @@ CREATE POLICY "Admin can view all student_profiles" ON student_profiles FOR SELE
 CREATE POLICY "Admin can view all families" ON families FOR SELECT USING (is_user_admin());
 CREATE POLICY "Admin can view all schools" ON schools FOR SELECT USING (is_user_admin());
 
+-- Owner policies for families (owners need to manage families in their school)
+CREATE POLICY "Owners can view school families" ON families FOR SELECT USING (
+  school_id = get_user_school_id() AND
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'owner')
+);
+CREATE POLICY "Owners can insert families" ON families FOR INSERT WITH CHECK (
+  school_id = get_user_school_id() AND
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'owner')
+);
+CREATE POLICY "Owners can update families" ON families FOR UPDATE USING (
+  school_id = get_user_school_id() AND
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'owner')
+);
+CREATE POLICY "Owners can delete families" ON families FOR DELETE USING (
+  school_id = get_user_school_id() AND
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'owner')
+);
+
+-- Owner policies for student_profiles (owners need to manage student profiles for belt assignments, PINs, etc.)
+CREATE POLICY "Owners can view school student_profiles" ON student_profiles FOR SELECT USING (
+  school_id = get_user_school_id() AND
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'owner')
+);
+CREATE POLICY "Owners can insert student_profiles" ON student_profiles FOR INSERT WITH CHECK (
+  school_id = get_user_school_id() AND
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'owner')
+);
+CREATE POLICY "Owners can update student_profiles" ON student_profiles FOR UPDATE USING (
+  school_id = get_user_school_id() AND
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'owner')
+);
+CREATE POLICY "Owners can delete student_profiles" ON student_profiles FOR DELETE USING (
+  school_id = get_user_school_id() AND
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'owner')
+);
+
+-- Owner policies for events (owners need to manage all events including unpublished)
+CREATE POLICY "Owners can view school events" ON events FOR SELECT USING (
+  school_id = get_user_school_id() AND
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'owner')
+);
+CREATE POLICY "Owners can insert events" ON events FOR INSERT WITH CHECK (
+  school_id = get_user_school_id() AND
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'owner')
+);
+CREATE POLICY "Owners can update events" ON events FOR UPDATE USING (
+  school_id = get_user_school_id() AND
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'owner')
+);
+CREATE POLICY "Owners can delete events" ON events FOR DELETE USING (
+  school_id = get_user_school_id() AND
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'owner')
+);
+
+-- Owner policies for event_registrations (join through events to check school_id)
+CREATE POLICY "Owners can view school event_registrations" ON event_registrations FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM events e
+    WHERE e.id = event_registrations.event_id
+    AND e.school_id = get_user_school_id()
+    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'owner')
+  )
+);
+CREATE POLICY "Owners can insert event_registrations" ON event_registrations FOR INSERT WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM events e
+    WHERE e.id = event_registrations.event_id
+    AND e.school_id = get_user_school_id()
+    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'owner')
+  )
+);
+CREATE POLICY "Owners can update event_registrations" ON event_registrations FOR UPDATE USING (
+  EXISTS (
+    SELECT 1 FROM events e
+    WHERE e.id = event_registrations.event_id
+    AND e.school_id = get_user_school_id()
+    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'owner')
+  )
+);
+CREATE POLICY "Owners can delete event_registrations" ON event_registrations FOR DELETE USING (
+  EXISTS (
+    SELECT 1 FROM events e
+    WHERE e.id = event_registrations.event_id
+    AND e.school_id = get_user_school_id()
+    AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'owner')
+  )
+);
+
+-- User policies for event registrations (students/parents can manage their own)
+CREATE POLICY "Users can view own event_registrations" ON event_registrations FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM student_profiles sp
+    WHERE sp.id = event_registrations.student_profile_id
+    AND sp.profile_id = auth.uid()
+  )
+);
+CREATE POLICY "Users can insert own event_registrations" ON event_registrations FOR INSERT WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM student_profiles sp
+    WHERE sp.id = event_registrations.student_profile_id
+    AND sp.profile_id = auth.uid()
+  )
+);
+
+-- User policies for student_profiles (users can view their own)
+CREATE POLICY "Users can view own student_profiles" ON student_profiles FOR SELECT USING (
+  profile_id = auth.uid()
+);
+
 CREATE POLICY "Admin can view platform_payments" ON platform_payments FOR SELECT USING (is_user_admin());
 CREATE POLICY "Admin can view user_sessions" ON user_sessions FOR SELECT USING (is_user_admin());
 CREATE POLICY "Admin can view visitor_sessions" ON visitor_sessions FOR SELECT USING (is_user_admin());

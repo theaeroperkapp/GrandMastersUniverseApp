@@ -475,6 +475,116 @@ export function getWelcomeEmail(ownerName: string, schoolName: string) {
   }
 }
 
+// Staff Invitation Email
+export function getStaffInvitationEmail(
+  staffName: string,
+  schoolName: string,
+  role: string,
+  inviteLink: string
+) {
+  const content = `
+    <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 8px; padding: 40px; margin-bottom: 20px; text-align: center; color: white;">
+      <h1 style="margin: 0; font-size: 28px;">You've Been Invited! 🎉</h1>
+      <p style="margin: 15px 0 0 0; font-size: 16px; opacity: 0.9;">Join ${schoolName} as ${role}</p>
+    </div>
+
+    <div style="background: #f9fafb; border-radius: 8px; padding: 25px; margin-bottom: 20px;">
+      <p style="color: #374151; line-height: 1.6;">
+        Hi ${staffName},
+      </p>
+      <p style="color: #374151; line-height: 1.6;">
+        You've been invited to join <strong>${schoolName}</strong> as a <strong style="color: #3b82f6;">${role}</strong> on ${APP_NAME}.
+      </p>
+      <p style="color: #374151; line-height: 1.6;">
+        As a ${role}, you'll have access to manage students, classes, and help run the school.
+      </p>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${inviteLink}"
+         style="background: #dc2626; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px;">
+        Accept Invitation
+      </a>
+    </div>
+
+    <p style="color: #6b7280; font-size: 13px; text-align: center;">
+      If the button doesn't work, copy and paste this link:<br>
+      <a href="${inviteLink}" style="color: #dc2626; word-break: break-all;">${inviteLink}</a>
+    </p>
+
+    <div style="background: #fef3c7; border-radius: 8px; padding: 15px; margin-top: 20px;">
+      <p style="color: #92400e; margin: 0; font-size: 13px;">
+        <strong>⚠️ Note:</strong> This invitation link expires in 7 days. If you didn't expect this invitation, you can safely ignore this email.
+      </p>
+    </div>
+  `
+
+  return {
+    subject: `🎉 You're Invited to Join ${schoolName} - ${APP_NAME}`,
+    html: emailWrapper(content),
+  }
+}
+
+// Staff Promotion Email - when a student/parent is promoted to staff
+export function getStaffPromotionEmail(
+  memberName: string,
+  schoolName: string,
+  newRole: string
+) {
+  const content = `
+    <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 8px; padding: 40px; margin-bottom: 20px; text-align: center; color: white;">
+      <h1 style="margin: 0; font-size: 28px;">Congratulations! 🎉</h1>
+      <p style="margin: 15px 0 0 0; font-size: 18px; opacity: 0.9;">You've been promoted!</p>
+    </div>
+
+    <div style="background: #f0fdf4; border-radius: 8px; padding: 30px; margin-bottom: 20px; border-left: 4px solid #22c55e;">
+      <p style="color: #374151; line-height: 1.6;">
+        Hi ${memberName},
+      </p>
+      <p style="color: #374151; line-height: 1.6;">
+        Great news! You have been promoted to <strong style="color: #22c55e; font-size: 18px;">${newRole}</strong> at <strong>${schoolName}</strong>.
+      </p>
+      <p style="color: #374151; line-height: 1.6;">
+        You now have additional responsibilities and access to help manage the school.
+      </p>
+    </div>
+
+    <div style="background: #f9fafb; border-radius: 8px; padding: 25px; margin-bottom: 20px;">
+      <h3 style="color: #111; margin-top: 0; font-size: 16px;">What You Can Do Now:</h3>
+      <ul style="color: #374151; line-height: 1.8; margin: 0; padding-left: 20px;">
+        ${newRole === 'Admin' ? `
+        <li>Access the school dashboard</li>
+        <li>Manage students and members</li>
+        <li>Create and manage classes</li>
+        <li>Handle billing and payments</li>
+        <li>Create announcements and events</li>
+        ` : `
+        <li>Access instructor features</li>
+        <li>Manage class attendance</li>
+        <li>Track student progress</li>
+        <li>Assign belt promotions</li>
+        `}
+      </ul>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${APP_URL}/owner"
+         style="background: #dc2626; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px;">
+        Go to Dashboard
+      </a>
+    </div>
+
+    <p style="color: #6b7280; margin-top: 20px; font-size: 14px; text-align: center;">
+      Thank you for being part of the ${schoolName} team! 🥋
+    </p>
+  `
+
+  return {
+    subject: `🎉 You've Been Promoted to ${newRole} at ${schoolName}!`,
+    html: emailWrapper(content),
+  }
+}
+
 // New: Student/Parent signup notification to school owner
 export function getNewMemberNotificationEmail(
   ownerName: string,

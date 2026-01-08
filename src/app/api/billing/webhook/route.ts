@@ -32,8 +32,25 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
-        const schoolId = session.metadata?.school_id
 
+        // Check if this is an event registration payment
+        if (session.metadata?.type === 'event_registration') {
+          const registrationId = session.metadata?.registration_id
+          if (registrationId) {
+            // Update the registration payment status to paid
+            await (adminClient as any)
+              .from('event_registrations')
+              .update({
+                payment_status: 'paid',
+                payment_intent_id: session.payment_intent as string,
+              })
+              .eq('id', registrationId)
+          }
+          break
+        }
+
+        // Otherwise handle subscription checkout
+        const schoolId = session.metadata?.school_id
         if (schoolId && session.subscription) {
           await (adminClient as any)
             .from('schools')

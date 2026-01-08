@@ -32,22 +32,17 @@ interface ClassSchedule {
 interface ClassSession {
   id: string
   class_schedule_id: string
-  session_date: string
+  date: string
   status: string
   class_schedule: {
     name: string
-  }
+  } | null
 }
 
 interface Student {
   id: string
-  check_in_pin: string | null
-  belt_rank: string | null
-  profile: {
-    id: string
-    full_name: string
-    avatar_url: string | null
-  }
+  full_name: string
+  avatar_url: string | null
 }
 
 interface AttendanceRecord {
@@ -95,7 +90,7 @@ export function AttendanceClient({
 
   // Filter students based on search
   const filteredStudents = students.filter(student =>
-    student.profile.full_name.toLowerCase().includes(searchQuery.toLowerCase())
+    student.full_name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   // Handle manual check-in
@@ -119,7 +114,7 @@ export function AttendanceClient({
         throw new Error(data.error || 'Failed to check in')
       }
 
-      const studentName = students.find(s => s.id === studentId)?.profile.full_name
+      const studentName = students.find(s => s.id === studentId)?.full_name
       setLastCheckedIn(studentName || 'Student')
       setShowSuccessModal(true)
 
@@ -271,7 +266,7 @@ export function AttendanceClient({
               <option value="">General Check-in (No specific class)</option>
               {sessions.map((session) => (
                 <option key={session.id} value={session.id}>
-                  {session.class_schedule?.name || 'Class'} - {new Date(session.session_date).toLocaleDateString()}
+                  {session.class_schedule?.name || 'Class'} - {new Date(session.date).toLocaleDateString()}
                 </option>
               ))}
             </select>
@@ -343,23 +338,20 @@ export function AttendanceClient({
                     >
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                          {student.profile.avatar_url ? (
+                          {student.avatar_url ? (
                             <img
-                              src={student.profile.avatar_url}
-                              alt={student.profile.full_name}
+                              src={student.avatar_url}
+                              alt={student.full_name}
                               className="h-10 w-10 rounded-full object-cover"
                             />
                           ) : (
                             <span className="text-sm font-medium text-gray-600">
-                              {student.profile.full_name.charAt(0)}
+                              {student.full_name.charAt(0)}
                             </span>
                           )}
                         </div>
                         <div>
-                          <p className="font-medium">{student.profile.full_name}</p>
-                          {student.belt_rank && (
-                            <p className="text-sm text-gray-500">{student.belt_rank} Belt</p>
-                          )}
+                          <p className="font-medium">{student.full_name}</p>
                         </div>
                       </div>
                       <Button

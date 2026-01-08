@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     }
 
     let query = supabase
-      .from('contract_templates')
+      .from('contracts')
       .select('*')
       .order('created_at', { ascending: false })
 
@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const {
       school_id,
+      name,
       title,
       description,
       contract_type,
@@ -68,21 +69,23 @@ export async function POST(request: NextRequest) {
       is_required,
     } = body
 
-    if (!school_id || !title || !contract_type || !content) {
+    if (!school_id || !content) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const { data: template, error } = await (adminClient as any)
-      .from('contract_templates')
+    const contractName = name || title || 'Untitled Contract'
+
+    const { data: contract, error } = await (adminClient as any)
+      .from('contracts')
       .insert({
         school_id,
-        title,
+        name: contractName,
+        title: title || contractName,
         description,
-        contract_type,
+        contract_type: contract_type || 'other',
         content,
         is_required: is_required ?? false,
         is_active: true,
-        created_by: user.id,
       })
       .select()
       .single()
@@ -92,7 +95,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create contract' }, { status: 500 })
     }
 
-    return NextResponse.json(template, { status: 201 })
+    return NextResponse.json(contract, { status: 201 })
   } catch (error) {
     console.error('Contracts API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

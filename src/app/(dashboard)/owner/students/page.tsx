@@ -1,13 +1,29 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
-import { User } from 'lucide-react'
+import { Modal } from '@/components/ui/modal'
+import { User, QrCode, Key, Download, Printer, Award, Users } from 'lucide-react'
+import toast from 'react-hot-toast'
+
+interface BeltRank {
+  id: string
+  name: string
+  color: string
+  is_default: boolean
+}
+
+interface Family {
+  id: string
+  name: string
+  primary_holder_id: string
+}
 
 interface Member {
   id: string
@@ -15,11 +31,15 @@ interface Member {
   email: string
   avatar_url: string | null
   role: string
+  family_id: string | null
   is_approved: boolean
   created_at: string
   student_profile?: {
     id: string
+    pin_code?: string | null
+    belt_rank_id?: string | null
     belt_rank: {
+      id: string
       name: string
       color: string
     } | null
@@ -29,14 +49,24 @@ interface Member {
 
 export default function StudentsPage() {
   const [members, setMembers] = useState<Member[]>([])
+  const [belts, setBelts] = useState<BeltRank[]>([])
+  const [families, setFamilies] = useState<Family[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null)
+  const [showQrModal, setShowQrModal] = useState(false)
+  const [memberPin, setMemberPin] = useState<string | null>(null)
+  const [generatingPin, setGeneratingPin] = useState(false)
+  const [updatingBelt, setUpdatingBelt] = useState(false)
+  const [updatingFamily, setUpdatingFamily] = useState(false)
+  const [schoolId, setSchoolId] = useState<string | null>(null)
+  const qrRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    fetchMembers()
+    fetchData()
   }, [])
 
-  const fetchMembers = async () => {
+  const fetchData = async () => {
     const supabase = createClient()
     const { data: authData } = await supabase.auth.getUser()
 
@@ -54,32 +84,338 @@ export default function StudentsPage() {
       return
     }
 
+    setSchoolId(userProfile.school_id)
+
+    // Fetch all data in parallel
+    await Promise.all([
+      fetchMembers(supabase, userProfile.school_id),
+      fetchBelts(supabase, userProfile.school_id),
+      fetchFamilies(supabase, userProfile.school_id),
+    ])
+
+    setLoading(false)
+  }
+
+  const fetchMembers = async (supabase: ReturnType<typeof createClient>, schoolId: string) => {
     // Get all approved members (students and parents) from profiles
     const { data: profilesData } = await supabase
       .from('profiles')
-      .select('id, full_name, email, avatar_url, role, is_approved, created_at')
-      .eq('school_id', userProfile.school_id)
+      .select('id, full_name, email, avatar_url, role, family_id, is_approved, created_at')
+      .eq('school_id', schoolId)
       .eq('is_approved', true)
       .in('role', ['student', 'parent'])
       .order('created_at', { ascending: false })
 
     if (profilesData) {
+      type ProfileRow = { id: string; full_name: string; email: string; avatar_url: string | null; role: string; family_id: string | null; is_approved: boolean; created_at: string }
+      const typedProfilesData = profilesData as ProfileRow[]
+
       // Get student_profiles data for these members
-      const memberIds = profilesData.map(p => p.id)
+      const memberIds = typedProfilesData.map(p => p.id)
       const { data: studentProfilesData } = await supabase
         .from('student_profiles')
-        .select('id, profile_id, enrollment_date, belt_rank:belt_ranks(name, color)')
+        .select('id, profile_id, enrollment_date, pin_code, belt_rank_id, belt_rank:belt_ranks(id, name, color)')
         .in('profile_id', memberIds)
 
+      type StudentProfileRow = { id: string; profile_id: string; enrollment_date: string | null; pin_code: string | null; belt_rank_id: string | null; belt_rank: { id: string; name: string; color: string } | null }
+      const typedStudentProfilesData = (studentProfilesData || []) as StudentProfileRow[]
+
       // Merge the data
-      const membersWithDetails = profilesData.map(profile => ({
+      const membersWithDetails = typedProfilesData.map(profile => ({
         ...profile,
-        student_profile: studentProfilesData?.find(sp => sp.profile_id === profile.id) || null
+        student_profile: typedStudentProfilesData.find(sp => sp.profile_id === profile.id) || null
       }))
 
       setMembers(membersWithDetails as Member[])
     }
-    setLoading(false)
+  }
+
+  const fetchBelts = async (supabase: ReturnType<typeof createClient>, schoolId: string) => {
+    const { data: beltsData } = await supabase
+      .from('belt_ranks')
+      .select('*')
+      .or(`is_default.eq.true,school_id.eq.${schoolId}`)
+      .order('display_order')
+
+    if (beltsData) {
+      setBelts(beltsData)
+    }
+  }
+
+  const fetchFamilies = async (supabase: ReturnType<typeof createClient>, schoolId: string) => {
+    const { data: familiesData } = await supabase
+      .from('families')
+      .select('id, name, primary_holder_id')
+      .eq('school_id', schoolId)
+      .order('name')
+
+    if (familiesData) {
+      setFamilies(familiesData)
+    }
+  }
+
+  const openQrModal = async (member: Member) => {
+    setSelectedMember(member)
+    setMemberPin(member.student_profile?.pin_code || null)
+    setShowQrModal(true)
+
+    // Fetch latest PIN if exists
+    try {
+      const response = await fetch(`/api/students/${member.id}/pin`)
+      if (response.ok) {
+        const data = await response.json()
+        setMemberPin(data.pin)
+      }
+    } catch (error) {
+      console.error('Error fetching PIN:', error)
+    }
+  }
+
+  const generatePin = async () => {
+    if (!selectedMember) return
+
+    setGeneratingPin(true)
+    try {
+      const response = await fetch(`/api/students/${selectedMember.id}/pin`, {
+        method: 'POST',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate PIN')
+      }
+
+      setMemberPin(data.pin)
+
+      if (data.alreadyExists) {
+        toast.success('PIN already exists for this student')
+      } else {
+        toast.success('PIN generated successfully')
+      }
+
+      // Update the member in the list
+      setMembers(prev => prev.map(m => {
+        if (m.id === selectedMember.id) {
+          return {
+            ...m,
+            student_profile: {
+              ...m.student_profile,
+              id: data.studentProfileId,
+              pin_code: data.pin,
+              belt_rank_id: m.student_profile?.belt_rank_id || null,
+              belt_rank: m.student_profile?.belt_rank || null,
+              enrollment_date: m.student_profile?.enrollment_date || null,
+            }
+          }
+        }
+        return m
+      }))
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to generate PIN')
+    } finally {
+      setGeneratingPin(false)
+    }
+  }
+
+  const updateBeltRank = async (beltId: string | null) => {
+    if (!selectedMember || !schoolId) return
+
+    setUpdatingBelt(true)
+    try {
+      // First ensure student_profile exists
+      let studentProfileId = selectedMember.student_profile?.id
+
+      if (!studentProfileId) {
+        // Create student profile first
+        const pinResponse = await fetch(`/api/students/${selectedMember.id}/pin`, {
+          method: 'POST',
+        })
+        const pinData = await pinResponse.json()
+        if (pinResponse.ok) {
+          studentProfileId = pinData.studentProfileId
+        }
+      }
+
+      if (!studentProfileId) {
+        throw new Error('Could not create student profile')
+      }
+
+      // Update belt rank
+      const response = await fetch(`/api/students/${selectedMember.id}/belt`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ belt_rank_id: beltId }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to update belt')
+      }
+
+      const selectedBelt = belts.find(b => b.id === beltId)
+
+      // Update the member in the list
+      setMembers(prev => prev.map(m => {
+        if (m.id === selectedMember.id) {
+          return {
+            ...m,
+            student_profile: {
+              ...m.student_profile,
+              id: studentProfileId!,
+              belt_rank_id: beltId,
+              belt_rank: selectedBelt ? { id: selectedBelt.id, name: selectedBelt.name, color: selectedBelt.color } : null,
+              pin_code: m.student_profile?.pin_code || null,
+              enrollment_date: m.student_profile?.enrollment_date || null,
+            }
+          }
+        }
+        return m
+      }))
+
+      // Update selected member
+      setSelectedMember(prev => prev ? {
+        ...prev,
+        student_profile: {
+          ...prev.student_profile,
+          id: studentProfileId!,
+          belt_rank_id: beltId,
+          belt_rank: selectedBelt ? { id: selectedBelt.id, name: selectedBelt.name, color: selectedBelt.color } : null,
+          pin_code: prev.student_profile?.pin_code || null,
+          enrollment_date: prev.student_profile?.enrollment_date || null,
+        }
+      } : null)
+
+      toast.success(beltId ? 'Belt rank updated' : 'Belt rank removed')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update belt')
+    } finally {
+      setUpdatingBelt(false)
+    }
+  }
+
+  const updateFamily = async (familyId: string | null) => {
+    if (!selectedMember) return
+
+    setUpdatingFamily(true)
+    try {
+      const response = await fetch(`/api/students/${selectedMember.id}/family`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ family_id: familyId }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to update family')
+      }
+
+      // Update the member in the list
+      setMembers(prev => prev.map(m => {
+        if (m.id === selectedMember.id) {
+          return { ...m, family_id: familyId }
+        }
+        return m
+      }))
+
+      // Update selected member
+      setSelectedMember(prev => prev ? { ...prev, family_id: familyId } : null)
+
+      toast.success(familyId ? 'Family updated' : 'Removed from family')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update family')
+    } finally {
+      setUpdatingFamily(false)
+    }
+  }
+
+  const downloadQrCode = () => {
+    if (!selectedMember) return
+
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${selectedMember.id}`
+    const link = document.createElement('a')
+    link.href = qrUrl
+    link.download = `${selectedMember.full_name.replace(/\s+/g, '_')}_qr.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    toast.success('QR code downloaded')
+  }
+
+  const printQrCode = () => {
+    if (!selectedMember || !qrRef.current) return
+
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      toast.error('Please allow popups to print')
+      return
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>QR Code - ${selectedMember.full_name}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              min-height: 100vh;
+              margin: 0;
+              padding: 20px;
+            }
+            .container {
+              text-align: center;
+              border: 2px solid #000;
+              padding: 30px;
+              border-radius: 10px;
+            }
+            h1 { margin: 0 0 10px; font-size: 24px; }
+            p { margin: 5px 0; color: #666; }
+            .qr-code { margin: 20px 0; }
+            .pin {
+              font-size: 32px;
+              font-weight: bold;
+              letter-spacing: 8px;
+              margin: 20px 0;
+              padding: 10px 20px;
+              background: #f0f0f0;
+              border-radius: 8px;
+            }
+            .label { font-size: 14px; color: #999; margin-bottom: 5px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>${selectedMember.full_name}</h1>
+            <p>Attendance Check-in Card</p>
+            <div class="qr-code">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${selectedMember.id}" alt="QR Code" />
+            </div>
+            ${memberPin ? `
+              <div class="label">PIN Code</div>
+              <div class="pin">${memberPin}</div>
+            ` : ''}
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              window.onafterprint = function() { window.close(); }
+            }
+          </script>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+  }
+
+  const getFamilyName = (familyId: string | null) => {
+    if (!familyId) return null
+    const family = families.find(f => f.id === familyId)
+    return family?.name || null
   }
 
   const filteredMembers = members.filter(member =>
@@ -134,7 +470,7 @@ export default function StudentsPage() {
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium truncate">{member.full_name}</h3>
                     <p className="text-sm text-gray-500 truncate">{member.email}</p>
-                    <div className="flex items-center gap-2 mt-2">
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
                       <Badge variant="secondary" className="capitalize">
                         {member.role}
                       </Badge>
@@ -148,10 +484,22 @@ export default function StudentsPage() {
                           {member.student_profile.belt_rank.name}
                         </Badge>
                       )}
+                      {getFamilyName(member.family_id) && (
+                        <Badge variant="outline" className="text-xs">
+                          {getFamilyName(member.family_id)}
+                        </Badge>
+                      )}
                     </div>
-                    <p className="text-xs text-gray-400 mt-2">
-                      Joined: {new Date(member.created_at).toLocaleDateString()}
-                    </p>
+                    <div className="flex items-center gap-2 mt-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openQrModal(member)}
+                      >
+                        <QrCode className="h-4 w-4 mr-1" />
+                        Manage
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -159,6 +507,125 @@ export default function StudentsPage() {
           ))}
         </div>
       )}
+
+      {/* Student Management Modal */}
+      <Modal
+        isOpen={showQrModal}
+        onClose={() => {
+          setShowQrModal(false)
+          setSelectedMember(null)
+          setMemberPin(null)
+        }}
+        title="Member Management"
+      >
+        {selectedMember && (
+          <div className="space-y-6" ref={qrRef}>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold">{selectedMember.full_name}</h3>
+              <p className="text-sm text-gray-500">{selectedMember.email}</p>
+              <Badge variant="secondary" className="capitalize mt-2">
+                {selectedMember.role}
+              </Badge>
+            </div>
+
+            {/* Family Assignment */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Family
+              </Label>
+              <select
+                value={selectedMember.family_id || ''}
+                onChange={(e) => updateFamily(e.target.value || null)}
+                disabled={updatingFamily}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                <option value="">No family assigned</option>
+                {families.map((family) => (
+                  <option key={family.id} value={family.id}>
+                    {family.name}
+                  </option>
+                ))}
+              </select>
+              {families.length === 0 && (
+                <p className="text-xs text-gray-500">
+                  Families are created when parents are approved
+                </p>
+              )}
+            </div>
+
+            {/* Belt Assignment (only for students) */}
+            {selectedMember.role === 'student' && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Award className="h-4 w-4" />
+                  Belt Rank
+                </Label>
+                <select
+                  value={selectedMember.student_profile?.belt_rank_id || ''}
+                  onChange={(e) => updateBeltRank(e.target.value || null)}
+                  disabled={updatingBelt}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="">No belt assigned</option>
+                  {belts.map((belt) => (
+                    <option key={belt.id} value={belt.id}>
+                      {belt.name} {belt.is_default ? '' : '(Custom)'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* QR Code */}
+            <div className="flex flex-col items-center">
+              <p className="text-sm text-gray-500 mb-2">QR Code for Check-in</p>
+              <div className="p-4 bg-white border rounded-lg">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${selectedMember.id}`}
+                  alt="QR Code"
+                  className="w-48 h-48"
+                />
+              </div>
+            </div>
+
+            {/* PIN */}
+            <div className="flex flex-col items-center">
+              <p className="text-sm text-gray-500 mb-2">PIN Code</p>
+              {memberPin ? (
+                <div className="text-4xl font-bold tracking-widest bg-gray-100 px-6 py-3 rounded-lg">
+                  {memberPin}
+                </div>
+              ) : (
+                <>
+                  <div className="text-gray-400 italic mb-3">No PIN assigned</div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={generatePin}
+                    disabled={generatingPin}
+                  >
+                    <Key className="h-4 w-4 mr-2" />
+                    {generatingPin ? 'Generating...' : 'Generate PIN'}
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-center gap-3 pt-4 border-t">
+              <Button variant="outline" onClick={downloadQrCode}>
+                <Download className="h-4 w-4 mr-2" />
+                Download QR
+              </Button>
+              <Button variant="outline" onClick={printQrCode}>
+                <Printer className="h-4 w-4 mr-2" />
+                Print Card
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

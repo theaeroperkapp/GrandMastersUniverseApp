@@ -28,7 +28,8 @@
       "Bash(npx tsc:*)",
       "WebFetch(domain:grandmasters-universe.vercel.app)",
       "Bash(__NEW_LINE__ echo \"\")",
-      "Bash(npx vercel --prod)"
+      "Bash(npx vercel --prod)",
+      "Bash(taskkill:*)"
     ]
   }
 }

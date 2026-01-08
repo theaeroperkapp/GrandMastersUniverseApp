@@ -6,12 +6,12 @@ This document tracks pages and features that should exist but are not yet implem
 
 | Page | Route | Priority | Description |
 |------|-------|----------|-------------|
-| Schedule | `/schedule` | HIGH | View weekly class schedule for the school |
-| My Classes | `/my-classes` | HIGH | View enrolled classes and upcoming sessions |
+| ~~Schedule~~ | ~~`/schedule`~~ | ~~HIGH~~ | ~~View weekly class schedule for the school~~ DONE |
+| ~~My Classes~~ | ~~`/my-classes`~~ | ~~HIGH~~ | ~~View enrolled classes and upcoming sessions~~ DONE |
 | My Progress | `/my-progress` | MEDIUM | Belt progression history, attendance record |
 | My Family | `/my-family` | MEDIUM | Manage family members (for parents) |
 | Payments | `/payments` | LOW | View payment history and invoices |
-| Messages | `/messages` | LOW | Direct messaging with instructors |
+| ~~Messages~~ | ~~`/messages`~~ | ~~LOW~~ | ~~Direct messaging with instructors~~ DONE |
 
 ## Owner Pages (Improvements Needed)
 
@@ -23,6 +23,11 @@ This document tracks pages and features that should exist but are not yet implem
 | Family Detail | `/owner/families/[id]` | MISSING | View/edit family details |
 | Reports | `/owner/reports` | MISSING | Attendance reports, revenue reports |
 | Settings | `/owner/settings` | MISSING | School settings, business hours, etc. |
+| ~~Announcements~~ | `/owner/announcements` | DONE | Full CRUD for announcements |
+| ~~Billing~~ | `/owner/billing` | DONE | Create membership, add custom charges |
+| ~~Staff~~ | `/owner/staff` | DONE | Staff management with invite functionality |
+| ~~Subscription~~ | `/owner/subscription` | DONE | Subscription management with Stripe |
+| ~~Contracts~~ | `/owner/contracts` | DONE | Contract templates and signing |
 
 ## Admin Pages
 
@@ -44,7 +49,7 @@ This document tracks pages and features that should exist but are not yet implem
 |-------|--------|-------------|
 | `/api/schedule` | GET | Get class schedule for a school |
 | `/api/my-classes` | GET | Get user's enrolled classes |
-| `/api/messages` | GET/POST | Messaging system |
+| ~~`/api/messages`~~ | ~~GET/POST~~ | ~~Messaging system~~ DONE |
 | `/api/family-members` | GET/POST/DELETE | Manage family members |
 
 ## Database Considerations
@@ -61,7 +66,16 @@ This document tracks pages and features that should exist but are not yet implem
 - [x] Signup with school code URL parameter
 - [x] User approval flow
 - [x] Members page showing approved students/parents
+- [x] **Messages/Chat System** (`/messages`) - Real-time direct messaging with conversation list, message history, read receipts
+- [x] **Announcements CRUD** (`/owner/announcements`) - Create, edit, delete, publish/unpublish announcements
+- [x] **Billing Management** (`/owner/billing`) - Create memberships, add custom charges
+- [x] **Staff Management** (`/owner/staff`) - View staff, invite new staff via email
+- [x] **Subscription Page** (`/owner/subscription`) - View/manage subscription with Stripe integration
+- [x] **Contracts System** (`/owner/contracts`) - Contract templates and management
+- [x] **Events Calendar** (`/events`) - Student view of school events
+- [x] **Staff Invite API** (`/api/staff/invite`) - Send staff invitation emails
+- [x] **Messaging RLS Policies** - Row-level security for conversations and messages
 
 ---
 
-*Last updated: January 2026*
+*Last updated: January 8, 2026*

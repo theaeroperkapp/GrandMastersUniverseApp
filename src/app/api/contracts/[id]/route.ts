@@ -11,7 +11,7 @@ export async function GET(
     const supabase = await createClient()
 
     const { data: template, error } = await supabase
-      .from('contract_templates')
+      .from('contracts')
       .select('*')
       .eq('id', id)
       .single()
@@ -56,7 +56,7 @@ export async function PATCH(
     const body = await request.json()
 
     const { data: template, error } = await (adminClient as any)
-      .from('contract_templates')
+      .from('contracts')
       .update(body)
       .eq('id', id)
       .select()
@@ -101,7 +101,7 @@ export async function DELETE(
     }
 
     const { error } = await (adminClient as any)
-      .from('contract_templates')
+      .from('contracts')
       .delete()
       .eq('id', id)
 

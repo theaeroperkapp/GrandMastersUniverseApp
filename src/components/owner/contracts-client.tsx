@@ -23,12 +23,13 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-interface ContractTemplate {
+interface Contract {
   id: string
   school_id: string
-  title: string
+  name: string
+  title: string | null
   description: string | null
-  contract_type: string
+  contract_type: string | null
   content: string
   is_required: boolean
   is_active: boolean
@@ -37,24 +38,18 @@ interface ContractTemplate {
 
 interface SignedContract {
   id: string
-  template_id: string
-  student_id: string
-  signer_id: string
+  contract_id: string
+  family_id: string
+  signed_by: string
   signed_at: string
   signature_data: string
-  ip_address: string | null
-  template: {
-    title: string
-    contract_type: string
+  contract: {
+    name: string
+    title: string | null
+    contract_type: string | null
   }
   signer: {
     full_name: string
-  }
-  student: {
-    id: string
-    profile: {
-      full_name: string
-    }
   }
 }
 
@@ -68,7 +63,7 @@ interface Student {
 }
 
 interface ContractsClientProps {
-  templates: ContractTemplate[]
+  contracts: Contract[]
   signedContracts: SignedContract[]
   students: Student[]
   schoolId: string
@@ -84,22 +79,22 @@ const CONTRACT_TYPES = [
 ]
 
 export function ContractsClient({
-  templates: initialTemplates,
+  contracts: initialContracts,
   signedContracts: initialSignedContracts,
   students,
   schoolId,
 }: ContractsClientProps) {
-  const [templates, setTemplates] = useState(initialTemplates)
+  const [contracts, setContracts] = useState(initialContracts)
   const [signedContracts] = useState(initialSignedContracts)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isSendModalOpen, setIsSendModalOpen] = useState(false)
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
-  const [editingTemplate, setEditingTemplate] = useState<ContractTemplate | null>(null)
-  const [selectedTemplate, setSelectedTemplate] = useState<ContractTemplate | null>(null)
+  const [editingContract, setEditingContract] = useState<Contract | null>(null)
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null)
   const [viewingContract, setViewingContract] = useState<SignedContract | null>(null)
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<'templates' | 'signed'>('templates')
+  const [activeTab, setActiveTab] = useState<'contracts' | 'signed'>('contracts')
   const router = useRouter()
 
   const [formData, setFormData] = useState({
@@ -111,7 +106,7 @@ export function ContractsClient({
   })
 
   const openCreateModal = () => {
-    setEditingTemplate(null)
+    setEditingContract(null)
     setFormData({
       title: '',
       description: '',
@@ -122,20 +117,20 @@ export function ContractsClient({
     setIsModalOpen(true)
   }
 
-  const openEditModal = (template: ContractTemplate) => {
-    setEditingTemplate(template)
+  const openEditModal = (contract: Contract) => {
+    setEditingContract(contract)
     setFormData({
-      title: template.title,
-      description: template.description || '',
-      contract_type: template.contract_type,
-      content: template.content,
-      is_required: template.is_required,
+      title: contract.title || contract.name,
+      description: contract.description || '',
+      contract_type: contract.contract_type || 'other',
+      content: contract.content,
+      is_required: contract.is_required,
     })
     setIsModalOpen(true)
   }
 
-  const openSendModal = (template: ContractTemplate) => {
-    setSelectedTemplate(template)
+  const openSendModal = (contract: Contract) => {
+    setSelectedContract(contract)
     setSelectedStudents([])
     setIsSendModalOpen(true)
   }
@@ -177,6 +172,7 @@ I waive any right to inspect or approve the finished product or the copy that ma
     try {
       const payload = {
         school_id: schoolId,
+        name: formData.title,
         title: formData.title,
         description: formData.description || null,
         contract_type: formData.contract_type,
@@ -184,26 +180,26 @@ I waive any right to inspect or approve the finished product or the copy that ma
         is_required: formData.is_required,
       }
 
-      const url = editingTemplate ? `/api/contracts/${editingTemplate.id}` : '/api/contracts'
+      const url = editingContract ? `/api/contracts/${editingContract.id}` : '/api/contracts'
       const response = await fetch(url, {
-        method: editingTemplate ? 'PATCH' : 'POST',
+        method: editingContract ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.error || 'Failed to save template')
+        throw new Error(data.error || 'Failed to save contract')
       }
 
-      const savedTemplate = await response.json()
+      const savedContract = await response.json()
 
-      if (editingTemplate) {
-        setTemplates(templates.map(t => t.id === savedTemplate.id ? savedTemplate : t))
-        toast.success('Template updated successfully')
+      if (editingContract) {
+        setContracts(contracts.map(c => c.id === savedContract.id ? savedContract : c))
+        toast.success('Contract updated successfully')
       } else {
-        setTemplates([savedTemplate, ...templates])
-        toast.success('Template created successfully')
+        setContracts([savedContract, ...contracts])
+        toast.success('Contract created successfully')
       }
 
       setIsModalOpen(false)
@@ -215,23 +211,23 @@ I waive any right to inspect or approve the finished product or the copy that ma
     }
   }
 
-  const handleDelete = async (templateId: string) => {
-    if (!confirm('Are you sure you want to delete this template?')) return
+  const handleDelete = async (contractId: string) => {
+    if (!confirm('Are you sure you want to delete this contract?')) return
 
     try {
-      const response = await fetch(`/api/contracts/${templateId}`, { method: 'DELETE' })
-      if (!response.ok) throw new Error('Failed to delete template')
+      const response = await fetch(`/api/contracts/${contractId}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error('Failed to delete contract')
 
-      setTemplates(templates.filter(t => t.id !== templateId))
-      toast.success('Template deleted successfully')
+      setContracts(contracts.filter(c => c.id !== contractId))
+      toast.success('Contract deleted successfully')
       router.refresh()
     } catch {
-      toast.error('Failed to delete template')
+      toast.error('Failed to delete contract')
     }
   }
 
   const handleSendContracts = async () => {
-    if (!selectedTemplate || selectedStudents.length === 0) return
+    if (!selectedContract || selectedStudents.length === 0) return
 
     setIsLoading(true)
     try {
@@ -239,7 +235,7 @@ I waive any right to inspect or approve the finished product or the copy that ma
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          template_id: selectedTemplate.id,
+          contract_id: selectedContract.id,
           student_ids: selectedStudents,
         }),
       })
@@ -259,21 +255,21 @@ I waive any right to inspect or approve the finished product or the copy that ma
     }
   }
 
-  const toggleActive = async (template: ContractTemplate) => {
+  const toggleActive = async (contract: Contract) => {
     try {
-      const response = await fetch(`/api/contracts/${template.id}`, {
+      const response = await fetch(`/api/contracts/${contract.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active: !template.is_active }),
+        body: JSON.stringify({ is_active: !contract.is_active }),
       })
 
-      if (!response.ok) throw new Error('Failed to update template')
+      if (!response.ok) throw new Error('Failed to update contract')
 
       const updated = await response.json()
-      setTemplates(templates.map(t => t.id === updated.id ? updated : t))
-      toast.success(updated.is_active ? 'Template activated' : 'Template deactivated')
+      setContracts(contracts.map(c => c.id === updated.id ? updated : c))
+      toast.success(updated.is_active ? 'Contract activated' : 'Contract deactivated')
     } catch {
-      toast.error('Failed to update template')
+      toast.error('Failed to update contract')
     }
   }
 
@@ -287,12 +283,12 @@ I waive any right to inspect or approve the finished product or the copy that ma
     })
   }
 
-  // Get unsigned students for a template
-  const getUnsignedStudents = (templateId: string) => {
-    const signedStudentIds = signedContracts
-      .filter(c => c.template_id === templateId)
-      .map(c => c.student_id)
-    return students.filter(s => !signedStudentIds.includes(s.id))
+  // Get unsigned students for a contract
+  const getUnsignedStudents = (contractId: string) => {
+    const signedFamilyIds = signedContracts
+      .filter(c => c.contract_id === contractId)
+      .map(c => c.family_id)
+    return students.filter(s => !signedFamilyIds.includes(s.profile?.id))
   }
 
   return (
@@ -300,14 +296,14 @@ I waive any right to inspect or approve the finished product or the copy that ma
       {/* Tab Navigation */}
       <div className="flex gap-2 border-b">
         <button
-          onClick={() => setActiveTab('templates')}
+          onClick={() => setActiveTab('contracts')}
           className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-            activeTab === 'templates'
+            activeTab === 'contracts'
               ? 'border-red-500 text-red-600'
               : 'border-transparent text-gray-600 hover:text-gray-900'
           }`}
         >
-          Templates
+          Contracts
         </button>
         <button
           onClick={() => setActiveTab('signed')}
@@ -321,53 +317,53 @@ I waive any right to inspect or approve the finished product or the copy that ma
         </button>
       </div>
 
-      {/* Templates Tab */}
-      {activeTab === 'templates' && (
+      {/* Contracts Tab */}
+      {activeTab === 'contracts' && (
         <>
           <div className="flex justify-end">
             <Button onClick={openCreateModal}>
               <Plus className="h-4 w-4 mr-2" />
-              Create Template
+              Create Contract
             </Button>
           </div>
 
           <div className="grid gap-4">
-            {templates.length === 0 ? (
+            {contracts.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
                   <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <p className="text-gray-500 mb-4">No contract templates yet</p>
+                  <p className="text-gray-500 mb-4">No contracts yet</p>
                   <Button onClick={openCreateModal}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Create Your First Template
+                    Create Your First Contract
                   </Button>
                 </CardContent>
               </Card>
             ) : (
-              templates.map(template => {
-                const unsignedCount = getUnsignedStudents(template.id).length
-                const signedCount = signedContracts.filter(c => c.template_id === template.id).length
+              contracts.map(contract => {
+                const unsignedCount = getUnsignedStudents(contract.id).length
+                const signedCount = signedContracts.filter(c => c.contract_id === contract.id).length
 
                 return (
-                  <Card key={template.id} className={!template.is_active ? 'opacity-60' : ''}>
+                  <Card key={contract.id} className={!contract.is_active ? 'opacity-60' : ''}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <FileText className="h-5 w-5 text-gray-500" />
-                            <h3 className="font-semibold">{template.title}</h3>
+                            <h3 className="font-semibold">{contract.title || contract.name}</h3>
                             <Badge variant="outline">
-                              {CONTRACT_TYPES.find(t => t.value === template.contract_type)?.label}
+                              {CONTRACT_TYPES.find(t => t.value === contract.contract_type)?.label || 'Other'}
                             </Badge>
-                            {template.is_required && (
+                            {contract.is_required && (
                               <Badge className="bg-red-100 text-red-700">Required</Badge>
                             )}
-                            {!template.is_active && (
+                            {!contract.is_active && (
                               <Badge variant="secondary">Inactive</Badge>
                             )}
                           </div>
-                          {template.description && (
-                            <p className="text-sm text-gray-500 mb-2">{template.description}</p>
+                          {contract.description && (
+                            <p className="text-sm text-gray-500 mb-2">{contract.description}</p>
                           )}
                           <div className="flex gap-4 text-sm text-gray-600">
                             <span className="flex items-center gap-1">
@@ -386,19 +382,19 @@ I waive any right to inspect or approve the finished product or the copy that ma
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => openSendModal(template)}
-                            disabled={!template.is_active}
+                            onClick={() => openSendModal(contract)}
+                            disabled={!contract.is_active}
                           >
                             <Send className="h-4 w-4 mr-1" />
                             Send
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => toggleActive(template)}>
-                            {template.is_active ? 'Deactivate' : 'Activate'}
+                          <Button variant="ghost" size="sm" onClick={() => toggleActive(contract)}>
+                            {contract.is_active ? 'Deactivate' : 'Activate'}
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => openEditModal(template)}>
+                          <Button variant="ghost" size="sm" onClick={() => openEditModal(contract)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(template.id)}>
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(contract.id)}>
                             <Trash2 className="h-4 w-4 text-red-500" />
                           </Button>
                         </div>
@@ -429,23 +425,23 @@ I waive any right to inspect or approve the finished product or the copy that ma
               </div>
             ) : (
               <div className="space-y-3">
-                {signedContracts.map(contract => (
+                {signedContracts.map(signedContract => (
                   <div
-                    key={contract.id}
+                    key={signedContract.id}
                     className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
                   >
                     <div className="flex items-center gap-3">
                       <CheckCircle className="h-5 w-5 text-green-500" />
                       <div>
-                        <p className="font-medium">{contract.template?.title}</p>
+                        <p className="font-medium">{signedContract.contract?.title || signedContract.contract?.name}</p>
                         <p className="text-sm text-gray-500">
-                          Signed by {contract.signer?.full_name} for {contract.student?.profile?.full_name}
+                          Signed by {signedContract.signer?.full_name}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-sm text-gray-500">{formatDate(contract.signed_at)}</span>
-                      <Button variant="ghost" size="sm" onClick={() => openViewModal(contract)}>
+                      <span className="text-sm text-gray-500">{formatDate(signedContract.signed_at)}</span>
+                      <Button variant="ghost" size="sm" onClick={() => openViewModal(signedContract)}>
                         <Eye className="h-4 w-4" />
                       </Button>
                     </div>
@@ -457,15 +453,15 @@ I waive any right to inspect or approve the finished product or the copy that ma
         </Card>
       )}
 
-      {/* Create/Edit Template Modal */}
+      {/* Create/Edit Contract Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingTemplate ? 'Edit Template' : 'Create Template'}
+        title={editingContract ? 'Edit Contract' : 'Create Contract'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="title">Template Title *</Label>
+            <Label htmlFor="title">Contract Title *</Label>
             <Input
               id="title"
               value={formData.title}
@@ -535,7 +531,7 @@ I waive any right to inspect or approve the finished product or the copy that ma
               Cancel
             </Button>
             <Button type="submit" isLoading={isLoading}>
-              {editingTemplate ? 'Update Template' : 'Create Template'}
+              {editingContract ? 'Update Contract' : 'Create Contract'}
             </Button>
           </div>
         </form>
@@ -545,7 +541,7 @@ I waive any right to inspect or approve the finished product or the copy that ma
       <Modal
         isOpen={isSendModalOpen}
         onClose={() => setIsSendModalOpen(false)}
-        title={`Send: ${selectedTemplate?.title}`}
+        title={`Send: ${selectedContract?.title || selectedContract?.name}`}
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
@@ -553,7 +549,7 @@ I waive any right to inspect or approve the finished product or the copy that ma
           </p>
 
           <div className="max-h-64 overflow-y-auto space-y-2">
-            {selectedTemplate && getUnsignedStudents(selectedTemplate.id).map(student => (
+            {selectedContract && getUnsignedStudents(selectedContract.id).map(student => (
               <label
                 key={student.id}
                 className="flex items-center gap-3 p-2 border rounded-lg cursor-pointer hover:bg-gray-50"
@@ -576,7 +572,7 @@ I waive any right to inspect or approve the finished product or the copy that ma
                 </div>
               </label>
             ))}
-            {selectedTemplate && getUnsignedStudents(selectedTemplate.id).length === 0 && (
+            {selectedContract && getUnsignedStudents(selectedContract.id).length === 0 && (
               <p className="text-center text-gray-500 py-4">All students have signed this contract</p>
             )}
           </div>
@@ -606,12 +602,8 @@ I waive any right to inspect or approve the finished product or the copy that ma
         {viewingContract && (
           <div className="space-y-4">
             <div className="p-4 bg-gray-50 rounded-lg">
-              <h3 className="font-semibold mb-2">{viewingContract.template?.title}</h3>
+              <h3 className="font-semibold mb-2">{viewingContract.contract?.title || viewingContract.contract?.name}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-500">Student:</span>
-                  <p className="font-medium">{viewingContract.student?.profile?.full_name}</p>
-                </div>
                 <div>
                   <span className="text-gray-500">Signed by:</span>
                   <p className="font-medium">{viewingContract.signer?.full_name}</p>
@@ -619,10 +611,6 @@ I waive any right to inspect or approve the finished product or the copy that ma
                 <div>
                   <span className="text-gray-500">Signed at:</span>
                   <p className="font-medium">{formatDate(viewingContract.signed_at)}</p>
-                </div>
-                <div>
-                  <span className="text-gray-500">IP Address:</span>
-                  <p className="font-medium">{viewingContract.ip_address || 'N/A'}</p>
                 </div>
               </div>
             </div>

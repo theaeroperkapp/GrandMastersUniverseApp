@@ -22,11 +22,10 @@ interface School {
   id: string
   name: string
   stripe_customer_id: string | null
-  stripe_subscription_id: string | null
+  stripe_account_id: string | null
   subscription_status: string
-  subscription_plan: string | null
   trial_ends_at: string | null
-  current_period_end: string | null
+  subscription_ends_at: string | null
 }
 
 interface SubscriptionClientProps {
@@ -50,7 +49,7 @@ export function SubscriptionClient({ school, userEmail }: SubscriptionClientProp
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
-  const isTrialing = school.subscription_status === 'trialing'
+  const isTrialing = school.subscription_status === 'trialing' || school.subscription_status === 'trial'
   const isActive = school.subscription_status === 'active'
   const isPastDue = school.subscription_status === 'past_due'
   const isCanceled = school.subscription_status === 'canceled'
@@ -202,10 +201,10 @@ export function SubscriptionClient({ school, userEmail }: SubscriptionClientProp
               </div>
             )}
 
-            {isActive && school.current_period_end && (
+            {isActive && school.subscription_ends_at && (
               <div className="flex items-center gap-2 text-gray-600">
                 <Calendar className="h-4 w-4" />
-                <span>Next billing date: {formatDate(school.current_period_end)}</span>
+                <span>Next billing date: {formatDate(school.subscription_ends_at)}</span>
               </div>
             )}
 
