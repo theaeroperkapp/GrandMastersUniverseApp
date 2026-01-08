@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
@@ -38,7 +37,6 @@ interface Family {
 export default function MyFamilyPage() {
   const [family, setFamily] = useState<Family | null>(null)
   const [members, setMembers] = useState<FamilyMember[]>([])
-  const [currentUser, setCurrentUser] = useState<FamilyMember | null>(null)
   const [isPrimaryHolder, setIsPrimaryHolder] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -47,103 +45,20 @@ export default function MyFamilyPage() {
   }, [])
 
   const fetchFamilyData = async () => {
-    const supabase = createClient()
+    try {
+      const response = await fetch('/api/my-family')
+      const data = await response.json()
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    // Get current user's profile with family info
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('id, full_name, email, avatar_url, role, phone, family_id, created_at')
-      .eq('id', user.id)
-      .single()
-
-    const profile = profileData as FamilyMember & { family_id: string | null } | null
-
-    if (!profile) {
-      setLoading(false)
-      return
-    }
-
-    setCurrentUser(profile)
-
-    let familyId = profile.family_id
-
-    // If no family_id, check if user is primary holder of a family
-    if (!familyId) {
-      const { data: primaryHolderFamily } = await supabase
-        .from('families')
-        .select('id')
-        .eq('primary_holder_id', user.id)
-        .single()
-
-      if (primaryHolderFamily) {
-        familyId = (primaryHolderFamily as { id: string }).id
+      if (response.ok) {
+        setFamily(data.family)
+        setMembers(data.members || [])
+        setIsPrimaryHolder(data.isPrimaryHolder || false)
       }
-    }
-
-    if (!familyId) {
+    } catch (error) {
+      console.error('Error fetching family data:', error)
+    } finally {
       setLoading(false)
-      return
     }
-
-    // Get family details
-    const { data: familyData } = await supabase
-      .from('families')
-      .select('id, name, billing_email, primary_holder_id')
-      .eq('id', familyId)
-      .single()
-
-    const familyInfo = familyData as Family | null
-
-    if (familyInfo) {
-      setFamily(familyInfo)
-      setIsPrimaryHolder(familyInfo.primary_holder_id === user.id)
-
-      // Get all family members with their student profiles
-      // Include both members with family_id set AND the primary holder
-      const { data: membersData } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          full_name,
-          email,
-          avatar_url,
-          role,
-          phone,
-          created_at
-        `)
-        .or(`family_id.eq.${familyId},id.eq.${familyInfo.primary_holder_id}`)
-        .order('role')
-        .order('full_name')
-
-      const typedMembers = (membersData || []) as FamilyMember[]
-
-      // For each member, fetch their student profile if they have one
-      const membersWithStudentProfiles = await Promise.all(
-        typedMembers.map(async (member) => {
-          const { data: studentProfileData } = await supabase
-            .from('student_profiles')
-            .select(`
-              id,
-              enrollment_date,
-              current_belt:belt_ranks!student_profiles_current_belt_id_fkey(id, name, color)
-            `)
-            .eq('profile_id', member.id)
-            .single()
-
-          return {
-            ...member,
-            student_profile: studentProfileData as FamilyMember['student_profile'],
-          }
-        })
-      )
-
-      setMembers(membersWithStudentProfiles)
-    }
-
-    setLoading(false)
   }
 
   const formatDate = (dateString: string | null) => {
@@ -284,6 +199,9 @@ export default function MyFamilyPage() {
                       <div className="flex items-center gap-2 mb-1">
                         <p className="font-semibold">{student.full_name}</p>
                         <Badge className={getRoleBadgeColor('student')}>Student</Badge>
+                        {family.primary_holder_id === student.id && (
+                          <Badge className="bg-yellow-100 text-yellow-800 text-xs">Primary</Badge>
+                        )}
                       </div>
                       <p className="text-sm text-gray-500">{student.email}</p>
 
