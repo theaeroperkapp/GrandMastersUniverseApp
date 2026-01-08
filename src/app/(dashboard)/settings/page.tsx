@@ -1,0 +1,412 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Settings, Bell, User, Lock, Mail, Save } from 'lucide-react'
+import toast from 'react-hot-toast'
+
+interface UserProfile {
+  id: string
+  full_name: string
+  email: string
+  phone: string | null
+  avatar_url: string | null
+}
+
+interface NotificationSettings {
+  email_announcements: boolean
+  email_events: boolean
+  email_messages: boolean
+  email_class_reminders: boolean
+}
+
+export default function SettingsPage() {
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [savingNotifications, setSavingNotifications] = useState(false)
+  const [savingPassword, setSavingPassword] = useState(false)
+
+  // Profile form state
+  const [fullName, setFullName] = useState('')
+  const [phone, setPhone] = useState('')
+
+  // Notification settings
+  const [notifications, setNotifications] = useState<NotificationSettings>({
+    email_announcements: true,
+    email_events: true,
+    email_messages: true,
+    email_class_reminders: true,
+  })
+
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+
+  useEffect(() => {
+    fetchUserData()
+  }, [])
+
+  const fetchUserData = async () => {
+    const supabase = createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    // Get user profile
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, phone, avatar_url')
+      .eq('id', user.id)
+      .single()
+
+    const userProfile = profileData as UserProfile | null
+
+    if (userProfile) {
+      setProfile(userProfile)
+      setFullName(userProfile.full_name || '')
+      setPhone(userProfile.phone || '')
+    }
+
+    // Get notification settings (if they exist)
+    const { data: settingsData } = await supabase
+      .from('user_settings')
+      .select('*')
+      .eq('user_id', user.id)
+      .single()
+
+    if (settingsData) {
+      const settings = settingsData as NotificationSettings & { user_id: string }
+      setNotifications({
+        email_announcements: settings.email_announcements ?? true,
+        email_events: settings.email_events ?? true,
+        email_messages: settings.email_messages ?? true,
+        email_class_reminders: settings.email_class_reminders ?? true,
+      })
+    }
+
+    setLoading(false)
+  }
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!profile) return
+
+    setSavingProfile(true)
+
+    try {
+      const supabase = createClient()
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('profiles') as any)
+        .update({
+          full_name: fullName,
+          phone: phone || null,
+        })
+        .eq('id', profile.id)
+
+      if (error) throw error
+
+      toast.success('Profile updated successfully')
+      setProfile({ ...profile, full_name: fullName, phone: phone || null })
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      toast.error('Failed to update profile')
+    } finally {
+      setSavingProfile(false)
+    }
+  }
+
+  const handleSaveNotifications = async () => {
+    if (!profile) return
+
+    setSavingNotifications(true)
+
+    try {
+      const supabase = createClient()
+
+      // Upsert notification settings
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('user_settings') as any)
+        .upsert({
+          user_id: profile.id,
+          ...notifications,
+          updated_at: new Date().toISOString(),
+        })
+
+      if (error) throw error
+
+      toast.success('Notification settings saved')
+    } catch (error) {
+      console.error('Error saving notifications:', error)
+      toast.error('Failed to save notification settings')
+    } finally {
+      setSavingNotifications(false)
+    }
+  }
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match')
+      return
+    }
+
+    if (newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters')
+      return
+    }
+
+    setSavingPassword(true)
+
+    try {
+      const supabase = createClient()
+
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      })
+
+      if (error) throw error
+
+      toast.success('Password updated successfully')
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (error) {
+      console.error('Error changing password:', error)
+      toast.error('Failed to change password')
+    } finally {
+      setSavingPassword(false)
+    }
+  }
+
+  const toggleNotification = (key: keyof NotificationSettings) => {
+    setNotifications(prev => ({
+      ...prev,
+      [key]: !prev[key],
+    }))
+  }
+
+  if (loading) {
+    return <div className="p-8">Loading settings...</div>
+  }
+
+  return (
+    <div className="p-8 max-w-3xl mx-auto">
+      <div className="flex items-center gap-3 mb-6">
+        <Settings className="h-8 w-8 text-red-500" />
+        <div>
+          <h1 className="text-2xl font-bold">Settings</h1>
+          <p className="text-gray-600">Manage your account preferences</p>
+        </div>
+      </div>
+
+      {/* Profile Settings */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Profile Information
+          </CardTitle>
+          <CardDescription>Update your personal information</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSaveProfile} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-gray-400" />
+                <Input
+                  id="email"
+                  type="email"
+                  value={profile?.email || ''}
+                  disabled
+                  className="bg-gray-50"
+                />
+              </div>
+              <p className="text-xs text-gray-500">Email cannot be changed</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Full Name</Label>
+              <Input
+                id="fullName"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Your full name"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="(555) 123-4567"
+              />
+            </div>
+
+            <Button type="submit" isLoading={savingProfile}>
+              <Save className="h-4 w-4 mr-2" />
+              Save Profile
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Notification Settings */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Notification Preferences
+          </CardTitle>
+          <CardDescription>Choose what email notifications you receive</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Announcements</p>
+                <p className="text-sm text-gray-500">Receive emails about school announcements</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => toggleNotification('email_announcements')}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  notifications.email_announcements ? 'bg-red-600' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    notifications.email_announcements ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Events</p>
+                <p className="text-sm text-gray-500">Receive emails about upcoming events</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => toggleNotification('email_events')}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  notifications.email_events ? 'bg-red-600' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    notifications.email_events ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Messages</p>
+                <p className="text-sm text-gray-500">Receive emails when you get new messages</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => toggleNotification('email_messages')}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  notifications.email_messages ? 'bg-red-600' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    notifications.email_messages ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Class Reminders</p>
+                <p className="text-sm text-gray-500">Receive reminder emails before classes</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => toggleNotification('email_class_reminders')}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  notifications.email_class_reminders ? 'bg-red-600' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    notifications.email_class_reminders ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <Button onClick={handleSaveNotifications} isLoading={savingNotifications}>
+              <Save className="h-4 w-4 mr-2" />
+              Save Notifications
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Password Change */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Lock className="h-5 w-5" />
+            Change Password
+          </CardTitle>
+          <CardDescription>Update your account password</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">New Password</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm New Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                required
+              />
+              {newPassword && confirmPassword && newPassword !== confirmPassword && (
+                <p className="text-xs text-red-500">Passwords do not match</p>
+              )}
+            </div>
+
+            <Button type="submit" isLoading={savingPassword}>
+              <Lock className="h-4 w-4 mr-2" />
+              Update Password
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
