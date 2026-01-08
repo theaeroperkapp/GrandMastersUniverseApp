@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
 import { Modal } from '@/components/ui/modal'
-import { User, QrCode, Key, Download, Printer, Award, Users } from 'lucide-react'
+import { User, QrCode, Key, Download, Printer, Award, Users, Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface BeltRank {
@@ -61,6 +61,17 @@ export default function StudentsPage() {
   const [updatingFamily, setUpdatingFamily] = useState(false)
   const [schoolId, setSchoolId] = useState<string | null>(null)
   const qrRef = useRef<HTMLDivElement>(null)
+
+  // Add student modal state
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [addingStudent, setAddingStudent] = useState(false)
+  const [newStudent, setNewStudent] = useState({
+    full_name: '',
+    email: '',
+    role: 'student' as 'student' | 'parent',
+    belt_rank_id: '',
+    family_id: '',
+  })
 
   useEffect(() => {
     fetchData()
@@ -419,6 +430,50 @@ export default function StudentsPage() {
     return family?.name || null
   }
 
+  const handleAddStudent = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newStudent.full_name.trim() || !schoolId) {
+      toast.error('Please enter a name')
+      return
+    }
+
+    setAddingStudent(true)
+    try {
+      const response = await fetch('/api/students', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...newStudent,
+          school_id: schoolId,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to add student')
+      }
+
+      toast.success('Student added successfully')
+      setShowAddModal(false)
+      setNewStudent({
+        full_name: '',
+        email: '',
+        role: 'student',
+        belt_rank_id: '',
+        family_id: '',
+      })
+
+      // Refresh data
+      const supabase = createClient()
+      await fetchMembers(supabase, schoolId)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to add student')
+    } finally {
+      setAddingStudent(false)
+    }
+  }
+
   const filteredMembers = members.filter(member =>
     member.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     member.email?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -435,8 +490,14 @@ export default function StudentsPage() {
           <h1 className="text-2xl font-bold">Members</h1>
           <p className="text-gray-500 text-sm">Approved students and parents at your school</p>
         </div>
-        <div className="text-sm text-gray-500">
-          Total: {members.length} members
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-gray-500">
+            Total: {members.length} members
+          </div>
+          <Button onClick={() => setShowAddModal(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Student
+          </Button>
         </div>
       </div>
 
@@ -626,6 +687,122 @@ export default function StudentsPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Add Student Modal */}
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => {
+          setShowAddModal(false)
+          setNewStudent({
+            full_name: '',
+            email: '',
+            role: 'student',
+            belt_rank_id: '',
+            family_id: '',
+          })
+        }}
+        title="Add Student"
+      >
+        <form onSubmit={handleAddStudent} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="full_name">Full Name *</Label>
+            <Input
+              id="full_name"
+              value={newStudent.full_name}
+              onChange={(e) => setNewStudent({ ...newStudent, full_name: e.target.value })}
+              placeholder="Enter full name"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Email (optional)</Label>
+            <Input
+              id="email"
+              type="email"
+              value={newStudent.email}
+              onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
+              placeholder="Enter email address"
+            />
+            <p className="text-xs text-gray-500">
+              Leave blank for minors without email
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="role">Role *</Label>
+            <select
+              id="role"
+              value={newStudent.role}
+              onChange={(e) => setNewStudent({ ...newStudent, role: e.target.value as 'student' | 'parent' })}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+            >
+              <option value="student">Student</option>
+              <option value="parent">Parent</option>
+            </select>
+          </div>
+
+          {newStudent.role === 'student' && belts.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="belt_rank_id">Belt Rank</Label>
+              <select
+                id="belt_rank_id"
+                value={newStudent.belt_rank_id}
+                onChange={(e) => setNewStudent({ ...newStudent, belt_rank_id: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                <option value="">No belt assigned</option>
+                {belts.map((belt) => (
+                  <option key={belt.id} value={belt.id}>
+                    {belt.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {families.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="family_id">Family</Label>
+              <select
+                id="family_id"
+                value={newStudent.family_id}
+                onChange={(e) => setNewStudent({ ...newStudent, family_id: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                <option value="">No family assigned</option>
+                {families.map((family) => (
+                  <option key={family.id} value={family.id}>
+                    {family.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowAddModal(false)
+                setNewStudent({
+                  full_name: '',
+                  email: '',
+                  role: 'student',
+                  belt_rank_id: '',
+                  family_id: '',
+                })
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" isLoading={addingStudent}>
+              Add Student
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   )
