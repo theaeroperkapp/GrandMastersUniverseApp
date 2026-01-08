@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { validateClassInput, sanitizeString, formatValidationErrors } from '@/lib/validation'
 
 export async function GET(request: NextRequest) {
   try {
@@ -61,22 +62,37 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { school_id, name, description, day_of_week, start_time, end_time, instructor_id, max_capacity, location } = body
 
-    if (!school_id || !name || day_of_week === undefined || !start_time || !end_time) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    // Sanitize inputs
+    const sanitizedInput = {
+      school_id: sanitizeString(school_id),
+      name: sanitizeString(name),
+      description: description ? sanitizeString(description) : null,
+      day_of_week: typeof day_of_week === 'number' ? day_of_week : parseInt(day_of_week),
+      start_time: sanitizeString(start_time),
+      end_time: sanitizeString(end_time),
+      instructor_id: instructor_id ? sanitizeString(instructor_id) : null,
+      max_capacity: max_capacity ? parseInt(max_capacity) : null,
+      location: location ? sanitizeString(location) : null,
+    }
+
+    // Validate inputs
+    const validation = validateClassInput(sanitizedInput)
+    if (!validation.isValid) {
+      return NextResponse.json({ error: formatValidationErrors(validation.errors) }, { status: 400 })
     }
 
     const { data: newClass, error } = await (adminClient as any)
       .from('class_schedules')
       .insert({
-        school_id,
-        name,
-        description,
-        day_of_week,
-        start_time,
-        end_time,
-        instructor_id,
-        max_capacity,
-        location,
+        school_id: sanitizedInput.school_id,
+        name: sanitizedInput.name,
+        description: sanitizedInput.description,
+        day_of_week: sanitizedInput.day_of_week,
+        start_time: sanitizedInput.start_time,
+        end_time: sanitizedInput.end_time,
+        instructor_id: sanitizedInput.instructor_id,
+        max_capacity: sanitizedInput.max_capacity,
+        location: sanitizedInput.location,
         is_active: true,
       })
       .select()

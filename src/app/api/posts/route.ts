@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { uploadImage } from '@/lib/cloudinary'
 import { getYearMonth } from '@/lib/utils'
+import { validatePostInput, sanitizeString, formatValidationErrors, isValidUUID } from '@/lib/validation'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,10 +16,20 @@ export async function POST(request: NextRequest) {
     }
 
     const formData = await request.formData()
-    const content = formData.get('content') as string
-    const schoolId = formData.get('school_id') as string
+    const rawContent = formData.get('content') as string
+    const rawSchoolId = formData.get('school_id') as string
     const shareToFacebook = formData.get('share_to_facebook') === 'true'
     const image = formData.get('image') as File | null
+
+    // Sanitize inputs
+    const content = sanitizeString(rawContent)
+    const schoolId = sanitizeString(rawSchoolId)
+
+    // Validate inputs
+    const validation = validatePostInput({ content, school_id: schoolId })
+    if (!validation.isValid) {
+      return NextResponse.json({ error: formatValidationErrors(validation.errors) }, { status: 400 })
+    }
 
     // Get user profile
     const { data: profile } = await supabase
