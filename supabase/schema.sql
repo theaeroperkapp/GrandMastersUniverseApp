@@ -58,7 +58,7 @@ CREATE TABLE schools (
   phone TEXT,
   email TEXT,
   website TEXT,
-  owner_id UUID NOT NULL REFERENCES profiles(id),
+  owner_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   stripe_account_id TEXT,
   stripe_customer_id TEXT,
   subscription_status subscription_status NOT NULL DEFAULT 'trial',
@@ -77,7 +77,7 @@ ALTER TABLE profiles ADD CONSTRAINT fk_profiles_school FOREIGN KEY (school_id) R
 CREATE TABLE families (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   school_id UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
-  primary_holder_id UUID NOT NULL REFERENCES profiles(id),
+  primary_holder_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   billing_email TEXT,
   billing_address TEXT,
@@ -137,7 +137,7 @@ CREATE TABLE rank_history (
   student_profile_id UUID NOT NULL REFERENCES student_profiles(id) ON DELETE CASCADE,
   belt_rank_id UUID NOT NULL REFERENCES belt_ranks(id),
   promoted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  promoted_by UUID REFERENCES profiles(id),
+  promoted_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
   notes TEXT
 );
 
@@ -154,7 +154,7 @@ CREATE TABLE class_schedules (
   day_of_week INTEGER NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
   start_time TIME NOT NULL,
   end_time TIME NOT NULL,
-  instructor_id UUID REFERENCES profiles(id),
+  instructor_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
   max_capacity INTEGER,
   belt_requirement_id UUID REFERENCES belt_ranks(id),
   is_active BOOLEAN NOT NULL DEFAULT true,
@@ -190,7 +190,7 @@ CREATE TABLE attendance_records (
   student_profile_id UUID NOT NULL REFERENCES student_profiles(id) ON DELETE CASCADE,
   check_in_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   check_in_method check_in_method NOT NULL,
-  checked_in_by UUID REFERENCES profiles(id),
+  checked_in_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(class_session_id, student_profile_id)
 );
@@ -247,7 +247,7 @@ CREATE TABLE signed_contracts (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   contract_id UUID NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
   family_id UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
-  signed_by UUID NOT NULL REFERENCES profiles(id),
+  signed_by UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   signature_data TEXT NOT NULL, -- base64 signature image
   signed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   ip_address TEXT,
@@ -344,7 +344,7 @@ CREATE TABLE likes (
 CREATE TABLE announcements (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   school_id UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
-  author_id UUID NOT NULL REFERENCES profiles(id),
+  author_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   content TEXT NOT NULL,
   category announcement_category NOT NULL DEFAULT 'general',
@@ -424,7 +424,7 @@ CREATE TABLE waitlist (
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   notes TEXT,
   reviewed_at TIMESTAMPTZ,
-  reviewed_by UUID REFERENCES profiles(id),
+  reviewed_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
