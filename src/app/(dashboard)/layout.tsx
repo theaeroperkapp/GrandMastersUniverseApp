@@ -4,6 +4,9 @@ import { Navbar } from '@/components/layout/navbar'
 import { Sidebar } from '@/components/layout/sidebar'
 import type { UserRole } from '@/types/database'
 
+// Disable caching - always fetch fresh user data
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardLayout({
   children,
 }: {

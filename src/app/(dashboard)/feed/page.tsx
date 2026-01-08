@@ -2,17 +2,25 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { FeedClient } from '@/components/feed/feed-client'
 
+// Disable caching - always fetch fresh data
+export const dynamic = 'force-dynamic'
+
 export default async function FeedPage() {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('*, schools(*)')
     .eq('id', user.id)
     .single()
+
+  // Debug logging
+  console.log('Feed page - User ID:', user.id)
+  console.log('Feed page - Profile:', JSON.stringify(profile))
+  console.log('Feed page - Profile Error:', profileError)
 
   const profileData = profile as {
     id: string
@@ -24,6 +32,7 @@ export default async function FeedPage() {
   } | null
 
   if (!profileData?.school_id) {
+    console.log('Feed page - No school_id found, showing no school message')
     return (
       <div className="text-center py-12">
         <h1 className="text-2xl font-bold mb-2">No School Assigned</h1>
