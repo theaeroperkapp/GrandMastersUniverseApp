@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
-import { Users, User, Mail, Phone, Award, Calendar } from 'lucide-react'
+import { Users, User, Mail, Award, Calendar } from 'lucide-react'
 
 interface BeltRank {
   id: string
@@ -18,7 +18,6 @@ interface FamilyMember {
   email: string
   avatar_url: string | null
   role: string
-  phone: string | null
   created_at: string
   student_profile?: {
     id: string
@@ -163,12 +162,6 @@ export default function MyFamilyPage() {
                         )}
                       </div>
                       <p className="text-sm text-gray-500">{parent.email}</p>
-                      {parent.phone && (
-                        <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-                          <Phone className="h-3 w-3" />
-                          {parent.phone}
-                        </p>
-                      )}
                     </div>
                   </div>
                 </CardContent>

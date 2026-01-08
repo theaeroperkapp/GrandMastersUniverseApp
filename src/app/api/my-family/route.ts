@@ -12,11 +12,10 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get current user's profile with family info (using admin to bypass RLS)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: profileData } = await (adminClient as any)
+    // Get current user's profile with family info
+    const { data: profileData, error: profileError } = await supabase
       .from('profiles')
-      .select('id, full_name, email, avatar_url, role, phone, family_id, created_at')
+      .select('id, full_name, email, avatar_url, role, family_id, created_at')
       .eq('id', user.id)
       .single()
 
@@ -26,13 +25,15 @@ export async function GET() {
       email: string
       avatar_url: string | null
       role: string
-      phone: string | null
       family_id: string | null
       created_at: string
     } | null
 
     if (!profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+      return NextResponse.json({
+        error: 'Profile not found',
+        debug: { userId: user.id, profileError: profileError?.message }
+      }, { status: 404 })
     }
 
     let familyId = profile.family_id
@@ -55,7 +56,7 @@ export async function GET() {
       return NextResponse.json({ family: null, members: [], profile })
     }
 
-    // Get family details
+    // Get family details (using admin client to bypass RLS)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: familyData } = await (adminClient as any)
       .from('families')
@@ -67,47 +68,57 @@ export async function GET() {
       return NextResponse.json({ family: null, members: [], profile })
     }
 
+    const family = familyData as {
+      id: string
+      name: string
+      billing_email: string | null
+      primary_holder_id: string
+    }
+
     // Get all family members
     // Include both members with family_id set AND the primary holder
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: membersData } = await (adminClient as any)
+    const { data: membersData } = await supabase
       .from('profiles')
-      .select('id, full_name, email, avatar_url, role, phone, created_at')
-      .or(`family_id.eq.${familyId},id.eq.${familyData.primary_holder_id}`)
+      .select('id, full_name, email, avatar_url, role, created_at')
+      .or(`family_id.eq.${familyId},id.eq.${family.primary_holder_id}`)
       .order('role')
       .order('full_name')
 
-    const members = membersData || []
+    const members = (membersData || []) as Array<{
+      id: string
+      full_name: string
+      email: string
+      avatar_url: string | null
+      role: string
+      created_at: string
+    }>
 
     // For each member, fetch their student profile if they have one
     const membersWithStudentProfiles = await Promise.all(
-      members.map(async (member: { id: string }) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: studentProfileData } = await (adminClient as any)
+      members.map(async (member) => {
+        const { data: studentProfileData } = await supabase
           .from('student_profiles')
-          .select(`
-            id,
-            enrollment_date,
-            current_belt_id
-          `)
+          .select('id, enrollment_date, current_belt_id')
           .eq('profile_id', member.id)
           .single()
 
         let currentBelt = null
-        if (studentProfileData?.current_belt_id) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { data: beltData } = await (adminClient as any)
-            .from('belt_ranks')
-            .select('id, name, color')
-            .eq('id', studentProfileData.current_belt_id)
-            .single()
-          currentBelt = beltData
+        if (studentProfileData) {
+          const studentProfile = studentProfileData as { id: string; enrollment_date: string | null; current_belt_id: string | null }
+          if (studentProfile.current_belt_id) {
+            const { data: beltData } = await supabase
+              .from('belt_ranks')
+              .select('id, name, color')
+              .eq('id', studentProfile.current_belt_id)
+              .single()
+            currentBelt = beltData
+          }
         }
 
         return {
           ...member,
           student_profile: studentProfileData ? {
-            ...studentProfileData,
+            ...(studentProfileData as { id: string; enrollment_date: string | null; current_belt_id: string | null }),
             current_belt: currentBelt,
           } : null,
         }
@@ -115,10 +126,10 @@ export async function GET() {
     )
 
     return NextResponse.json({
-      family: familyData,
+      family,
       members: membersWithStudentProfiles,
       profile,
-      isPrimaryHolder: familyData.primary_holder_id === user.id,
+      isPrimaryHolder: family.primary_holder_id === user.id,
     })
   } catch (error) {
     console.error('My family error:', error)
