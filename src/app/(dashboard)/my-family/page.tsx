@@ -68,7 +68,22 @@ export default function MyFamilyPage() {
 
     setCurrentUser(profile)
 
-    if (!profile.family_id) {
+    let familyId = profile.family_id
+
+    // If no family_id, check if user is primary holder of a family
+    if (!familyId) {
+      const { data: primaryHolderFamily } = await supabase
+        .from('families')
+        .select('id')
+        .eq('primary_holder_id', user.id)
+        .single()
+
+      if (primaryHolderFamily) {
+        familyId = (primaryHolderFamily as { id: string }).id
+      }
+    }
+
+    if (!familyId) {
       setLoading(false)
       return
     }
@@ -77,7 +92,7 @@ export default function MyFamilyPage() {
     const { data: familyData } = await supabase
       .from('families')
       .select('id, name, billing_email, primary_holder_id')
-      .eq('id', profile.family_id)
+      .eq('id', familyId)
       .single()
 
     const familyInfo = familyData as Family | null
@@ -87,6 +102,7 @@ export default function MyFamilyPage() {
       setIsPrimaryHolder(familyInfo.primary_holder_id === user.id)
 
       // Get all family members with their student profiles
+      // Include both members with family_id set AND the primary holder
       const { data: membersData } = await supabase
         .from('profiles')
         .select(`
@@ -98,7 +114,7 @@ export default function MyFamilyPage() {
           phone,
           created_at
         `)
-        .eq('family_id', profile.family_id)
+        .or(`family_id.eq.${familyId},id.eq.${familyInfo.primary_holder_id}`)
         .order('role')
         .order('full_name')
 
