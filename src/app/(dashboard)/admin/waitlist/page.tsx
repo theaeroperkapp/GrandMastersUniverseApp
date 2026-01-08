@@ -1,14 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
+import { Skeleton } from '@/components/ui/skeleton'
 import toast from 'react-hot-toast'
-import { Check, X, Mail, Trash2, Clock } from 'lucide-react'
+import { Check, X, Mail, Trash2, Clock, AlertCircle } from 'lucide-react'
 
 interface WaitlistEntry {
   id: string
@@ -28,9 +29,29 @@ export default function WaitlistPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
   const [selectedEntry, setSelectedEntry] = useState<WaitlistEntry | null>(null)
+  const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null)
   const [notes, setNotes] = useState('')
   const [processing, setProcessing] = useState(false)
   const [sendNotification, setSendNotification] = useState(true)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+
+  // Close modal on Escape key
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      if (deleteConfirm) {
+        setDeleteConfirm(null)
+      } else if (selectedEntry) {
+        setSelectedEntry(null)
+        setActionType(null)
+        setNotes('')
+      }
+    }
+  }, [deleteConfirm, selectedEntry])
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [handleKeyDown])
 
   useEffect(() => {
     fetchWaitlist()
@@ -53,7 +74,23 @@ export default function WaitlistPage() {
     setLoading(false)
   }
 
-  const updateStatus = async (id: string, status: 'approved' | 'rejected') => {
+  const openModal = (entry: WaitlistEntry, action: 'approve' | 'reject') => {
+    setSelectedEntry(entry)
+    setActionType(action)
+    setNotes('')
+    setSendNotification(true)
+  }
+
+  const closeModal = () => {
+    setSelectedEntry(null)
+    setActionType(null)
+    setNotes('')
+  }
+
+  const updateStatus = async () => {
+    if (!selectedEntry || !actionType) return
+
+    const status = actionType === 'approve' ? 'approved' : 'rejected'
     setProcessing(true)
 
     try {
@@ -61,7 +98,7 @@ export default function WaitlistPage() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id,
+          id: selectedEntry.id,
           status,
           notes: notes || null,
           sendNotification,
@@ -75,15 +112,19 @@ export default function WaitlistPage() {
 
       const result = await response.json()
 
-      toast.success(
-        `Entry ${status}${result.emailSent ? ' - notification sent' : sendNotification ? ' - email not configured' : ''}`
-      )
+      let message = `Entry ${status}`
+      if (sendNotification) {
+        if (result.emailSent) {
+          message += ' - notification sent'
+        } else if (result.emailError) {
+          message += ` - email failed: ${result.emailError}`
+        }
+      }
+      toast.success(message)
       setEntries(entries.map(e =>
-        e.id === id ? { ...e, status, notes: notes || null, reviewed_at: new Date().toISOString() } : e
+        e.id === selectedEntry.id ? { ...e, status, notes: notes || null, reviewed_at: new Date().toISOString() } : e
       ))
-      setSelectedEntry(null)
-      setNotes('')
-      setSendNotification(true)
+      closeModal()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : `Failed to ${status} entry`)
     }
@@ -92,8 +133,6 @@ export default function WaitlistPage() {
   }
 
   const deleteEntry = async (id: string) => {
-    if (!confirm('Are you sure you want to permanently delete this entry?')) return
-
     const supabase = createClient()
 
     const { error } = await supabase
@@ -107,6 +146,7 @@ export default function WaitlistPage() {
       toast.success('Entry deleted')
       setEntries(entries.filter(e => e.id !== id))
     }
+    setDeleteConfirm(null)
   }
 
   const filteredEntries = entries.filter(entry => {
@@ -138,7 +178,37 @@ export default function WaitlistPage() {
   const rejectedCount = entries.filter(e => e.status === 'rejected').length
 
   if (loading) {
-    return <div className="p-8">Loading waitlist...</div>
+    return (
+      <div className="p-8">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <Skeleton className="h-8 w-32 mb-2" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          {[1, 2, 3].map(i => (
+            <Card key={i}>
+              <CardContent className="p-4 text-center">
+                <Skeleton className="h-8 w-12 mx-auto mb-2" />
+                <Skeleton className="h-4 w-16 mx-auto" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="space-y-4">
+          {[1, 2, 3].map(i => (
+            <Card key={i}>
+              <CardContent className="p-4">
+                <Skeleton className="h-6 w-48 mb-2" />
+                <Skeleton className="h-4 w-32 mb-2" />
+                <Skeleton className="h-4 w-64" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -152,19 +222,28 @@ export default function WaitlistPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <Card className="cursor-pointer hover:bg-yellow-50" onClick={() => setFilter('pending')}>
+        <Card
+          className={`cursor-pointer hover:bg-yellow-50 transition-colors ${filter === 'pending' ? 'ring-2 ring-yellow-400' : ''}`}
+          onClick={() => setFilter('pending')}
+        >
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold text-yellow-600">{pendingCount}</p>
             <p className="text-sm text-gray-500">Pending</p>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:bg-green-50" onClick={() => setFilter('approved')}>
+        <Card
+          className={`cursor-pointer hover:bg-green-50 transition-colors ${filter === 'approved' ? 'ring-2 ring-green-400' : ''}`}
+          onClick={() => setFilter('approved')}
+        >
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold text-green-600">{approvedCount}</p>
             <p className="text-sm text-gray-500">Approved</p>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:bg-red-50" onClick={() => setFilter('rejected')}>
+        <Card
+          className={`cursor-pointer hover:bg-red-50 transition-colors ${filter === 'rejected' ? 'ring-2 ring-red-400' : ''}`}
+          onClick={() => setFilter('rejected')}
+        >
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold text-red-600">{rejectedCount}</p>
             <p className="text-sm text-gray-500">Rejected</p>
@@ -173,41 +252,41 @@ export default function WaitlistPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <Input
           placeholder="Search by name, email, or school..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"
         />
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button
             variant={filter === 'all' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setFilter('all')}
           >
-            All
+            All ({entries.length})
           </Button>
           <Button
             variant={filter === 'pending' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setFilter('pending')}
           >
-            Pending
+            Pending ({pendingCount})
           </Button>
           <Button
             variant={filter === 'approved' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setFilter('approved')}
           >
-            Approved
+            Approved ({approvedCount})
           </Button>
           <Button
             variant={filter === 'rejected' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setFilter('rejected')}
           >
-            Rejected
+            Rejected ({rejectedCount})
           </Button>
         </div>
       </div>
@@ -215,7 +294,17 @@ export default function WaitlistPage() {
       {filteredEntries.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center text-gray-500">
-            {searchTerm || filter !== 'all' ? 'No matching entries found.' : 'No waitlist entries yet.'}
+            <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+            <p>{searchTerm || filter !== 'all' ? 'No matching entries found.' : 'No waitlist entries yet.'}</p>
+            {(searchTerm || filter !== 'all') && (
+              <Button
+                variant="link"
+                className="mt-2"
+                onClick={() => { setSearchTerm(''); setFilter('all'); }}
+              >
+                Clear filters
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -255,10 +344,7 @@ export default function WaitlistPage() {
                         <Button
                           size="sm"
                           className="bg-green-600 hover:bg-green-700"
-                          onClick={() => {
-                            setSelectedEntry(entry)
-                            setNotes('')
-                          }}
+                          onClick={() => openModal(entry, 'approve')}
                         >
                           <Check className="h-4 w-4 mr-1" />
                           Approve
@@ -267,10 +353,7 @@ export default function WaitlistPage() {
                           size="sm"
                           variant="outline"
                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => {
-                            setSelectedEntry({ ...entry, status: 'rejected' } as WaitlistEntry)
-                            setNotes('')
-                          }}
+                          onClick={() => openModal(entry, 'reject')}
                         >
                           <X className="h-4 w-4 mr-1" />
                           Reject
@@ -280,7 +363,7 @@ export default function WaitlistPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => deleteEntry(entry.id)}
+                        onClick={() => setDeleteConfirm(entry.id)}
                         className="text-red-600 hover:text-red-700"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -295,12 +378,15 @@ export default function WaitlistPage() {
       )}
 
       {/* Approval/Rejection Modal */}
-      {selectedEntry && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      {selectedEntry && actionType && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
+        >
           <Card className="w-full max-w-md mx-4">
             <CardHeader>
               <CardTitle>
-                {selectedEntry.status === 'rejected' ? 'Reject' : 'Approve'} Application
+                {actionType === 'reject' ? 'Reject' : 'Approve'} Application
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -333,22 +419,54 @@ export default function WaitlistPage() {
               <div className="flex gap-2 justify-end">
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setSelectedEntry(null)
-                    setNotes('')
-                  }}
+                  onClick={closeModal}
                   disabled={processing}
                 >
                   Cancel
                 </Button>
                 <Button
-                  className={selectedEntry.status === 'rejected' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}
-                  onClick={() => updateStatus(selectedEntry.id, selectedEntry.status === 'rejected' ? 'rejected' : 'approved')}
+                  className={actionType === 'reject' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}
+                  onClick={updateStatus}
                   disabled={processing}
                 >
-                  {processing ? 'Processing...' : selectedEntry.status === 'rejected' ? 'Reject' : 'Approve'}
+                  {processing ? 'Processing...' : actionType === 'reject' ? 'Reject' : 'Approve'}
                 </Button>
               </div>
+              <p className="text-xs text-gray-400 text-center">Press Escape to cancel</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={(e) => { if (e.target === e.currentTarget) setDeleteConfirm(null); }}
+        >
+          <Card className="w-full max-w-sm mx-4">
+            <CardHeader>
+              <CardTitle className="text-red-600">Delete Entry</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-gray-600">
+                Are you sure you want to permanently delete this waitlist entry? This action cannot be undone.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteConfirm(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-red-600 hover:bg-red-700"
+                  onClick={() => deleteEntry(deleteConfirm)}
+                >
+                  Delete
+                </Button>
+              </div>
+              <p className="text-xs text-gray-400 text-center">Press Escape to cancel</p>
             </CardContent>
           </Card>
         </div>

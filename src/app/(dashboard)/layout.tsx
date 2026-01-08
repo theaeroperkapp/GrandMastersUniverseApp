@@ -65,7 +65,7 @@ export default async function DashboardLayout({
   const { count: unreadNotifications } = await supabase
     .from('notifications')
     .select('*', { count: 'exact', head: true })
-    .eq('profile_id', user.id)
+    .eq('user_id', user.id)
     .eq('is_read', false)
 
   // Get unread messages count

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -15,6 +15,7 @@ import {
   User,
   Settings,
   ChevronDown,
+  Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/types/database'
@@ -35,15 +36,53 @@ interface NavbarProps {
 export function Navbar({ user, unreadNotifications, unreadMessages }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
 
+  // Close all menus on route change
+  useEffect(() => {
+    setIsMenuOpen(false)
+    setIsProfileOpen(false)
+  }, [pathname])
+
+  // Handle Escape key to close menus
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setIsMenuOpen(false)
+      setIsProfileOpen(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [handleKeyDown])
+
   const handleLogout = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    toast.success('Logged out successfully')
-    router.push('/login')
-    router.refresh()
+    setIsLoggingOut(true)
+    try {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+      toast.success('Logged out successfully')
+      router.push('/login')
+      router.refresh()
+    } catch {
+      toast.error('Failed to log out')
+      setIsLoggingOut(false)
+    }
+  }
+
+  // Toggle mobile menu and close profile dropdown
+  const toggleMobileMenu = () => {
+    setIsProfileOpen(false)
+    setIsMenuOpen(!isMenuOpen)
+  }
+
+  // Toggle profile dropdown and close mobile menu
+  const toggleProfileMenu = () => {
+    setIsMenuOpen(false)
+    setIsProfileOpen(!isProfileOpen)
   }
 
   const navLinks = [
@@ -120,15 +159,20 @@ export function Navbar({ user, unreadNotifications, unreadMessages }: NavbarProp
             {/* Profile Dropdown */}
             <div className="relative">
               <button
-                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                onClick={toggleProfileMenu}
                 className="flex items-center gap-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                aria-expanded={isProfileOpen}
+                aria-haspopup="true"
               >
                 <Avatar
                   src={user.avatar_url}
                   name={user.full_name}
                   size="sm"
                 />
-                <ChevronDown className="h-4 w-4 text-gray-600 hidden sm:block" />
+                <ChevronDown className={cn(
+                  'h-4 w-4 text-gray-600 hidden sm:block transition-transform',
+                  isProfileOpen && 'rotate-180'
+                )} />
               </button>
 
               {isProfileOpen && (
@@ -136,6 +180,7 @@ export function Navbar({ user, unreadNotifications, unreadMessages }: NavbarProp
                   <div
                     className="fixed inset-0 z-40"
                     onClick={() => setIsProfileOpen(false)}
+                    aria-hidden="true"
                   />
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-50 py-1">
                     <div className="px-4 py-2 border-b">
@@ -160,10 +205,15 @@ export function Navbar({ user, unreadNotifications, unreadMessages }: NavbarProp
                     </Link>
                     <button
                       onClick={handleLogout}
-                      className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                      disabled={isLoggingOut}
+                      className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100 disabled:opacity-50"
                     >
-                      <LogOut className="h-4 w-4" />
-                      Log Out
+                      {isLoggingOut ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <LogOut className="h-4 w-4" />
+                      )}
+                      {isLoggingOut ? 'Logging out...' : 'Log Out'}
                     </button>
                   </div>
                 </>
@@ -172,8 +222,10 @@ export function Navbar({ user, unreadNotifications, unreadMessages }: NavbarProp
 
             {/* Mobile Menu Button */}
             <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              onClick={toggleMobileMenu}
               className="md:hidden p-2 rounded-lg hover:bg-gray-100"
+              aria-expanded={isMenuOpen}
+              aria-label="Toggle menu"
             >
               {isMenuOpen ? (
                 <X className="h-6 w-6" />

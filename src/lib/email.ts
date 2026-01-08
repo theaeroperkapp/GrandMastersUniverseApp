@@ -1,35 +1,19 @@
 import nodemailer from 'nodemailer'
 import { APP_NAME, APP_URL } from './constants'
 
-// Create OAuth2 transporter for Gmail
-const createTransporter = async () => {
-  // Check if OAuth2 credentials are available
-  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REFRESH_TOKEN) {
-    return nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        type: 'OAuth2',
-        user: process.env.EMAIL_USER,
-        clientId: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
-      },
-    })
+// Create Gmail transporter with App Password
+const createTransporter = () => {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+    return null
   }
 
-  // Fallback to basic auth (for development/testing)
-  if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
-    return nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    })
-  }
-
-  // Return null if no email credentials configured
-  return null
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASSWORD,
+    },
+  })
 }
 
 interface EmailOptions {
@@ -40,7 +24,7 @@ interface EmailOptions {
 
 export async function sendEmail({ to, subject, html }: EmailOptions) {
   try {
-    const transporter = await createTransporter()
+    const transporter = createTransporter()
 
     if (!transporter) {
       console.warn('Email not configured - skipping email send to:', to)
@@ -62,7 +46,8 @@ export async function sendEmail({ to, subject, html }: EmailOptions) {
 }
 
 // Waitlist Email Templates
-export function getWaitlistApprovalEmail(name: string, schoolName: string) {
+export function getWaitlistApprovalEmail(name: string, schoolName: string, email?: string) {
+  const signupUrl = `${APP_URL}/signup/owner?approved=true&school=${encodeURIComponent(schoolName)}${email ? `&email=${encodeURIComponent(email)}` : ''}`
   return {
     subject: `Your Application Has Been Approved - ${APP_NAME}`,
     html: `
@@ -78,7 +63,7 @@ export function getWaitlistApprovalEmail(name: string, schoolName: string) {
           You can now set up your martial arts school on our platform and start managing your students, classes, and more!
         </p>
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${APP_URL}/signup?approved=true" style="display: inline-block; background-color: #dc2626; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+          <a href="${signupUrl}" style="display: inline-block; background-color: #dc2626; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold;">
             Get Started Now
           </a>
         </div>

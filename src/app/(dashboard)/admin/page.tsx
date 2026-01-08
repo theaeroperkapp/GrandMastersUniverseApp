@@ -11,6 +11,7 @@ import {
   Globe,
   FileText,
   Activity,
+  Clock,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
@@ -40,6 +41,7 @@ export default async function AdminDashboardPage() {
     { data: recentPayments },
     { count: pendingContacts },
     { count: waitlistCount },
+    { count: pendingWaitlist },
     { data: recentSchools },
   ] = await Promise.all([
     supabase.from('profiles').select('*', { count: 'exact', head: true }),
@@ -60,6 +62,7 @@ export default async function AdminDashboardPage() {
       .select('*', { count: 'exact', head: true })
       .eq('status', 'new'),
     supabase.from('waitlist').select('*', { count: 'exact', head: true }),
+    supabase.from('waitlist').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
     supabase
       .from('schools')
       .select('id, name, subdomain, subscription_status, created_at, owner:profiles!schools_owner_id_fkey(full_name)')
@@ -108,10 +111,10 @@ export default async function AdminDashboardPage() {
     },
     {
       title: 'Waitlist',
-      value: waitlistCount || 0,
-      icon: <FileText className="h-6 w-6" />,
-      href: '/admin/contact-submissions',
-      color: 'text-orange-600 bg-orange-100',
+      value: pendingWaitlist ? `${pendingWaitlist} pending` : (waitlistCount || 0),
+      icon: pendingWaitlist ? <Clock className="h-6 w-6" /> : <FileText className="h-6 w-6" />,
+      href: '/admin/waitlist',
+      color: pendingWaitlist ? 'text-yellow-600 bg-yellow-100' : 'text-orange-600 bg-orange-100',
     },
   ]
 
@@ -144,6 +147,27 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Alerts */}
+      {(pendingWaitlist || 0) > 0 && (
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Clock className="h-5 w-5 text-yellow-600" />
+                <p className="font-medium text-yellow-800">
+                  {pendingWaitlist} pending waitlist application{(pendingWaitlist || 0) > 1 ? 's' : ''} awaiting review
+                </p>
+              </div>
+              <Link
+                href="/admin/waitlist"
+                className="text-yellow-600 hover:underline text-sm font-medium"
+              >
+                Review now
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {(pendingContacts || 0) > 0 && (
         <Card className="border-orange-200 bg-orange-50">
           <CardContent className="p-4">

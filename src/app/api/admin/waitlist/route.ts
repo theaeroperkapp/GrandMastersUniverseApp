@@ -56,12 +56,14 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to update entry' }, { status: 500 })
     }
 
+    const entryData = entry as { name: string; email: string; school_name: string }
+
     // Send email notification if requested
     let emailSent = false
+    let emailError = null
     if (sendNotification) {
-      const entryData = entry as { name: string; email: string; school_name: string }
       const emailTemplate = status === 'approved'
-        ? getWaitlistApprovalEmail(entryData.name, entryData.school_name)
+        ? getWaitlistApprovalEmail(entryData.name, entryData.school_name, entryData.email)
         : getWaitlistRejectionEmail(entryData.name, entryData.school_name)
 
       const result = await sendEmail({
@@ -70,11 +72,25 @@ export async function PATCH(request: NextRequest) {
       })
 
       emailSent = result.success
+      if (!result.success) {
+        emailError = result.reason
+      }
     }
+
+    // Create notification for the admin
+    await supabase
+      .from('notifications')
+      .insert({
+        user_id: user.id,
+        title: `Waitlist Entry ${status === 'approved' ? 'Approved' : 'Rejected'}`,
+        message: `${entryData.name} (${entryData.school_name}) has been ${status}.`,
+        type: status === 'approved' ? 'success' : 'info',
+      } as never)
 
     return NextResponse.json({
       success: true,
       emailSent,
+      emailError,
     })
   } catch (error) {
     console.error('Waitlist API error:', error)
