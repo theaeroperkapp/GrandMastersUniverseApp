@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Plus, Edit, Trash2, DollarSign } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { BeltTestFees } from '@/components/owner/belt-test-fees'
 
 interface Membership {
   id: string
@@ -477,6 +478,13 @@ export default function BillingPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Belt Test Fees */}
+      {schoolId && (
+        <div className="mt-6">
+          <BeltTestFees schoolId={schoolId} />
+        </div>
+      )}
 
       {/* Create/Edit Membership Modal */}
       <Modal

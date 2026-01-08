@@ -8,7 +8,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import {
   CreditCard,
-  Calendar,
   DollarSign,
   CheckCircle,
   Clock,
@@ -16,7 +15,10 @@ import {
   Receipt,
   Ticket,
   RefreshCw,
+  Award,
 } from 'lucide-react'
+import { CardManagement } from '@/components/payments/card-management'
+import { PaymentModal } from '@/components/payments/payment-modal'
 
 interface EventPayment {
   id: string
@@ -35,6 +37,14 @@ interface CustomCharge {
   created_at: string
 }
 
+interface BeltTestPayment {
+  id: string
+  description: string
+  amount: number
+  status: 'pending' | 'paid' | 'cancelled'
+  created_at: string
+}
+
 interface MembershipInfo {
   id: string
   membership_name: string
@@ -43,12 +53,28 @@ interface MembershipInfo {
   current_period_end: string | null
 }
 
+interface PaymentModalState {
+  isOpen: boolean
+  amount: number
+  description: string
+  paymentType: 'custom_charge' | 'event' | 'belt_test' | 'subscription'
+  paymentId: string
+}
+
 export default function PaymentsPage() {
   const [loading, setLoading] = useState(true)
   const [eventPayments, setEventPayments] = useState<EventPayment[]>([])
   const [customCharges, setCustomCharges] = useState<CustomCharge[]>([])
+  const [beltTestPayments, setBeltTestPayments] = useState<BeltTestPayment[]>([])
   const [membership, setMembership] = useState<MembershipInfo | null>(null)
   const [familyId, setFamilyId] = useState<string | null>(null)
+  const [paymentModal, setPaymentModal] = useState<PaymentModalState>({
+    isOpen: false,
+    amount: 0,
+    description: '',
+    paymentType: 'custom_charge',
+    paymentId: '',
+  })
 
   useEffect(() => {
     fetchData()
@@ -120,6 +146,53 @@ export default function PaymentsPage() {
 
     if (typedCharges) {
       setCustomCharges(typedCharges)
+    }
+
+    // Fetch belt test payments
+    const { data: beltPayments } = await supabase
+      .from('belt_test_payments')
+      .select(`
+        id, amount, status, created_at,
+        belt_test_fee:belt_test_fees(
+          description,
+          from_belt:belt_ranks!belt_test_fees_from_belt_id_fkey(name),
+          to_belt:belt_ranks!belt_test_fees_to_belt_id_fkey(name)
+        )
+      `)
+      .eq('family_id', profileData.family_id)
+      .order('created_at', { ascending: false })
+
+    type BeltPaymentRow = {
+      id: string
+      amount: number
+      status: 'pending' | 'paid' | 'cancelled'
+      created_at: string
+      belt_test_fee: {
+        description: string | null
+        from_belt: { name: string } | null
+        to_belt: { name: string } | null
+      } | null
+    }
+    const typedBeltPayments = beltPayments as BeltPaymentRow[] | null
+
+    if (typedBeltPayments) {
+      setBeltTestPayments(
+        typedBeltPayments.map(bp => {
+          let desc = 'Belt Test Fee'
+          if (bp.belt_test_fee?.from_belt && bp.belt_test_fee?.to_belt) {
+            desc = `Belt Test: ${bp.belt_test_fee.from_belt.name} → ${bp.belt_test_fee.to_belt.name}`
+          } else if (bp.belt_test_fee?.description) {
+            desc = bp.belt_test_fee.description
+          }
+          return {
+            id: bp.id,
+            description: desc,
+            amount: bp.amount,
+            status: bp.status,
+            created_at: bp.created_at,
+          }
+        })
+      )
     }
 
     // Fetch membership info
@@ -200,13 +273,36 @@ export default function PaymentsPage() {
     }
   }
 
-  const totalPending = customCharges
-    .filter(c => c.status === 'pending')
-    .reduce((sum, c) => sum + c.amount, 0)
+  const openPaymentModal = (
+    type: 'custom_charge' | 'event' | 'belt_test',
+    id: string,
+    amount: number,
+    description: string
+  ) => {
+    setPaymentModal({
+      isOpen: true,
+      amount,
+      description,
+      paymentType: type,
+      paymentId: id,
+    })
+  }
+
+  const handlePaymentSuccess = () => {
+    setPaymentModal(prev => ({ ...prev, isOpen: false }))
+    fetchData() // Refresh data
+  }
+
+  const totalPending = [
+    ...customCharges.filter(c => c.status === 'pending').map(c => c.amount),
+    ...eventPayments.filter(p => p.payment_status === 'pending' && p.amount > 0).map(p => p.amount),
+    ...beltTestPayments.filter(b => b.status === 'pending').map(b => b.amount),
+  ].reduce((sum, amount) => sum + amount, 0)
 
   const totalPaid = [
     ...eventPayments.filter(p => p.payment_status === 'paid').map(p => p.amount),
     ...customCharges.filter(c => c.status === 'paid').map(c => c.amount),
+    ...beltTestPayments.filter(b => b.status === 'paid').map(b => b.amount),
   ].reduce((sum, amount) => sum + amount, 0)
 
   if (loading) {
@@ -242,9 +338,14 @@ export default function PaymentsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <CreditCard className="h-6 w-6" />
-          Payment History
+          Payments
         </h1>
-        <p className="text-gray-500 text-sm">View your payments and billing information</p>
+        <p className="text-gray-500 text-sm">Manage your payment methods and view billing history</p>
+      </div>
+
+      {/* Card Management */}
+      <div className="mb-6">
+        <CardManagement />
       </div>
 
       {/* Summary Cards */}
@@ -285,7 +386,7 @@ export default function PaymentsPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Transactions</p>
-                <p className="text-xl font-bold">{eventPayments.length + customCharges.length}</p>
+                <p className="text-xl font-bold">{eventPayments.length + customCharges.length + beltTestPayments.length}</p>
               </div>
             </div>
           </CardContent>
@@ -317,38 +418,7 @@ export default function PaymentsPage() {
         </Card>
       )}
 
-      {/* Event Payments */}
-      {eventPayments.length > 0 && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Ticket className="h-5 w-5" />
-              Event Registrations
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {eventPayments.map(payment => (
-                <div
-                  key={payment.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                >
-                  <div>
-                    <p className="font-medium">{payment.event_title}</p>
-                    <p className="text-sm text-gray-500">{formatDate(payment.registered_at)}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-semibold">{formatAmount(payment.amount)}</span>
-                    {getStatusBadge(payment.payment_status)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Custom Charges */}
+      {/* Custom Charges - Show pending first */}
       {customCharges.length > 0 && (
         <Card className="mb-6">
           <CardHeader>
@@ -372,7 +442,96 @@ export default function PaymentsPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-semibold">{formatAmount(charge.amount)}</span>
-                    {getStatusBadge(charge.status)}
+                    {charge.status === 'pending' ? (
+                      <Button
+                        size="sm"
+                        onClick={() => openPaymentModal('custom_charge', charge.id, charge.amount, charge.description)}
+                      >
+                        Pay Now
+                      </Button>
+                    ) : (
+                      getStatusBadge(charge.status)
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Belt Test Payments */}
+      {beltTestPayments.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Award className="h-5 w-5" />
+              Belt Test Fees
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {beltTestPayments.map(payment => (
+                <div
+                  key={payment.id}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                >
+                  <div>
+                    <p className="font-medium">{payment.description}</p>
+                    <p className="text-sm text-gray-500">{formatDate(payment.created_at)}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold">{formatAmount(payment.amount)}</span>
+                    {payment.status === 'pending' ? (
+                      <Button
+                        size="sm"
+                        onClick={() => openPaymentModal('belt_test', payment.id, payment.amount, payment.description)}
+                      >
+                        Pay Now
+                      </Button>
+                    ) : (
+                      getStatusBadge(payment.status)
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Event Payments */}
+      {eventPayments.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Ticket className="h-5 w-5" />
+              Event Registrations
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {eventPayments.map(payment => (
+                <div
+                  key={payment.id}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                >
+                  <div>
+                    <p className="font-medium">{payment.event_title}</p>
+                    <p className="text-sm text-gray-500">{formatDate(payment.registered_at)}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold">{formatAmount(payment.amount)}</span>
+                    {payment.payment_status === 'pending' && payment.amount > 0 ? (
+                      <Button
+                        size="sm"
+                        onClick={() => openPaymentModal('event', payment.id, payment.amount, payment.event_title)}
+                      >
+                        Pay Now
+                      </Button>
+                    ) : (
+                      getStatusBadge(payment.payment_status)
+                    )}
                   </div>
                 </div>
               ))}
@@ -382,7 +541,7 @@ export default function PaymentsPage() {
       )}
 
       {/* Empty State */}
-      {eventPayments.length === 0 && customCharges.length === 0 && !membership && (
+      {eventPayments.length === 0 && customCharges.length === 0 && beltTestPayments.length === 0 && !membership && (
         <Card>
           <CardContent className="p-12 text-center">
             <Receipt className="h-12 w-12 mx-auto text-gray-300 mb-4" />
@@ -391,6 +550,17 @@ export default function PaymentsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={paymentModal.isOpen}
+        onClose={() => setPaymentModal(prev => ({ ...prev, isOpen: false }))}
+        amount={paymentModal.amount}
+        description={paymentModal.description}
+        paymentType={paymentModal.paymentType}
+        paymentId={paymentModal.paymentId}
+        onSuccess={handlePaymentSuccess}
+      />
     </div>
   )
 }

@@ -115,3 +115,89 @@ export function constructWebhookEvent(
 ) {
   return stripe.webhooks.constructEvent(payload, signature, webhookSecret)
 }
+
+// Create SetupIntent for saving cards without immediate payment
+export async function createSetupIntent(customerId: string) {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not configured')
+  }
+  return stripe.setupIntents.create({
+    customer: customerId,
+    usage: 'off_session',
+    automatic_payment_methods: { enabled: true },
+  })
+}
+
+// Detach a payment method from customer
+export async function detachPaymentMethod(paymentMethodId: string) {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not configured')
+  }
+  return stripe.paymentMethods.detach(paymentMethodId)
+}
+
+// Get customer with default payment method
+export async function getCustomer(customerId: string) {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not configured')
+  }
+  return stripe.customers.retrieve(customerId)
+}
+
+// Create PaymentIntent with immediate confirmation using saved card
+export async function createAndConfirmPayment(
+  amount: number,
+  currency: string,
+  customerId: string,
+  paymentMethodId: string,
+  metadata?: Record<string, string>
+) {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not configured')
+  }
+  return stripe.paymentIntents.create({
+    amount,
+    currency,
+    customer: customerId,
+    payment_method: paymentMethodId,
+    confirm: true,
+    off_session: true,
+    metadata,
+  })
+}
+
+// Confirm an existing PaymentIntent
+export async function confirmPaymentIntent(
+  paymentIntentId: string,
+  paymentMethodId: string
+) {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not configured')
+  }
+  return stripe.paymentIntents.confirm(paymentIntentId, {
+    payment_method: paymentMethodId,
+  })
+}
+
+// Create subscription with default payment method (for in-app payment)
+export async function createSubscriptionWithPaymentMethod(
+  customerId: string,
+  priceId: string,
+  paymentMethodId: string,
+  trialDays?: number
+) {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not configured')
+  }
+
+  // Set default payment method first
+  await setDefaultPaymentMethod(customerId, paymentMethodId)
+
+  return stripe.subscriptions.create({
+    customer: customerId,
+    items: [{ price: priceId }],
+    trial_period_days: trialDays,
+    default_payment_method: paymentMethodId,
+    expand: ['latest_invoice.payment_intent'],
+  })
+}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -12,11 +12,13 @@ import {
   Calendar,
   Zap,
   Shield,
-  Users,
   Clock,
   ExternalLink,
+  Loader2,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { CardManagement } from '@/components/payments/card-management'
+import { AddCardModal } from '@/components/payments/add-card-modal'
 
 interface School {
   id: string
@@ -45,9 +47,47 @@ const PLAN_FEATURES = [
   'Email support',
 ]
 
+interface PaymentMethod {
+  id: string
+  brand: string
+  last4: string
+  exp_month: number
+  exp_year: number
+  is_default: boolean
+}
+
 export function SubscriptionClient({ school, userEmail }: SubscriptionClientProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const [isPayingInApp, setIsPayingInApp] = useState(false)
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null)
+  const [showAddCard, setShowAddCard] = useState(false)
+  const [loadingCards, setLoadingCards] = useState(true)
   const router = useRouter()
+
+  useEffect(() => {
+    fetchPaymentMethods()
+  }, [])
+
+  const fetchPaymentMethods = async () => {
+    try {
+      const response = await fetch('/api/payment-methods')
+      const data = await response.json()
+      if (data.payment_methods) {
+        setPaymentMethods(data.payment_methods)
+        const defaultCard = data.payment_methods.find((pm: PaymentMethod) => pm.is_default)
+        if (defaultCard) {
+          setSelectedPaymentMethod(defaultCard.id)
+        } else if (data.payment_methods.length > 0) {
+          setSelectedPaymentMethod(data.payment_methods[0].id)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching payment methods:', error)
+    } finally {
+      setLoadingCards(false)
+    }
+  }
 
   const isTrialing = school.subscription_status === 'trialing' || school.subscription_status === 'trial'
   const isActive = school.subscription_status === 'active'
@@ -111,6 +151,42 @@ export function SubscriptionClient({ school, userEmail }: SubscriptionClientProp
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handlePayInApp = async () => {
+    if (!selectedPaymentMethod) {
+      toast.error('Please select a payment method')
+      return
+    }
+
+    setIsPayingInApp(true)
+    try {
+      const response = await fetch('/api/pay/subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payment_method_id: selectedPaymentMethod,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to start subscription')
+      }
+
+      toast.success('Subscription started successfully!')
+      router.refresh()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Something went wrong')
+    } finally {
+      setIsPayingInApp(false)
+    }
+  }
+
+  const handleCardAdded = () => {
+    setShowAddCard(false)
+    fetchPaymentMethods()
   }
 
   const getStatusBadge = () => {
@@ -209,18 +285,81 @@ export function SubscriptionClient({ school, userEmail }: SubscriptionClientProp
             )}
 
             <div className="pt-4 space-y-3">
-              {(isInactive || isCanceled) && (
-                <Button className="w-full" size="lg" onClick={handleSubscribe} isLoading={isLoading}>
-                  <Zap className="h-4 w-4 mr-2" />
-                  Subscribe Now
-                </Button>
-              )}
+              {(isInactive || isCanceled || isTrialing) && (
+                <>
+                  {/* In-App Payment Option */}
+                  {!loadingCards && paymentMethods.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">
+                          Pay with saved card
+                        </label>
+                        <div className="space-y-2">
+                          {paymentMethods.map((pm) => (
+                            <label
+                              key={pm.id}
+                              className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                                selectedPaymentMethod === pm.id
+                                  ? 'border-red-500 bg-red-50'
+                                  : 'border-gray-200 hover:bg-gray-50'
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name="paymentMethod"
+                                value={pm.id}
+                                checked={selectedPaymentMethod === pm.id}
+                                onChange={() => setSelectedPaymentMethod(pm.id)}
+                                className="text-red-600"
+                              />
+                              <CreditCard className="h-5 w-5 text-gray-400" />
+                              <span className="capitalize">{pm.brand}</span>
+                              <span className="text-gray-500">•••• {pm.last4}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      <Button
+                        className="w-full"
+                        size="lg"
+                        onClick={handlePayInApp}
+                        disabled={isPayingInApp || !selectedPaymentMethod}
+                      >
+                        {isPayingInApp ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="h-4 w-4 mr-2" />
+                            Start Subscription
+                          </>
+                        )}
+                      </Button>
+                      <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                          <div className="w-full border-t border-gray-200" />
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                          <span className="bg-white px-2 text-gray-500">or</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-              {isTrialing && (
-                <Button className="w-full" size="lg" onClick={handleSubscribe} isLoading={isLoading}>
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Add Payment Method
-                </Button>
+                  {/* Add New Card / Stripe Checkout */}
+                  <Button
+                    variant={paymentMethods.length > 0 ? 'outline' : 'default'}
+                    className="w-full"
+                    size="lg"
+                    onClick={handleSubscribe}
+                    isLoading={isLoading}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    {paymentMethods.length > 0 ? 'Pay with New Card' : 'Subscribe Now'}
+                  </Button>
+                </>
               )}
 
               {(isActive || isPastDue) && school.stripe_customer_id && (
@@ -238,6 +377,9 @@ export function SubscriptionClient({ school, userEmail }: SubscriptionClientProp
           </div>
         </CardContent>
       </Card>
+
+      {/* Payment Methods */}
+      <CardManagement onCardAdded={fetchPaymentMethods} />
 
       {/* Plan Features */}
       <Card>

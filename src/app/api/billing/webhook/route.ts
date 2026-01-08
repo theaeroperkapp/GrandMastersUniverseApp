@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { constructWebhookEvent } from '@/lib/stripe'
+import { createPaymentNotification } from '@/lib/notifications'
 import Stripe from 'stripe'
 
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || ''
@@ -161,6 +162,100 @@ export async function POST(request: NextRequest) {
               .update({ subscription_status: 'past_due' })
               .eq('id', schools[0].id)
           }
+        }
+        break
+      }
+
+      case 'payment_intent.succeeded': {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent
+        const metadata = paymentIntent.metadata
+
+        // Handle custom charge payment
+        if (metadata?.type === 'custom_charge' && metadata?.charge_id) {
+          await (adminClient as any)
+            .from('custom_charges')
+            .update({
+              status: 'paid',
+              payment_intent_id: paymentIntent.id,
+            })
+            .eq('id', metadata.charge_id)
+
+          // Send notification
+          if (metadata.user_id) {
+            await createPaymentNotification({
+              userId: metadata.user_id,
+              success: true,
+              amount: paymentIntent.amount,
+              description: 'Custom charge',
+              relatedId: metadata.charge_id,
+            })
+          }
+        }
+
+        // Handle event registration payment
+        if (metadata?.type === 'event_registration' && metadata?.registration_id) {
+          await (adminClient as any)
+            .from('event_registrations')
+            .update({
+              payment_status: 'paid',
+              payment_intent_id: paymentIntent.id,
+            })
+            .eq('id', metadata.registration_id)
+
+          // Send notification
+          if (metadata.user_id) {
+            await createPaymentNotification({
+              userId: metadata.user_id,
+              success: true,
+              amount: paymentIntent.amount,
+              description: 'Event registration',
+              relatedId: metadata.registration_id,
+            })
+          }
+        }
+
+        // Handle belt test payment
+        if (metadata?.type === 'belt_test' && metadata?.belt_test_payment_id) {
+          await (adminClient as any)
+            .from('belt_test_payments')
+            .update({
+              status: 'paid',
+              payment_intent_id: paymentIntent.id,
+              paid_at: new Date().toISOString(),
+            })
+            .eq('id', metadata.belt_test_payment_id)
+
+          // Send notification
+          if (metadata.user_id) {
+            await createPaymentNotification({
+              userId: metadata.user_id,
+              success: true,
+              amount: paymentIntent.amount,
+              description: 'Belt test fee',
+              relatedId: metadata.belt_test_payment_id,
+            })
+          }
+        }
+        break
+      }
+
+      case 'payment_intent.payment_failed': {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent
+        const metadata = paymentIntent.metadata
+
+        // Send failure notification
+        if (metadata?.user_id) {
+          let description = 'Payment'
+          if (metadata.type === 'custom_charge') description = 'Custom charge'
+          if (metadata.type === 'event_registration') description = 'Event registration'
+          if (metadata.type === 'belt_test') description = 'Belt test fee'
+
+          await createPaymentNotification({
+            userId: metadata.user_id,
+            success: false,
+            amount: paymentIntent.amount,
+            description,
+          })
         }
         break
       }
