@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { jsPDF } from 'jspdf'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -43,23 +44,23 @@ interface SignedContract {
   signed_by: string
   signed_at: string
   signature_data: string
+  ip_address?: string
   contract: {
     name: string
     title: string | null
     contract_type: string | null
+    content: string
   }
   signer: {
     full_name: string
+    email: string
   }
 }
 
 interface Student {
   id: string
-  profile: {
-    id: string
-    full_name: string
-    email: string
-  }
+  full_name: string
+  email: string
 }
 
 interface ContractsClientProps {
@@ -283,12 +284,119 @@ I waive any right to inspect or approve the finished product or the copy that ma
     })
   }
 
+  const downloadPDF = (signedContract: SignedContract) => {
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const margin = 20
+    const contentWidth = pageWidth - margin * 2
+    let yPos = 20
+
+    // Title
+    doc.setFontSize(18)
+    doc.setFont('helvetica', 'bold')
+    const title = signedContract.contract?.title || signedContract.contract?.name || 'Contract'
+    doc.text(title, pageWidth / 2, yPos, { align: 'center' })
+    yPos += 15
+
+    // Contract type badge
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    const contractType = CONTRACT_TYPES.find(t => t.value === signedContract.contract?.contract_type)?.label || 'Contract'
+    doc.text(contractType, pageWidth / 2, yPos, { align: 'center' })
+    yPos += 15
+
+    // Divider line
+    doc.setDrawColor(200, 200, 200)
+    doc.line(margin, yPos, pageWidth - margin, yPos)
+    yPos += 10
+
+    // Contract content
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'normal')
+    const content = signedContract.contract?.content || ''
+    const lines = doc.splitTextToSize(content, contentWidth)
+
+    for (const line of lines) {
+      if (yPos > 260) {
+        doc.addPage()
+        yPos = 20
+      }
+      doc.text(line, margin, yPos)
+      yPos += 6
+    }
+
+    yPos += 10
+
+    // Check if we need a new page for signature section
+    if (yPos > 200) {
+      doc.addPage()
+      yPos = 20
+    }
+
+    // Divider line
+    doc.line(margin, yPos, pageWidth - margin, yPos)
+    yPos += 15
+
+    // Signature section
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text('SIGNATURE', margin, yPos)
+    yPos += 10
+
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Signed by: ${signedContract.signer?.full_name || 'Unknown'}`, margin, yPos)
+    yPos += 6
+    doc.text(`Email: ${signedContract.signer?.email || 'N/A'}`, margin, yPos)
+    yPos += 6
+    doc.text(`Date: ${formatDate(signedContract.signed_at)}`, margin, yPos)
+    yPos += 6
+    if (signedContract.ip_address) {
+      doc.text(`IP Address: ${signedContract.ip_address}`, margin, yPos)
+      yPos += 6
+    }
+    yPos += 10
+
+    // Signature image
+    if (signedContract.signature_data) {
+      try {
+        if (signedContract.signature_data.startsWith('data:image')) {
+          // Canvas signature (base64 image)
+          doc.addImage(signedContract.signature_data, 'PNG', margin, yPos, 80, 30)
+        } else {
+          // Typed signature
+          doc.setFontSize(20)
+          doc.setFont('times', 'italic')
+          doc.text(signedContract.signature_data, margin, yPos + 20)
+        }
+      } catch {
+        // If image fails, show typed text
+        doc.setFontSize(14)
+        doc.setFont('times', 'italic')
+        doc.text(signedContract.signature_data.substring(0, 50), margin, yPos + 15)
+      }
+    }
+
+    // Footer
+    const footerY = doc.internal.pageSize.getHeight() - 10
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(128, 128, 128)
+    doc.text(`Document ID: ${signedContract.id}`, margin, footerY)
+    doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth - margin, footerY, { align: 'right' })
+
+    // Download
+    const fileName = `${title.replace(/[^a-z0-9]/gi, '_')}_${signedContract.signer?.full_name?.replace(/[^a-z0-9]/gi, '_') || 'signed'}.pdf`
+    doc.save(fileName)
+    toast.success('PDF downloaded successfully')
+  }
+
   // Get unsigned students for a contract
   const getUnsignedStudents = (contractId: string) => {
-    const signedFamilyIds = signedContracts
+    const signedByIds = signedContracts
       .filter(c => c.contract_id === contractId)
-      .map(c => c.family_id)
-    return students.filter(s => !signedFamilyIds.includes(s.profile?.id))
+      .map(c => c.signed_by)
+    return students.filter(s => !signedByIds.includes(s.id))
   }
 
   return (
@@ -567,13 +675,13 @@ I waive any right to inspect or approve the finished product or the copy that ma
                   className="rounded"
                 />
                 <div>
-                  <p className="font-medium">{student.profile.full_name}</p>
-                  <p className="text-sm text-gray-500">{student.profile.email}</p>
+                  <p className="font-medium">{student.full_name}</p>
+                  <p className="text-sm text-gray-500">{student.email}</p>
                 </div>
               </label>
             ))}
             {selectedContract && getUnsignedStudents(selectedContract.id).length === 0 && (
-              <p className="text-center text-gray-500 py-4">All students have signed this contract</p>
+              <p className="text-center text-gray-500 py-4">All members have signed this contract</p>
             )}
           </div>
 
@@ -632,7 +740,7 @@ I waive any right to inspect or approve the finished product or the copy that ma
               <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
                 Close
               </Button>
-              <Button>
+              <Button onClick={() => viewingContract && downloadPDF(viewingContract)}>
                 <Download className="h-4 w-4 mr-2" />
                 Download PDF
               </Button>

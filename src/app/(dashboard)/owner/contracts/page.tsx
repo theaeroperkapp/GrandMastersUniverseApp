@@ -39,16 +39,17 @@ export default async function ContractsPage() {
   // Get signed contracts
   const { data: signedContracts } = await supabase
     .from('signed_contracts')
-    .select('*, contract:contracts(name, title, contract_type), signer:profiles(full_name)')
+    .select('*, contract:contracts(name, title, contract_type, content), signer:profiles(full_name, email)')
     .order('signed_at', { ascending: false })
     .limit(50)
 
-  // Get students for sending contracts
+  // Get students for sending contracts (approved members)
   const { data: students } = await supabase
-    .from('student_profiles')
-    .select('*, profile:profiles(id, full_name, email)')
+    .from('profiles')
+    .select('id, full_name, email')
     .eq('school_id', profileData.school_id)
-    .eq('is_active', true)
+    .eq('is_approved', true)
+    .in('role', ['student', 'parent'])
 
   return (
     <div className="space-y-6">

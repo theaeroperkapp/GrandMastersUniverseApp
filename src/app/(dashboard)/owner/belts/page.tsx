@@ -29,19 +29,18 @@ export default async function BeltsPage() {
     redirect('/feed')
   }
 
-  // Get default belts (use admin client to bypass RLS)
+  // Get default belts (used as template for schools without belts)
   const { data: defaultBelts } = await adminClient
     .from('belt_ranks')
     .select('*')
     .eq('is_default', true)
     .order('display_order')
 
-  // Get custom belts for this school
-  const { data: customBelts } = await adminClient
+  // Get school's belts
+  const { data: schoolBelts } = await adminClient
     .from('belt_ranks')
     .select('*')
     .eq('school_id', profileData.school_id)
-    .eq('is_default', false)
     .order('display_order')
 
   return (
@@ -53,8 +52,9 @@ export default async function BeltsPage() {
 
       <BeltsClient
         defaultBelts={defaultBelts || []}
-        customBelts={customBelts || []}
+        customBelts={schoolBelts || []}
         schoolId={profileData.school_id}
+        disabledBelts={[]}
       />
     </div>
   )

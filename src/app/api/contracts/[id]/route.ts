@@ -9,18 +9,62 @@ export async function GET(
   try {
     const { id } = await params
     const supabase = await createClient()
+    const adminClient = createAdminClient()
 
-    const { data: template, error } = await supabase
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Get user's profile to check school_id
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('school_id')
+      .eq('id', user.id)
+      .single()
+
+    const profileData = profile as { school_id: string | null } | null
+
+    if (!profileData?.school_id) {
+      return NextResponse.json({ error: 'User not associated with a school' }, { status: 403 })
+    }
+
+    // Fetch the contract using admin client (bypasses RLS)
+    const { data: contract, error } = await (adminClient as any)
       .from('contracts')
-      .select('*')
+      .select('id, title, name, content, contract_type, is_required, school_id, is_active')
       .eq('id', id)
       .single()
 
-    if (error || !template) {
+    if (error || !contract) {
+      console.error('Contract fetch error:', error)
       return NextResponse.json({ error: 'Contract not found' }, { status: 404 })
     }
 
-    return NextResponse.json(template)
+    // Verify user belongs to the same school as the contract
+    if (contract.school_id !== profileData.school_id) {
+      return NextResponse.json({ error: 'Contract not found' }, { status: 404 })
+    }
+
+    // Check if user has already signed this contract
+    const { data: signedContract } = await (adminClient as any)
+      .from('signed_contracts')
+      .select('id')
+      .eq('contract_id', id)
+      .eq('signed_by', user.id)
+      .single()
+
+    return NextResponse.json({
+      contract: {
+        id: contract.id,
+        title: contract.title,
+        name: contract.name,
+        content: contract.content,
+        contract_type: contract.contract_type,
+        is_required: contract.is_required,
+      },
+      already_signed: !!signedContract,
+    })
   } catch (error) {
     console.error('Get contract error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

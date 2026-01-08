@@ -13,56 +13,55 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { pending_contract_id, signature_data, agreed_to_terms } = body
+    const { contract_id, signature_data, agreed_to_terms } = body
 
-    if (!pending_contract_id || !signature_data || !agreed_to_terms) {
+    if (!contract_id || !signature_data || !agreed_to_terms) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Get the pending contract
-    const { data: pendingContract } = await supabase
-      .from('pending_contracts')
-      .select('*, template:contract_templates(*), student:student_profiles(*, profile:profiles(*))')
-      .eq('id', pending_contract_id)
-      .eq('status', 'pending')
+    // Get the contract using admin client (bypasses RLS)
+    const { data: contract } = await (adminClient as any)
+      .from('contracts')
+      .select('id, school_id, title, name, content')
+      .eq('id', contract_id)
       .single()
 
-    const pendingData = pendingContract as {
+    const contractData = contract as {
       id: string
-      template_id: string
-      student_id: string
       school_id: string
-      template: { id: string; content: string }
-      student: { id: string; profile: { id: string } }
+      title: string
+      name: string
+      content: string
     } | null
 
-    if (!pendingData) {
-      return NextResponse.json({ error: 'Pending contract not found or already signed' }, { status: 404 })
+    if (!contractData) {
+      return NextResponse.json({ error: 'Contract not found' }, { status: 404 })
     }
 
-    // Verify user has permission to sign (is the student, parent, or school owner)
+    // Get user's profile to verify school and get family_id
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, school_id')
+      .select('family_id, school_id')
       .eq('id', user.id)
       .single()
 
-    const profileData = profile as { role: string; school_id: string | null } | null
-    const isOwner = profileData?.role === 'owner' && profileData?.school_id === pendingData.school_id
-    const isStudent = pendingData.student?.profile?.id === user.id
+    const profileData = profile as { family_id: string | null; school_id: string | null } | null
 
-    // Check if user is a parent of the student
-    const { data: parentLink } = await supabase
-      .from('family_links')
+    // Verify user belongs to the same school as the contract
+    if (!profileData?.school_id || profileData.school_id !== contractData.school_id) {
+      return NextResponse.json({ error: 'Contract not found' }, { status: 404 })
+    }
+
+    // Check if already signed
+    const { data: existingSigned } = await (adminClient as any)
+      .from('signed_contracts')
       .select('id')
-      .eq('parent_id', user.id)
-      .eq('student_id', pendingData.student_id)
+      .eq('contract_id', contract_id)
+      .eq('signed_by', user.id)
       .single()
 
-    const isParent = !!parentLink
-
-    if (!isOwner && !isStudent && !isParent) {
-      return NextResponse.json({ error: 'You do not have permission to sign this contract' }, { status: 403 })
+    if (existingSigned) {
+      return NextResponse.json({ error: 'You have already signed this contract' }, { status: 400 })
     }
 
     // Get IP address
@@ -74,14 +73,11 @@ export async function POST(request: NextRequest) {
     const { data: signedContract, error: signError } = await (adminClient as any)
       .from('signed_contracts')
       .insert({
-        template_id: pendingData.template_id,
-        student_id: pendingData.student_id,
-        school_id: pendingData.school_id,
-        signer_id: user.id,
+        contract_id: contractData.id,
+        family_id: profileData?.family_id,
+        signed_by: user.id,
         signature_data,
-        contract_content: pendingData.template.content,
         ip_address: ip,
-        user_agent: request.headers.get('user-agent'),
       })
       .select()
       .single()
@@ -91,11 +87,48 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to sign contract' }, { status: 500 })
     }
 
-    // Update pending contract status
+    // Mark related notification as read
     await (adminClient as any)
-      .from('pending_contracts')
-      .update({ status: 'signed', signed_at: new Date().toISOString() })
-      .eq('id', pending_contract_id)
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', user.id)
+      .ilike('link', `%${contract_id}%`)
+
+    // Notify school owner that contract was signed
+    try {
+      // Get school owner
+      const { data: school } = await (adminClient as any)
+        .from('schools')
+        .select('owner_id')
+        .eq('id', contractData.school_id)
+        .single()
+
+      // Get signer's name
+      const { data: signerProfile } = await (adminClient as any)
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single()
+
+      if (school?.owner_id) {
+        const signerName = signerProfile?.full_name || 'A member'
+        const contractName = contractData.title || contractData.name
+
+        await (adminClient as any)
+          .from('notifications')
+          .insert({
+            user_id: school.owner_id,
+            type: 'contract_signed',
+            title: 'Contract Signed',
+            message: `${signerName} has signed "${contractName}"`,
+            link: '/owner/contracts',
+            is_read: false,
+          })
+      }
+    } catch (notifyError) {
+      // Don't fail the request if notification fails
+      console.error('Failed to notify owner:', notifyError)
+    }
 
     return NextResponse.json({
       success: true,
@@ -107,57 +140,54 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Get pending contracts for the current user to sign
-export async function GET(request: NextRequest) {
+// Get contracts available for the current user to sign
+export async function GET() {
   try {
     const supabase = await createClient()
+    const adminClient = createAdminClient()
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get student profiles linked to this user (as student or parent)
-    const { data: studentProfile } = await supabase
-      .from('student_profiles')
-      .select('id')
-      .eq('profile_id', user.id)
+    // Get user's profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('school_id, role')
+      .eq('id', user.id)
       .single()
 
-    const studentProfileData = studentProfile as { id: string } | null
+    const profileData = profile as { school_id: string | null; role: string } | null
 
-    const { data: familyLinks } = await supabase
-      .from('family_links')
-      .select('student_id')
-      .eq('parent_id', user.id)
-
-    const familyLinksData = familyLinks as { student_id: string }[] | null
-
-    const studentIds = [
-      ...(studentProfileData ? [studentProfileData.id] : []),
-      ...(familyLinksData || []).map((link) => link.student_id),
-    ]
-
-    if (studentIds.length === 0) {
+    if (!profileData?.school_id) {
       return NextResponse.json([])
     }
 
-    // Get pending contracts for these students
-    const { data: pendingContracts, error } = await supabase
-      .from('pending_contracts')
-      .select('*, template:contract_templates(title, contract_type, content), student:student_profiles(*, profile:profiles(full_name))')
-      .in('student_id', studentIds)
-      .eq('status', 'pending')
+    // Get all active contracts for the school using admin client (bypasses RLS)
+    const { data: contracts } = await (adminClient as any)
+      .from('contracts')
+      .select('*')
+      .eq('school_id', profileData.school_id)
+      .eq('is_active', true)
       .order('created_at', { ascending: false })
 
-    if (error) {
-      console.error('Get pending contracts error:', error)
-      return NextResponse.json({ error: 'Failed to fetch contracts' }, { status: 500 })
-    }
+    // Get signed contracts for this user
+    const { data: signedContracts } = await (adminClient as any)
+      .from('signed_contracts')
+      .select('contract_id')
+      .eq('signed_by', user.id)
 
-    return NextResponse.json(pendingContracts)
+    const signedContractIds = (signedContracts || []).map((sc: { contract_id: string }) => sc.contract_id)
+
+    // Filter to unsigned contracts
+    const unsignedContracts = (contracts || []).filter(
+      (contract: { id: string }) => !signedContractIds.includes(contract.id)
+    )
+
+    return NextResponse.json(unsignedContracts)
   } catch (error) {
-    console.error('Pending contracts API error:', error)
+    console.error('Get contracts to sign API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

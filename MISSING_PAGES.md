@@ -8,7 +8,7 @@ This document tracks pages and features that should exist but are not yet implem
 |------|-------|----------|-------------|
 | ~~Schedule~~ | ~~`/schedule`~~ | ~~HIGH~~ | ~~View weekly class schedule for the school~~ DONE |
 | ~~My Classes~~ | ~~`/my-classes`~~ | ~~HIGH~~ | ~~View enrolled classes and upcoming sessions~~ DONE |
-| My Progress | `/my-progress` | MEDIUM | Belt progression history, attendance record |
+| ~~My Progress~~ | ~~`/my-progress`~~ | ~~MEDIUM~~ | ~~Belt progression history, attendance record~~ DONE |
 | ~~My Family~~ | ~~`/my-family`~~ | ~~MEDIUM~~ | ~~Manage family members (for parents)~~ DONE |
 | Payments | `/payments` | LOW | View payment history and invoices |
 | ~~Messages~~ | ~~`/messages`~~ | ~~LOW~~ | ~~Direct messaging with instructors~~ DONE |
@@ -77,6 +77,7 @@ This document tracks pages and features that should exist but are not yet implem
 - [x] **Messaging RLS Policies** - Row-level security for conversations and messages
 - [x] **My Family Page** (`/my-family`) - View family members, parents, and students with belt info
 - [x] **User Settings Page** (`/settings`) - Profile editing, notification preferences, password change
+- [x] **My Progress Page** (`/my-progress`) - Belt progression timeline, attendance stats, belt journey visualization
 
 ---
 

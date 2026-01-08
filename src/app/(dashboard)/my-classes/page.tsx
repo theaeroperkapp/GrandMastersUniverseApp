@@ -93,8 +93,8 @@ export default function MyClassesPage() {
       .select(`
         id,
         school_id,
-        current_belt_id,
-        current_belt:belt_ranks!student_profiles_current_belt_id_fkey(id, name, color, display_order)
+        belt_rank_id,
+        belt_rank:belt_ranks(id, name, color, display_order)
       `)
       .eq('profile_id', user.id)
       .single()
@@ -102,8 +102,8 @@ export default function MyClassesPage() {
     const studentProfile = studentProfileData as {
       id: string
       school_id: string
-      current_belt_id: string | null
-      current_belt: BeltRank | null
+      belt_rank_id: string | null
+      belt_rank: BeltRank | null
     } | null
 
     if (!studentProfile) {
@@ -113,10 +113,10 @@ export default function MyClassesPage() {
     }
 
     setStudentProfileId(studentProfile.id)
-    setCurrentBelt(studentProfile.current_belt)
+    setCurrentBelt(studentProfile.belt_rank)
 
     // If student has a belt, fetch classes for their belt level
-    if (studentProfile.current_belt_id) {
+    if (studentProfile.belt_rank_id) {
       const { data: classesData } = await supabase
         .from('class_schedules')
         .select(`
@@ -132,7 +132,7 @@ export default function MyClassesPage() {
           belt_requirement:belt_ranks!class_schedules_belt_requirement_id_fkey(id, name, color, display_order)
         `)
         .eq('school_id', studentProfile.school_id)
-        .eq('belt_requirement_id', studentProfile.current_belt_id)
+        .eq('belt_requirement_id', studentProfile.belt_rank_id)
         .eq('is_active', true)
         .order('day_of_week')
         .order('start_time')

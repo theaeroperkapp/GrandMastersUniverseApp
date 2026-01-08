@@ -16,7 +16,7 @@ interface BeltRank {
   id: string
   name: string
   color: string
-  is_default: boolean
+  display_order: number
 }
 
 interface Family {
@@ -131,10 +131,11 @@ export default function StudentsPage() {
   }
 
   const fetchBelts = async (supabase: ReturnType<typeof createClient>, schoolId: string) => {
+    // Only fetch school-specific belts (not defaults)
     const { data: beltsData } = await supabase
       .from('belt_ranks')
       .select('*')
-      .or(`is_default.eq.true,school_id.eq.${schoolId}`)
+      .eq('school_id', schoolId)
       .order('display_order')
 
     if (beltsData) {
@@ -570,7 +571,7 @@ export default function StudentsPage() {
                   <option value="">No belt assigned</option>
                   {belts.map((belt) => (
                     <option key={belt.id} value={belt.id}>
-                      {belt.name} {belt.is_default ? '' : '(Custom)'}
+                      {belt.name}
                     </option>
                   ))}
                 </select>

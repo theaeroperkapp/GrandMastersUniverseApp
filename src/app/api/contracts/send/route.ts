@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(request: NextRequest) {
+  console.log('=== Contract Send API Called ===')
   try {
     const supabase = await createClient()
     const adminClient = createAdminClient()
@@ -25,64 +26,73 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { template_id, student_ids } = body
+    const { contract_id, student_ids } = body
 
-    if (!template_id || !student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
+    if (!contract_id || !student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Get template to verify it exists and get school_id
-    const { data: template } = await supabase
-      .from('contract_templates')
-      .select('id, school_id, title')
-      .eq('id', template_id)
+    // Get contract to verify it exists and belongs to the school
+    const { data: contract } = await supabase
+      .from('contracts')
+      .select('id, school_id, title, name')
+      .eq('id', contract_id)
       .single()
 
-    const templateData = template as { id: string; school_id: string; title: string } | null
+    const contractData = contract as { id: string; school_id: string; title: string; name: string } | null
 
-    if (!templateData) {
-      return NextResponse.json({ error: 'Template not found' }, { status: 404 })
+    if (!contractData) {
+      return NextResponse.json({ error: 'Contract not found' }, { status: 404 })
     }
 
-    // Check for existing pending contracts for these students
-    const { data: existingContracts } = await supabase
-      .from('pending_contracts')
-      .select('student_id')
-      .eq('template_id', template_id)
-      .in('student_id', student_ids)
-      .eq('status', 'pending')
+    if (contractData.school_id !== profileData.school_id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
 
-    const existingStudentIds = (existingContracts || []).map((c: { student_id: string }) => c.student_id)
-    const newStudentIds = student_ids.filter((id: string) => !existingStudentIds.includes(id))
+    // Check for existing signed contracts for these students
+    const { data: existingSignedContracts } = await supabase
+      .from('signed_contracts')
+      .select('signed_by')
+      .eq('contract_id', contract_id)
+      .in('signed_by', student_ids)
+
+    const alreadySignedIds = (existingSignedContracts || []).map((c: { signed_by: string }) => c.signed_by)
+    const newStudentIds = student_ids.filter((id: string) => !alreadySignedIds.includes(id))
 
     if (newStudentIds.length === 0) {
-      return NextResponse.json({ error: 'All selected students already have pending contracts' }, { status: 400 })
+      return NextResponse.json({ error: 'All selected members have already signed this contract' }, { status: 400 })
     }
 
-    // Create pending contracts
-    const pendingContracts = newStudentIds.map((student_id: string) => ({
-      template_id,
-      student_id,
-      school_id: templateData.school_id,
-      sent_by: user.id,
-      status: 'pending',
+    // Create notifications for students/parents to sign the contract
+    // Actual table schema: user_id, type, title, message, link, is_read
+    const notifications = newStudentIds.map((user_id: string) => ({
+      user_id,
+      type: 'contract',
+      title: 'Contract to Sign',
+      message: `You have a new contract to sign: ${contractData.title || contractData.name}`,
+      link: `/contracts/${contract_id}/sign`,
+      is_read: false,
     }))
 
-    const { error } = await (adminClient as any)
-      .from('pending_contracts')
-      .insert(pendingContracts)
+    console.log('Creating notifications for:', newStudentIds)
+    console.log('Notification data:', JSON.stringify(notifications, null, 2))
 
-    if (error) {
-      console.error('Send contracts error:', error)
-      return NextResponse.json({ error: 'Failed to send contracts' }, { status: 500 })
+    const { data: notifData, error: notifError } = await (adminClient as any)
+      .from('notifications')
+      .insert(notifications)
+      .select()
+
+    if (notifError) {
+      console.error('Send notifications error:', notifError)
+      // Don't fail the request if notifications fail - just log it
+    } else {
+      console.log('Notifications created successfully:', notifData)
     }
-
-    // TODO: Send email notifications to students/parents
 
     return NextResponse.json({
       success: true,
       sent: newStudentIds.length,
-      already_pending: existingStudentIds.length,
+      already_signed: alreadySignedIds.length,
     }, { status: 201 })
   } catch (error) {
     console.error('Send contracts API error:', error)

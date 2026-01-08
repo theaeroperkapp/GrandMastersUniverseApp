@@ -18,6 +18,7 @@ import {
   Loader2,
   BookOpen,
   Users,
+  TrendingUp,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/types/database'
@@ -274,6 +275,14 @@ export function Navbar({ user, unreadNotifications: initialUnreadNotifications, 
                     >
                       <BookOpen className="h-4 w-4" />
                       My Classes
+                    </Link>
+                    <Link
+                      href="/my-progress"
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setIsProfileOpen(false)}
+                    >
+                      <TrendingUp className="h-4 w-4" />
+                      My Progress
                     </Link>
                     <Link
                       href="/my-family"

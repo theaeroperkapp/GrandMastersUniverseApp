@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Pagination } from '@/components/ui/pagination'
-import { Bell, Check, Trash2 } from 'lucide-react'
+import { Bell, Check, Trash2, ChevronRight } from 'lucide-react'
 
 interface Notification {
   id: string
@@ -15,6 +16,7 @@ interface Notification {
   type: string
   is_read: boolean
   created_at: string
+  link?: string
 }
 
 const ITEMS_PER_PAGE = 10
@@ -24,6 +26,7 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
+  const router = useRouter()
 
   const fetchNotifications = useCallback(async (page: number) => {
     setLoading(true)
@@ -179,7 +182,13 @@ export default function NotificationsPage() {
             {notifications.map((notification) => (
               <Card
                 key={notification.id}
-                className={notification.is_read ? 'bg-gray-50' : 'border-blue-200 bg-blue-50/30'}
+                className={`${notification.is_read ? 'bg-gray-50' : 'border-blue-200 bg-blue-50/30'} ${notification.link ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
+                onClick={() => {
+                  if (notification.link) {
+                    markAsRead(notification.id)
+                    router.push(notification.link)
+                  }
+                }}
               >
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start">
@@ -195,12 +204,18 @@ export default function NotificationsPage() {
                         {new Date(notification.created_at).toLocaleString()}
                       </p>
                     </div>
-                    <div className="flex gap-2 ml-4">
+                    <div className="flex gap-2 ml-4 items-center">
+                      {notification.link && (
+                        <ChevronRight className="h-5 w-5 text-gray-400" />
+                      )}
                       {!notification.is_read && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => markAsRead(notification.id)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            markAsRead(notification.id)
+                          }}
                         >
                           <Check className="h-4 w-4" />
                         </Button>
@@ -208,7 +223,10 @@ export default function NotificationsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => deleteNotification(notification.id)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          deleteNotification(notification.id)
+                        }}
                         className="text-red-500 hover:text-red-600"
                       >
                         <Trash2 className="h-4 w-4" />

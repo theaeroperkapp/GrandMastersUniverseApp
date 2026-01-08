@@ -145,10 +145,10 @@ export async function POST(request: NextRequest) {
 
       // Create notification
       await anyAdminClient.from('notifications').insert({
-        profile_id: user_id,
+        user_id: user_id,
         type: 'approval',
         title: 'Account Approved',
-        content: `Your account at ${schoolName} has been approved. Welcome!`,
+        message: `Your account at ${schoolName} has been approved. Welcome!`,
       })
 
       return NextResponse.json({ success: true })

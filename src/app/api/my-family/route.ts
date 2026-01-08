@@ -98,18 +98,18 @@ export async function GET() {
       members.map(async (member) => {
         const { data: studentProfileData } = await supabase
           .from('student_profiles')
-          .select('id, enrollment_date, current_belt_id')
+          .select('id, enrollment_date, belt_rank_id')
           .eq('profile_id', member.id)
           .single()
 
         let currentBelt = null
         if (studentProfileData) {
-          const studentProfile = studentProfileData as { id: string; enrollment_date: string | null; current_belt_id: string | null }
-          if (studentProfile.current_belt_id) {
+          const studentProfile = studentProfileData as { id: string; enrollment_date: string | null; belt_rank_id: string | null }
+          if (studentProfile.belt_rank_id) {
             const { data: beltData } = await supabase
               .from('belt_ranks')
               .select('id, name, color')
-              .eq('id', studentProfile.current_belt_id)
+              .eq('id', studentProfile.belt_rank_id)
               .single()
             currentBelt = beltData
           }
@@ -118,7 +118,7 @@ export async function GET() {
         return {
           ...member,
           student_profile: studentProfileData ? {
-            ...(studentProfileData as { id: string; enrollment_date: string | null; current_belt_id: string | null }),
+            ...(studentProfileData as { id: string; enrollment_date: string | null; belt_rank_id: string | null }),
             current_belt: currentBelt,
           } : null,
         }
