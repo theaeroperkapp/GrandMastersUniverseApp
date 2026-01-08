@@ -54,6 +54,13 @@ export default async function ClassesPage() {
     .in('role', ['owner', 'parent', 'student'])
     .eq('is_approved', true)
 
+  // Get belt ranks for this school
+  const { data: belts } = await adminClient
+    .from('belt_ranks')
+    .select('id, name, color, display_order')
+    .eq('school_id', profileData.school_id)
+    .order('display_order')
+
   return (
     <div className="space-y-6">
       <div>
@@ -61,9 +68,10 @@ export default async function ClassesPage() {
         <p className="text-gray-600">Manage your school's class schedule</p>
       </div>
 
-      <ClassesClient 
-        initialClasses={classes || []} 
+      <ClassesClient
+        initialClasses={classes || []}
         instructors={instructors || []}
+        belts={belts || []}
         schoolId={profileData.school_id}
       />
     </div>

@@ -32,9 +32,17 @@ interface Instructor {
   avatar_url: string | null
 }
 
+interface Belt {
+  id: string
+  name: string
+  color: string
+  display_order: number
+}
+
 interface ClassesClientProps {
   initialClasses: ClassSchedule[]
   instructors: Instructor[]
+  belts: Belt[]
   schoolId: string
 }
 
@@ -42,7 +50,7 @@ const DAYS_OF_WEEK = [
   'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
 ]
 
-export function ClassesClient({ initialClasses, instructors, schoolId }: ClassesClientProps) {
+export function ClassesClient({ initialClasses, instructors, belts, schoolId }: ClassesClientProps) {
   const [classes, setClasses] = useState(initialClasses)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingClass, setEditingClass] = useState<ClassSchedule | null>(null)
@@ -57,13 +65,14 @@ export function ClassesClient({ initialClasses, instructors, schoolId }: Classes
     end_time: '10:00',
     instructor_id: '',
     max_capacity: '',
+    belt_requirement_id: '',
   })
 
   const openCreateModal = () => {
     setEditingClass(null)
     setFormData({
       name: '', description: '', day_of_week: 1, start_time: '09:00',
-      end_time: '10:00', instructor_id: '', max_capacity: '',
+      end_time: '10:00', instructor_id: '', max_capacity: '', belt_requirement_id: '',
     })
     setIsModalOpen(true)
   }
@@ -78,6 +87,7 @@ export function ClassesClient({ initialClasses, instructors, schoolId }: Classes
       end_time: cls.end_time.slice(0, 5),
       instructor_id: cls.instructor_id || '',
       max_capacity: cls.max_capacity?.toString() || '',
+      belt_requirement_id: cls.belt_requirement_id || '',
     })
     setIsModalOpen(true)
   }
@@ -96,6 +106,7 @@ export function ClassesClient({ initialClasses, instructors, schoolId }: Classes
         end_time: formData.end_time,
         instructor_id: formData.instructor_id || null,
         max_capacity: formData.max_capacity ? parseInt(formData.max_capacity) : null,
+        belt_requirement_id: formData.belt_requirement_id || null,
       }
 
       const url = editingClass ? `/api/classes/${editingClass.id}` : '/api/classes'
@@ -198,12 +209,20 @@ export function ClassesClient({ initialClasses, instructors, schoolId }: Classes
                 <div className="space-y-3">
                   {dayClasses.map(cls => {
                     const instructor = instructors.find(i => i.id === cls.instructor_id)
+                    const belt = belts.find(b => b.id === cls.belt_requirement_id)
                     return (
                       <div key={cls.id} className={`p-4 rounded-lg border ${cls.is_active ? 'bg-white' : 'bg-gray-50 opacity-60'}`}>
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <h3 className="font-semibold">{cls.name}</h3>
+                              {belt && (
+                                <Badge
+                                  style={{ backgroundColor: belt.color, color: belt.color === '#FFFFFF' || belt.color === '#FFFF00' ? '#000' : '#fff' }}
+                                >
+                                  {belt.name}
+                                </Badge>
+                              )}
                               {!cls.is_active && <Badge variant="secondary">Inactive</Badge>}
                             </div>
                             {cls.description && <p className="text-sm text-gray-500 mb-2">{cls.description}</p>}
@@ -277,11 +296,26 @@ export function ClassesClient({ initialClasses, instructors, schoolId }: Classes
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="belt_requirement_id">Belt Level *</Label>
+              <select id="belt_requirement_id" value={formData.belt_requirement_id} onChange={(e) => setFormData({ ...formData, belt_requirement_id: e.target.value })} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" required>
+                <option value="">Select belt level</option>
+                {belts.map(b => (<option key={b.id} value={b.id}>{b.name}</option>))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
               <Label htmlFor="instructor_id">Instructor</Label>
               <select id="instructor_id" value={formData.instructor_id} onChange={(e) => setFormData({ ...formData, instructor_id: e.target.value })} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
                 <option value="">Select instructor</option>
                 {instructors.map(i => (<option key={i.id} value={i.id}>{i.full_name}</option>))}
               </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="max_capacity">Max Capacity</Label>
+              <Input id="max_capacity" type="number" min="1" value={formData.max_capacity} onChange={(e) => setFormData({ ...formData, max_capacity: e.target.value })} placeholder="e.g., 20" />
             </div>
           </div>
 
@@ -294,11 +328,6 @@ export function ClassesClient({ initialClasses, instructors, schoolId }: Classes
               <Label htmlFor="end_time">End Time *</Label>
               <Input id="end_time" type="time" value={formData.end_time} onChange={(e) => setFormData({ ...formData, end_time: e.target.value })} required />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="max_capacity">Max Capacity</Label>
-            <Input id="max_capacity" type="number" min="1" value={formData.max_capacity} onChange={(e) => setFormData({ ...formData, max_capacity: e.target.value })} placeholder="e.g., 20" />
           </div>
 
           <div className="flex justify-end gap-3 pt-4">

@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import {
   BookOpen,
   Clock,
@@ -14,6 +13,7 @@ import {
   XCircle,
   AlertCircle,
   Users,
+  Award,
 } from 'lucide-react'
 
 interface Instructor {
@@ -25,6 +25,7 @@ interface BeltRank {
   id: string
   name: string
   color: string
+  display_order: number
 }
 
 interface ClassSchedule {
@@ -35,15 +36,9 @@ interface ClassSchedule {
   start_time: string
   end_time: string
   max_capacity: number | null
+  belt_requirement_id: string | null
   instructor: Instructor | null
   belt_requirement: BeltRank | null
-}
-
-interface Enrollment {
-  id: string
-  enrolled_at: string
-  is_active: boolean
-  class_schedule: ClassSchedule
 }
 
 interface ClassSession {
@@ -75,11 +70,12 @@ interface AttendanceRecord {
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 export default function MyClassesPage() {
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([])
+  const [myClasses, setMyClasses] = useState<ClassSchedule[]>([])
   const [upcomingSessions, setUpcomingSessions] = useState<ClassSession[]>([])
   const [recentAttendance, setRecentAttendance] = useState<AttendanceRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [studentProfileId, setStudentProfileId] = useState<string | null>(null)
+  const [currentBelt, setCurrentBelt] = useState<BeltRank | null>(null)
 
   useEffect(() => {
     fetchMyClasses()
@@ -91,14 +87,24 @@ export default function MyClassesPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    // Get user's student profile
+    // Get user's student profile with their current belt
     const { data: studentProfileData } = await supabase
       .from('student_profiles')
-      .select('id, school_id')
+      .select(`
+        id,
+        school_id,
+        current_belt_id,
+        current_belt:belt_ranks!student_profiles_current_belt_id_fkey(id, name, color, display_order)
+      `)
       .eq('profile_id', user.id)
       .single()
 
-    const studentProfile = studentProfileData as { id: string; school_id: string } | null
+    const studentProfile = studentProfileData as {
+      id: string
+      school_id: string
+      current_belt_id: string | null
+      current_belt: BeltRank | null
+    } | null
 
     if (!studentProfile) {
       // User doesn't have a student profile yet
@@ -107,15 +113,13 @@ export default function MyClassesPage() {
     }
 
     setStudentProfileId(studentProfile.id)
+    setCurrentBelt(studentProfile.current_belt)
 
-    // Fetch enrollments with class details
-    const { data: enrollmentData } = await supabase
-      .from('class_enrollments')
-      .select(`
-        id,
-        enrolled_at,
-        is_active,
-        class_schedule:class_schedules(
+    // If student has a belt, fetch classes for their belt level
+    if (studentProfile.current_belt_id) {
+      const { data: classesData } = await supabase
+        .from('class_schedules')
+        .select(`
           id,
           name,
           description,
@@ -123,44 +127,48 @@ export default function MyClassesPage() {
           start_time,
           end_time,
           max_capacity,
+          belt_requirement_id,
           instructor:profiles!class_schedules_instructor_id_fkey(id, full_name),
-          belt_requirement:belt_ranks!class_schedules_belt_requirement_id_fkey(id, name, color)
-        )
-      `)
-      .eq('student_profile_id', studentProfile.id)
-      .eq('is_active', true)
+          belt_requirement:belt_ranks!class_schedules_belt_requirement_id_fkey(id, name, color, display_order)
+        `)
+        .eq('school_id', studentProfile.school_id)
+        .eq('belt_requirement_id', studentProfile.current_belt_id)
+        .eq('is_active', true)
+        .order('day_of_week')
+        .order('start_time')
 
-    if (enrollmentData) {
-      setEnrollments(enrollmentData as unknown as Enrollment[])
+      if (classesData) {
+        setMyClasses(classesData as unknown as ClassSchedule[])
 
-      // Get enrolled class IDs
-      const classIds = enrollmentData.map((e: any) => e.class_schedule?.id).filter(Boolean)
+        // Get class IDs for upcoming sessions
+        const classIds = classesData.map((c: { id: string }) => c.id)
 
-      if (classIds.length > 0) {
-        // Fetch upcoming sessions for enrolled classes
-        const today = new Date().toISOString().split('T')[0]
-        const { data: sessionsData } = await supabase
-          .from('class_sessions')
-          .select(`
-            id,
-            date,
-            status,
-            notes,
-            class_schedule:class_schedules(
+        if (classIds.length > 0) {
+          // Fetch upcoming sessions for these classes
+          const today = new Date().toISOString().split('T')[0]
+          const { data: sessionsData } = await supabase
+            .from('class_sessions')
+            .select(`
               id,
-              name,
-              start_time,
-              end_time
-            )
-          `)
-          .in('class_schedule_id', classIds)
-          .gte('date', today)
-          .eq('status', 'scheduled')
-          .order('date')
-          .limit(10)
+              date,
+              status,
+              notes,
+              class_schedule:class_schedules(
+                id,
+                name,
+                start_time,
+                end_time
+              )
+            `)
+            .in('class_schedule_id', classIds)
+            .gte('date', today)
+            .eq('status', 'scheduled')
+            .order('date')
+            .limit(10)
 
-        if (sessionsData) {
-          setUpcomingSessions(sessionsData as unknown as ClassSession[])
+          if (sessionsData) {
+            setUpcomingSessions(sessionsData as unknown as ClassSession[])
+          }
         }
       }
     }
@@ -248,7 +256,7 @@ export default function MyClassesPage() {
             <BookOpen className="h-12 w-12 mx-auto text-gray-400 mb-4" />
             <h2 className="text-xl font-semibold mb-2">No Student Profile</h2>
             <p className="text-gray-600 mb-4">
-              You don't have a student profile yet. Please contact your school administrator to set up your student profile.
+              You don&apos;t have a student profile yet. Please contact your school administrator to set up your student profile.
             </p>
           </CardContent>
         </Card>
@@ -262,76 +270,100 @@ export default function MyClassesPage() {
         <BookOpen className="h-8 w-8 text-red-500" />
         <div>
           <h1 className="text-2xl font-bold">My Classes</h1>
-          <p className="text-gray-600">View your enrolled classes and upcoming sessions</p>
+          <p className="text-gray-600">View your classes based on your belt level</p>
         </div>
       </div>
 
-      {/* Enrolled Classes */}
-      <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Enrolled Classes</h2>
+      {/* Current Belt */}
+      {currentBelt && (
+        <Card className="mb-6">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <Award className="h-8 w-8 text-yellow-500" />
+              <div>
+                <p className="text-sm text-gray-500">Your Current Belt</p>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-6 h-6 rounded-full border-2 border-gray-300"
+                    style={{ backgroundColor: currentBelt.color }}
+                  />
+                  <span className="font-semibold text-lg">{currentBelt.name}</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        {enrollments.length === 0 ? (
+      {/* My Classes (Belt-Based) */}
+      <section className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">Your Classes</h2>
+
+        {!currentBelt ? (
+          <Card>
+            <CardContent className="p-8 text-center text-gray-500">
+              <Award className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="font-medium">No Belt Assigned</p>
+              <p className="text-sm">You haven&apos;t been assigned a belt yet. Once your instructor assigns you a belt, your classes will appear here.</p>
+            </CardContent>
+          </Card>
+        ) : myClasses.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center text-gray-500">
               <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="font-medium">No class enrollments</p>
-              <p className="text-sm">You are not enrolled in any classes yet.</p>
+              <p className="font-medium">No Classes for Your Belt Level</p>
+              <p className="text-sm">There are no classes scheduled for your belt level yet.</p>
             </CardContent>
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {enrollments.map((enrollment) => {
-              const cls = enrollment.class_schedule
-              if (!cls) return null
-
-              return (
-                <Card key={enrollment.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg flex items-center justify-between">
-                      {cls.name}
-                      {cls.belt_requirement && (
-                        <Badge
-                          style={{
-                            backgroundColor: cls.belt_requirement.color || '#gray',
-                            color: ['white', 'yellow', '#FFD700'].includes(cls.belt_requirement.color?.toLowerCase() || '')
-                              ? '#000'
-                              : '#fff',
-                          }}
-                        >
-                          {cls.belt_requirement.name}
-                        </Badge>
-                      )}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Calendar className="h-4 w-4" />
-                        <span>{DAYS_OF_WEEK[cls.day_of_week]}</span>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Clock className="h-4 w-4" />
-                        <span>
-                          {formatTime(cls.start_time)} - {formatTime(cls.end_time)}
-                        </span>
-                      </div>
-
-                      {cls.instructor && (
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <User className="h-4 w-4" />
-                          <span>{cls.instructor.full_name}</span>
-                        </div>
-                      )}
-
-                      <p className="text-xs text-gray-400 mt-2">
-                        Enrolled {new Date(enrollment.enrolled_at).toLocaleDateString()}
-                      </p>
+            {myClasses.map((cls) => (
+              <Card key={cls.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg flex items-center justify-between">
+                    {cls.name}
+                    {cls.belt_requirement && (
+                      <Badge
+                        style={{
+                          backgroundColor: cls.belt_requirement.color || '#gray',
+                          color: ['#FFFFFF', '#FFFF00', '#FFD700', 'white', 'yellow'].includes(cls.belt_requirement.color || '')
+                            ? '#000'
+                            : '#fff',
+                        }}
+                      >
+                        {cls.belt_requirement.name}
+                      </Badge>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Calendar className="h-4 w-4" />
+                      <span>{DAYS_OF_WEEK[cls.day_of_week]}</span>
                     </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
+
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Clock className="h-4 w-4" />
+                      <span>
+                        {formatTime(cls.start_time)} - {formatTime(cls.end_time)}
+                      </span>
+                    </div>
+
+                    {cls.instructor && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <User className="h-4 w-4" />
+                        <span>{cls.instructor.full_name}</span>
+                      </div>
+                    )}
+
+                    {cls.description && (
+                      <p className="text-sm text-gray-500 mt-2">{cls.description}</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         )}
       </section>
