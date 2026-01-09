@@ -426,7 +426,10 @@ export default function MessagesPage() {
     e.preventDefault()
     if (!newMessage.trim() || !selectedConversation || !currentUserId) return
 
+    const messageContent = newMessage.trim()
     setSendingMessage(true)
+    setNewMessage('') // Clear input immediately for better UX
+
     const supabase = createClient()
 
     try {
@@ -435,12 +438,21 @@ export default function MessagesPage() {
         .insert({
           conversation_id: selectedConversation.id,
           sender_id: currentUserId,
-          content: newMessage.trim(),
+          content: messageContent,
         })
         .select()
         .single()
 
       if (error) throw error
+
+      // Optimistically add the message to the UI
+      if (msg) {
+        setMessages(prev => {
+          // Check if message already exists (from real-time)
+          if (prev.find(m => m.id === msg.id)) return prev
+          return [...prev, { ...msg, reactions: [] }]
+        })
+      }
 
       // Update conversation's last_message_at
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -448,11 +460,15 @@ export default function MessagesPage() {
         .update({ last_message_at: new Date().toISOString() })
         .eq('id', selectedConversation.id)
 
-      setNewMessage('')
+      // Update conversations list to show latest message
+      fetchConversations()
+
       messageInputRef.current?.focus()
     } catch (error) {
       console.error('Error sending message:', error)
       toast.error('Failed to send message')
+      // Restore the message if send failed
+      setNewMessage(messageContent)
     } finally {
       setSendingMessage(false)
     }
