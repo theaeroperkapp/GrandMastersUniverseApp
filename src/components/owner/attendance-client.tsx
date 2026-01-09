@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Modal } from '@/components/ui/modal'
+import { NumericKeypad } from '@/components/ui/numeric-keypad'
 import {
   QrCode,
   Keyboard,
@@ -15,9 +16,9 @@ import {
   Users,
   Calendar,
   CheckCircle,
-  XCircle,
   Search,
-  RefreshCw
+  RefreshCw,
+  Sparkles,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -286,32 +287,41 @@ export function AttendanceClient({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Tab Buttons */}
-          <div className="flex gap-2 mb-6">
-            <Button
-              variant={activeTab === 'manual' ? 'default' : 'outline'}
+          {/* Tab Buttons - Premium */}
+          <div className="flex p-1 bg-gray-100 rounded-xl mb-6">
+            <button
               onClick={() => setActiveTab('manual')}
-              className="flex-1"
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+                activeTab === 'manual'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
             >
-              <Users className="h-4 w-4 mr-2" />
-              Manual
-            </Button>
-            <Button
-              variant={activeTab === 'pin' ? 'default' : 'outline'}
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Manual</span>
+            </button>
+            <button
               onClick={() => setActiveTab('pin')}
-              className="flex-1"
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+                activeTab === 'pin'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
             >
-              <Keyboard className="h-4 w-4 mr-2" />
-              PIN
-            </Button>
-            <Button
-              variant={activeTab === 'qr' ? 'default' : 'outline'}
+              <Keyboard className="h-4 w-4" />
+              <span className="hidden sm:inline">PIN</span>
+            </button>
+            <button
               onClick={() => setActiveTab('qr')}
-              className="flex-1"
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+                activeTab === 'qr'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
             >
-              <QrCode className="h-4 w-4 mr-2" />
-              QR Code
-            </Button>
+              <QrCode className="h-4 w-4" />
+              <span className="hidden sm:inline">QR Code</span>
+            </button>
           </div>
 
           {/* Manual Check-in Tab */}
@@ -369,42 +379,31 @@ export function AttendanceClient({
             </div>
           )}
 
-          {/* PIN Check-in Tab */}
+          {/* PIN Check-in Tab - Premium Keypad */}
           {activeTab === 'pin' && (
             <div className="max-w-sm mx-auto space-y-6">
               <div className="text-center">
-                <Keyboard className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-600 mb-4">Enter your 4-digit PIN to check in</p>
+                <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-red-100 to-orange-100 flex items-center justify-center">
+                  <Keyboard className="h-8 w-8 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Enter Your PIN</h3>
+                <p className="text-gray-500 text-sm">Use the keypad below to check in</p>
               </div>
 
-              <div className="space-y-4">
-                <Input
-                  ref={pinInputRef}
-                  type="password"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={6}
-                  placeholder="Enter PIN"
-                  value={pinCode}
-                  onChange={(e) => setPinCode(e.target.value.replace(/\D/g, ''))}
-                  onKeyPress={handlePinKeyPress}
-                  className="text-center text-2xl tracking-widest"
-                />
+              <NumericKeypad
+                value={pinCode}
+                onChange={setPinCode}
+                onSubmit={handlePinCheckIn}
+                maxLength={4}
+                error={false}
+              />
 
-                <Button
-                  className="w-full"
-                  size="lg"
-                  onClick={handlePinCheckIn}
-                  disabled={isLoading || pinCode.length < 4}
-                >
-                  {isLoading ? (
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                  )}
-                  Check In
-                </Button>
-              </div>
+              {isLoading && (
+                <div className="flex items-center justify-center gap-2 text-gray-500">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">Checking in...</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -494,21 +493,43 @@ export function AttendanceClient({
         </CardContent>
       </Card>
 
-      {/* Success Modal */}
+      {/* Success Modal - Premium */}
       <Modal
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
-        title="Check-in Successful"
+        title=""
       >
-        <div className="text-center py-6">
-          <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="h-10 w-10 text-green-500" />
+        <div className="text-center py-8">
+          {/* Animated Success Icon */}
+          <div className="relative mx-auto mb-6">
+            <div className="h-20 w-20 mx-auto rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-200 animate-badge-bounce">
+              <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path className="animate-check" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            {/* Sparkles */}
+            <Sparkles className="absolute -top-2 -right-2 h-6 w-6 text-yellow-400 animate-pulse" />
+            <Sparkles className="absolute -bottom-1 -left-1 h-4 w-4 text-yellow-400 animate-pulse" style={{ animationDelay: '0.5s' }} />
           </div>
-          <h3 className="text-xl font-semibold mb-2">Welcome, {lastCheckedIn}!</h3>
-          <p className="text-gray-600">You have been checked in successfully.</p>
+
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">
+            Welcome, {lastCheckedIn}!
+          </h3>
+          <p className="text-gray-500 mb-6">You have been checked in successfully.</p>
+
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 rounded-full text-green-700 text-sm font-medium">
+            <Clock className="h-4 w-4" />
+            {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+          </div>
         </div>
-        <div className="flex justify-center">
-          <Button onClick={() => setShowSuccessModal(false)}>Close</Button>
+
+        <div className="flex justify-center pt-4">
+          <Button
+            onClick={() => setShowSuccessModal(false)}
+            className="btn-gradient-green text-white px-8 shadow-lg shadow-green-200"
+          >
+            Have a great class!
+          </Button>
         </div>
       </Modal>
     </div>

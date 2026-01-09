@@ -3,14 +3,13 @@
 import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { CreditCard as CreditCardVisual } from '@/components/ui/credit-card'
 import {
   CreditCard,
-  Trash2,
-  Star,
   Plus,
   Loader2,
+  Wallet,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { AddCardModal } from './add-card-modal'
@@ -106,31 +105,19 @@ export function CardManagement({ onCardAdded, onCardRemoved }: CardManagementPro
     onCardAdded?.()
   }
 
-  const getBrandIcon = (brand: string) => {
-    const brandLower = brand.toLowerCase()
-    // Return colored text based on brand
-    const colors: Record<string, string> = {
-      visa: 'text-blue-600',
-      mastercard: 'text-orange-600',
-      amex: 'text-blue-500',
-      discover: 'text-orange-500',
-    }
-    return colors[brandLower] || 'text-gray-600'
-  }
-
   if (loading) {
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <CreditCard className="h-5 w-5" />
+            <Wallet className="h-5 w-5" />
             Payment Methods
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             {[1, 2].map((i) => (
-              <Skeleton key={i} className="h-16 w-full" />
+              <Skeleton key={i} className="h-44 w-full rounded-xl" />
             ))}
           </div>
         </CardContent>
@@ -140,80 +127,51 @@ export function CardManagement({ onCardAdded, onCardRemoved }: CardManagementPro
 
   return (
     <>
-      <Card>
-        <CardHeader>
+      <Card className="overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100/50">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-lg">
-              <CreditCard className="h-5 w-5" />
+              <Wallet className="h-5 w-5" />
               Payment Methods
             </CardTitle>
-            <Button size="sm" onClick={() => setShowAddCard(true)}>
+            <Button size="sm" onClick={() => setShowAddCard(true)} className="shadow-sm">
               <Plus className="h-4 w-4 mr-1" />
               Add Card
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {paymentMethods.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <CreditCard className="h-10 w-10 mx-auto mb-2 text-gray-300" />
-              <p>No payment methods saved</p>
-              <p className="text-sm">Add a card to make payments easier</p>
+            <div className="text-center py-12">
+              <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                <CreditCard className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="font-medium text-gray-900 mb-1">No payment methods</h3>
+              <p className="text-sm text-gray-500 mb-4">Add a card to make payments easier</p>
+              <Button onClick={() => setShowAddCard(true)} variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                Add your first card
+              </Button>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               {paymentMethods.map((pm) => (
-                <div
-                  key={pm.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <CreditCard className={`h-8 w-8 ${getBrandIcon(pm.brand)}`} />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium capitalize">{pm.brand}</span>
-                        <span className="text-gray-500">•••• {pm.last4}</span>
-                        {pm.is_default && (
-                          <Badge className="bg-green-100 text-green-700">
-                            <Star className="h-3 w-3 mr-1" />
-                            Default
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-500">
-                        Expires {pm.exp_month.toString().padStart(2, '0')}/{pm.exp_year}
-                      </p>
+                <div key={pm.id} className="relative group">
+                  <CreditCardVisual
+                    brand={pm.brand}
+                    last4={pm.last4}
+                    expMonth={pm.exp_month}
+                    expYear={pm.exp_year}
+                    isDefault={pm.is_default}
+                    onSetDefault={pm.is_default ? undefined : () => handleSetDefault(pm.id)}
+                    onDelete={() => handleDelete(pm.id)}
+                  />
+                  {/* Loading overlays */}
+                  {(settingDefault === pm.id || deleting === pm.id) && (
+                    <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
+                      <Loader2 className="h-8 w-8 text-white animate-spin" />
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!pm.is_default && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleSetDefault(pm.id)}
-                        disabled={settingDefault === pm.id}
-                      >
-                        {settingDefault === pm.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          'Set Default'
-                        )}
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(pm.id)}
-                      disabled={deleting === pm.id}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      {deleting === pm.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -7,12 +7,28 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Pagination } from '@/components/ui/pagination'
-import { Bell, Check, Trash2, ChevronRight } from 'lucide-react'
+import {
+  Bell,
+  Check,
+  CheckCheck,
+  Trash2,
+  ChevronRight,
+  User,
+  Award,
+  Calendar,
+  CreditCard,
+  MessageSquare,
+  AlertCircle,
+  Settings,
+  Sparkles,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface Notification {
   id: string
   title: string
   message: string
+  content?: string
   type: string
   is_read: boolean
   created_at: string
@@ -20,6 +36,32 @@ interface Notification {
 }
 
 const ITEMS_PER_PAGE = 10
+
+const typeIcons: Record<string, { icon: React.ElementType; color: string; bg: string; gradient: string }> = {
+  approval: { icon: User, color: 'text-blue-600', bg: 'bg-blue-100', gradient: 'from-blue-400 to-blue-600' },
+  promotion: { icon: Award, color: 'text-amber-600', bg: 'bg-amber-100', gradient: 'from-amber-400 to-orange-500' },
+  event: { icon: Calendar, color: 'text-purple-600', bg: 'bg-purple-100', gradient: 'from-purple-400 to-purple-600' },
+  payment: { icon: CreditCard, color: 'text-green-600', bg: 'bg-green-100', gradient: 'from-green-400 to-emerald-500' },
+  message: { icon: MessageSquare, color: 'text-indigo-600', bg: 'bg-indigo-100', gradient: 'from-indigo-400 to-indigo-600' },
+  announcement: { icon: Bell, color: 'text-red-600', bg: 'bg-red-100', gradient: 'from-red-400 to-red-600' },
+  alert: { icon: AlertCircle, color: 'text-orange-600', bg: 'bg-orange-100', gradient: 'from-orange-400 to-orange-600' },
+  system: { icon: Settings, color: 'text-gray-600', bg: 'bg-gray-100', gradient: 'from-gray-400 to-gray-600' },
+}
+
+function getRelativeTime(dateString: string): string {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 7) return `${diffDays}d ago`
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: diffDays > 365 ? 'numeric' : undefined })
+}
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -121,31 +163,26 @@ export default function NotificationsPage() {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-3xl">
-        <div className="flex justify-between items-center mb-6">
+      <div className="p-6 md:p-8 max-w-3xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
           <div>
             <Skeleton className="h-8 w-40 mb-2" />
             <Skeleton className="h-4 w-24" />
           </div>
           <Skeleton className="h-10 w-36" />
         </div>
-        <div className="space-y-3">
+        <div className="space-y-4">
           {[1, 2, 3, 4, 5].map((i) => (
-            <Card key={i}>
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <Skeleton className="h-5 w-48 mb-2" />
-                    <Skeleton className="h-4 w-full mb-2" />
-                    <Skeleton className="h-3 w-32" />
-                  </div>
-                  <div className="flex gap-2 ml-4">
-                    <Skeleton className="h-8 w-8" />
-                    <Skeleton className="h-8 w-8" />
-                  </div>
+            <div key={i} className="glass rounded-xl p-4 animate-pulse">
+              <div className="flex gap-4">
+                <div className="h-12 w-12 rounded-xl bg-gray-200" />
+                <div className="flex-1">
+                  <div className="h-5 w-48 bg-gray-200 rounded mb-2" />
+                  <div className="h-4 w-full bg-gray-200 rounded mb-2" />
+                  <div className="h-3 w-32 bg-gray-200 rounded" />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       </div>
@@ -153,98 +190,162 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="p-8 max-w-3xl">
-      <div className="flex justify-between items-center mb-6">
+    <div className="p-6 md:p-8 max-w-3xl mx-auto">
+      {/* Premium Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold">Notifications</h1>
-          {unreadCount > 0 && (
-            <p className="text-gray-500">{unreadCount} unread</p>
-          )}
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-gradient-to-br from-red-500 to-red-600 rounded-xl shadow-lg shadow-red-500/25">
+              <Bell className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
+              {totalCount > 0 && (
+                <p className="text-sm text-gray-500">
+                  {unreadCount > 0 ? (
+                    <span className="text-red-600 font-medium">{unreadCount} unread</span>
+                  ) : (
+                    'All caught up!'
+                  )}
+                  {' '}of {totalCount} total
+                </p>
+              )}
+            </div>
+          </div>
         </div>
         {unreadCount > 0 && (
-          <Button variant="outline" onClick={markAllAsRead}>
-            <Check className="h-4 w-4 mr-2" />
+          <Button
+            onClick={markAllAsRead}
+            className="btn-gradient-red text-white shadow-lg shadow-red-200 hover:shadow-red-300 transition-all"
+          >
+            <CheckCheck className="h-4 w-4 mr-2" />
             Mark all as read
           </Button>
         )}
       </div>
 
       {notifications.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center text-gray-500">
-            <Bell className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p>No notifications yet</p>
+        <Card className="glass border-0 overflow-hidden">
+          <CardContent className="p-12 text-center">
+            <div className="relative">
+              <div className="h-20 w-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                <Bell className="h-10 w-10 text-gray-400" />
+              </div>
+              <Sparkles className="absolute top-0 right-1/3 h-5 w-5 text-amber-400 animate-pulse" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">All caught up!</h3>
+            <p className="text-gray-500">No notifications to show right now</p>
           </CardContent>
         </Card>
       ) : (
         <>
           <div className="space-y-3">
-            {notifications.map((notification) => (
-              <Card
-                key={notification.id}
-                className={`${notification.is_read ? 'bg-gray-50' : 'border-blue-200 bg-blue-50/30'} ${notification.link ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
-                onClick={() => {
-                  if (notification.link) {
-                    markAsRead(notification.id)
-                    router.push(notification.link)
-                  }
-                }}
-              >
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        {!notification.is_read && (
-                          <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                        )}
-                        <h3 className="font-medium">{notification.title}</h3>
+            {notifications.map((notification, index) => {
+              const typeConfig = typeIcons[notification.type] || typeIcons.system
+              const Icon = typeConfig.icon
+
+              return (
+                <div
+                  key={notification.id}
+                  style={{ animationDelay: `${index * 50}ms` }}
+                  className={cn(
+                    'glass rounded-xl overflow-hidden transition-all duration-300 animate-slide-up',
+                    notification.link && 'cursor-pointer hover:shadow-lg hover:scale-[1.01]',
+                    !notification.is_read && 'ring-2 ring-red-100 bg-red-50/30'
+                  )}
+                  onClick={() => {
+                    if (notification.link) {
+                      markAsRead(notification.id)
+                      router.push(notification.link)
+                    }
+                  }}
+                >
+                  <div className="p-4">
+                    <div className="flex gap-4">
+                      {/* Icon */}
+                      <div className={cn(
+                        'flex-shrink-0 p-3 rounded-xl bg-gradient-to-br shadow-lg',
+                        typeConfig.gradient
+                      )}>
+                        <Icon className="h-5 w-5 text-white" />
                       </div>
-                      <p className="text-gray-600 mt-1">{notification.message}</p>
-                      <p className="text-xs text-gray-400 mt-2">
-                        {new Date(notification.created_at).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="flex gap-2 ml-4 items-center">
-                      {notification.link && (
-                        <ChevronRight className="h-5 w-5 text-gray-400" />
-                      )}
-                      {!notification.is_read && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            markAsRead(notification.id)
-                          }}
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          deleteNotification(notification.id)
-                        }}
-                        className="text-red-500 hover:text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              {!notification.is_read && (
+                                <span className="w-2 h-2 bg-red-500 rounded-full animate-online flex-shrink-0" />
+                              )}
+                              <h3 className={cn(
+                                'font-semibold truncate',
+                                !notification.is_read ? 'text-gray-900' : 'text-gray-700'
+                              )}>
+                                {notification.title}
+                              </h3>
+                            </div>
+                            <p className="text-gray-600 mt-1 line-clamp-2 text-sm">
+                              {notification.message || notification.content}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-2 font-medium">
+                              {getRelativeTime(notification.created_at)}
+                            </p>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {notification.link && (
+                              <ChevronRight className="h-5 w-5 text-gray-400" />
+                            )}
+                            {!notification.is_read && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  markAsRead(notification.id)
+                                }}
+                                className="h-8 w-8 p-0 hover:bg-green-100 hover:text-green-600 rounded-lg transition-colors"
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                deleteNotification(notification.id)
+                              }}
+                              className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+
+                  {/* Progress bar for unread */}
+                  {!notification.is_read && (
+                    <div className="h-0.5 bg-gradient-to-r from-red-500 via-red-400 to-transparent" />
+                  )}
+                </div>
+              )
+            })}
           </div>
 
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-            totalItems={totalCount}
-            itemsPerPage={ITEMS_PER_PAGE}
-          />
+          <div className="mt-6">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              totalItems={totalCount}
+              itemsPerPage={ITEMS_PER_PAGE}
+            />
+          </div>
         </>
       )}
     </div>

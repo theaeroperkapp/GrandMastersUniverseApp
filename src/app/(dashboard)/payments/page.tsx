@@ -16,9 +16,11 @@ import {
   Ticket,
   RefreshCw,
   Award,
+  TrendingUp,
 } from 'lucide-react'
 import { CardManagement } from '@/components/payments/card-management'
 import { PaymentModal } from '@/components/payments/payment-modal'
+import { AnimatedCurrency, AnimatedCounter } from '@/components/ui/animated-counter'
 
 interface EventPayment {
   id: string
@@ -350,44 +352,65 @@ export default function PaymentsPage() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3 mb-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-100 rounded-lg">
-                <Clock className="h-5 w-5 text-amber-600" />
-              </div>
+        <Card className="glass border-0 overflow-hidden group hover:shadow-lg transition-all duration-300">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/10" />
+          <CardContent className="p-5 relative">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Pending</p>
-                <p className="text-xl font-bold text-amber-600">{formatAmount(totalPending)}</p>
+                <p className="text-sm font-medium text-gray-500 mb-1">Pending</p>
+                <p className="text-2xl font-bold text-amber-600">
+                  <AnimatedCurrency cents={totalPending} />
+                </p>
               </div>
+              <div className="p-3 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl shadow-lg shadow-amber-500/25 group-hover:scale-110 transition-transform duration-300">
+                <Clock className="h-6 w-6 text-white" />
+              </div>
+            </div>
+            {totalPending > 0 && (
+              <div className="mt-3 pt-3 border-t border-amber-200/50">
+                <span className="text-xs text-amber-600 font-medium">Payment due</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="glass border-0 overflow-hidden group hover:shadow-lg transition-all duration-300">
+          <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/10" />
+          <CardContent className="p-5 relative">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500 mb-1">Total Paid</p>
+                <p className="text-2xl font-bold text-green-600">
+                  <AnimatedCurrency cents={totalPaid} />
+                </p>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl shadow-lg shadow-green-500/25 group-hover:scale-110 transition-transform duration-300">
+                <CheckCircle className="h-6 w-6 text-white" />
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-green-200/50 flex items-center gap-1.5">
+              <TrendingUp className="h-3.5 w-3.5 text-green-500" />
+              <span className="text-xs text-green-600 font-medium">All time</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              </div>
+        <Card className="glass border-0 overflow-hidden group hover:shadow-lg transition-all duration-300">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/10" />
+          <CardContent className="p-5 relative">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Total Paid</p>
-                <p className="text-xl font-bold text-green-600">{formatAmount(totalPaid)}</p>
+                <p className="text-sm font-medium text-gray-500 mb-1">Transactions</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  <AnimatedCounter value={eventPayments.length + customCharges.length + beltTestPayments.length} />
+                </p>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl shadow-lg shadow-blue-500/25 group-hover:scale-110 transition-transform duration-300">
+                <Receipt className="h-6 w-6 text-white" />
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Receipt className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Transactions</p>
-                <p className="text-xl font-bold">{eventPayments.length + customCharges.length + beltTestPayments.length}</p>
-              </div>
+            <div className="mt-3 pt-3 border-t border-blue-200/50">
+              <span className="text-xs text-blue-600 font-medium">Payment records</span>
             </div>
           </CardContent>
         </Card>

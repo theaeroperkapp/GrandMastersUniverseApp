@@ -17,6 +17,8 @@ import {
   ArrowLeft,
 } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
+import { OnlineIndicator } from '@/components/ui/online-indicator'
+import { TypingIndicator } from '@/components/ui/typing-indicator'
 import toast from 'react-hot-toast'
 
 interface Profile {
@@ -557,17 +559,20 @@ export default function MessagesPage() {
                     ${selectedConversation?.id === convo.id ? 'bg-red-50' : ''}
                   `}
                 >
-                  {/* Avatar */}
-                  <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
-                    {convo.other_participant?.avatar_url ? (
-                      <img
-                        src={convo.other_participant.avatar_url}
-                        alt=""
-                        className="h-12 w-12 rounded-full object-cover"
-                      />
-                    ) : (
-                      <User className="h-6 w-6 text-gray-500" />
-                    )}
+                  {/* Avatar with Online Indicator */}
+                  <div className="relative shrink-0">
+                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center ring-2 ring-white shadow-sm">
+                      {convo.other_participant?.avatar_url ? (
+                        <img
+                          src={convo.other_participant.avatar_url}
+                          alt=""
+                          className="h-12 w-12 rounded-full object-cover"
+                        />
+                      ) : (
+                        <User className="h-6 w-6 text-gray-500" />
+                      )}
+                    </div>
+                    <OnlineIndicator status="online" className="absolute -bottom-0.5 -right-0.5" />
                   </div>
 
                   {/* Content */}
@@ -608,24 +613,30 @@ export default function MessagesPage() {
             <>
               {/* Chat Header - desktop only (mobile shows in main header) */}
               <div className="hidden md:flex p-4 border-b bg-white items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                  {selectedConversation.other_participant?.avatar_url ? (
-                    <img
-                      src={selectedConversation.other_participant.avatar_url}
-                      alt=""
-                      className="h-10 w-10 rounded-full object-cover"
-                    />
-                  ) : (
-                    <User className="h-5 w-5 text-gray-500" />
-                  )}
+                <div className="relative">
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center ring-2 ring-white shadow-sm">
+                    {selectedConversation.other_participant?.avatar_url ? (
+                      <img
+                        src={selectedConversation.other_participant.avatar_url}
+                        alt=""
+                        className="h-10 w-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <User className="h-5 w-5 text-gray-500" />
+                    )}
+                  </div>
+                  <OnlineIndicator status="online" size="sm" className="absolute -bottom-0.5 -right-0.5" />
                 </div>
                 <div>
                   <p className="font-medium">
                     {selectedConversation.other_participant?.full_name || 'Unknown'}
                   </p>
-                  <Badge className={getRoleBadgeColor(selectedConversation.other_participant?.role || '')}>
-                    {selectedConversation.other_participant?.role}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge className={getRoleBadgeColor(selectedConversation.other_participant?.role || '')}>
+                      {selectedConversation.other_participant?.role}
+                    </Badge>
+                    <span className="text-xs text-green-600 font-medium">Online</span>
+                  </div>
                 </div>
               </div>
 
