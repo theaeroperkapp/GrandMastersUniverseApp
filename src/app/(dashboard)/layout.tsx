@@ -2,6 +2,9 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Navbar } from '@/components/layout/navbar'
 import { Sidebar } from '@/components/layout/sidebar'
+import { BottomNav } from '@/components/layout/bottom-nav'
+import { OfflineIndicator } from '@/components/ui/offline-indicator'
+import { ScrollToTop } from '@/components/ui/scroll-to-top'
 import type { UserRole } from '@/types/database'
 
 // Disable caching - always fetch fresh user data
@@ -81,6 +84,9 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Offline indicator - shows at top when offline */}
+      <OfflineIndicator />
+
       <Navbar
         user={{
           id: profileData.id,
@@ -92,12 +98,22 @@ export default async function DashboardLayout({
         unreadNotifications={unreadNotifications || 0}
         unreadMessages={unreadMessages || 0}
       />
+
       <div className="flex">
         <Sidebar role={profileData.role} />
-        <main className="flex-1 p-4 md:p-6">
+        <main className="flex-1 p-4 md:p-6 pb-20 md:pb-6">
           {children}
         </main>
       </div>
+
+      {/* Mobile bottom navigation */}
+      <BottomNav
+        unreadMessages={unreadMessages || 0}
+        unreadNotifications={unreadNotifications || 0}
+      />
+
+      {/* Scroll to top button */}
+      <ScrollToTop bottomOffset={80} />
     </div>
   )
 }

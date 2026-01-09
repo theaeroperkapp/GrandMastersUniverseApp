@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -15,9 +14,9 @@ import {
   Check,
   CheckCheck,
   Loader2,
+  ArrowLeft,
 } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
-import { Label } from '@/components/ui/label'
 import toast from 'react-hot-toast'
 
 interface Profile {
@@ -59,6 +58,9 @@ export default function MessagesPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [schoolId, setSchoolId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+
+  // Mobile view state - 'list' shows conversations, 'chat' shows messages
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>('list')
 
   // New conversation modal
   const [isNewConversationOpen, setIsNewConversationOpen] = useState(false)
@@ -152,6 +154,17 @@ export default function MessagesPage() {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  // Handle selecting a conversation - switch to chat view on mobile
+  const handleSelectConversation = (convo: Conversation) => {
+    setSelectedConversation(convo)
+    setMobileView('chat')
+  }
+
+  // Handle back button - return to list view on mobile
+  const handleBackToList = () => {
+    setMobileView('list')
   }
 
   const fetchConversations = async () => {
@@ -380,10 +393,12 @@ export default function MessagesPage() {
     if (existing) {
       // Select existing conversation
       const member = schoolMembers.find(m => m.id === memberId)
-      setSelectedConversation({
+      const convo = {
         ...existing,
         other_participant: member,
-      })
+      }
+      setSelectedConversation(convo)
+      setMobileView('chat')
       setIsNewConversationOpen(false)
       return
     }
@@ -411,6 +426,7 @@ export default function MessagesPage() {
       ...newConvo,
       other_participant: member,
     })
+    setMobileView('chat')
     setIsNewConversationOpen(false)
     fetchConversations()
   }
@@ -454,23 +470,53 @@ export default function MessagesPage() {
 
   if (loading) {
     return (
-      <div className="p-8 flex items-center justify-center">
+      <div className="p-8 flex items-center justify-center min-h-[50vh]">
         <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
       </div>
     )
   }
 
   return (
-    <div className="h-[calc(100vh-120px)] flex flex-col">
-      <div className="p-4 border-b">
-        <h1 className="text-2xl font-bold">Messages</h1>
-        <p className="text-gray-600">Chat with instructors and members</p>
+    <div className="h-[calc(100dvh-120px)] md:h-[calc(100vh-120px)] flex flex-col -m-4 md:-m-6">
+      {/* Header - responsive with back button on mobile */}
+      <div className="p-4 border-b bg-white shrink-0">
+        <div className="flex items-center gap-3">
+          {/* Mobile back button - only show when in chat view */}
+          {mobileView === 'chat' && selectedConversation && (
+            <button
+              onClick={handleBackToList}
+              className="md:hidden flex items-center justify-center w-10 h-10 -ml-2 rounded-lg hover:bg-gray-100 touch-manipulation"
+              aria-label="Back to conversations"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+          )}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold truncate">
+              {mobileView === 'chat' && selectedConversation
+                ? selectedConversation.other_participant?.full_name || 'Chat'
+                : 'Messages'}
+            </h1>
+            {mobileView === 'list' && (
+              <p className="text-gray-600 text-sm hidden sm:block">Chat with instructors and members</p>
+            )}
+            {mobileView === 'chat' && selectedConversation?.other_participant?.role && (
+              <Badge className={`${getRoleBadgeColor(selectedConversation.other_participant.role)} md:hidden`}>
+                {selectedConversation.other_participant.role}
+              </Badge>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Conversations List */}
-        <div className="w-80 border-r flex flex-col">
-          <div className="p-3 border-b space-y-2">
+        {/* Conversations List - hidden on mobile when viewing chat */}
+        <div className={`
+          w-full md:w-80 border-r flex flex-col bg-white
+          ${mobileView === 'chat' ? 'hidden md:flex' : 'flex'}
+        `}>
+          {/* Search and New Conversation Button */}
+          <div className="p-3 border-b space-y-2 shrink-0">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
@@ -480,75 +526,88 @@ export default function MessagesPage() {
                 className="pl-9"
               />
             </div>
-            <Button className="w-full" size="sm" onClick={openNewConversation}>
+            <Button className="w-full hidden md:flex" size="sm" onClick={openNewConversation}>
               <Plus className="h-4 w-4 mr-2" />
               New Conversation
             </Button>
           </div>
 
+          {/* Conversations List */}
           <div className="flex-1 overflow-y-auto">
             {filteredConversations.length === 0 ? (
-              <div className="p-4 text-center text-gray-500">
-                <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No conversations yet</p>
-                <p className="text-xs">Start a new conversation</p>
+              <div className="p-6 text-center text-gray-500">
+                <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                <p className="font-medium">No conversations yet</p>
+                <p className="text-sm mt-1">Start a new conversation</p>
+                <Button className="mt-4 md:hidden" size="sm" onClick={openNewConversation}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Conversation
+                </Button>
               </div>
             ) : (
               filteredConversations.map(convo => (
-                <div
+                <button
                   key={convo.id}
-                  onClick={() => setSelectedConversation(convo)}
-                  className={`p-3 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
-                    selectedConversation?.id === convo.id ? 'bg-red-50' : ''
-                  }`}
+                  onClick={() => handleSelectConversation(convo)}
+                  className={`
+                    w-full p-4 border-b flex items-start gap-3 text-left
+                    transition-colors touch-manipulation
+                    active:bg-gray-100 md:hover:bg-gray-50
+                    min-h-[72px]
+                    ${selectedConversation?.id === convo.id ? 'bg-red-50' : ''}
+                  `}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                      {convo.other_participant?.avatar_url ? (
-                        <img
-                          src={convo.other_participant.avatar_url}
-                          alt=""
-                          className="h-10 w-10 rounded-full object-cover"
-                        />
-                      ) : (
-                        <User className="h-5 w-5 text-gray-500" />
+                  {/* Avatar */}
+                  <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                    {convo.other_participant?.avatar_url ? (
+                      <img
+                        src={convo.other_participant.avatar_url}
+                        alt=""
+                        className="h-12 w-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <User className="h-6 w-6 text-gray-500" />
+                    )}
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-medium truncate text-base">
+                        {convo.other_participant?.full_name || 'Unknown'}
+                      </p>
+                      {convo.last_message && (
+                        <span className="text-xs text-gray-500 shrink-0">
+                          {formatTime(convo.last_message.created_at)}
+                        </span>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className="font-medium truncate">
-                          {convo.other_participant?.full_name || 'Unknown'}
-                        </p>
-                        {convo.last_message && (
-                          <span className="text-xs text-gray-500">
-                            {formatTime(convo.last_message.created_at)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm text-gray-500 truncate">
-                          {convo.last_message?.content || 'No messages yet'}
-                        </p>
-                        {(convo.unread_count ?? 0) > 0 && (
-                          <Badge className="bg-red-500 text-white text-xs px-1.5 py-0.5 min-w-[20px] text-center">
-                            {convo.unread_count}
-                          </Badge>
-                        )}
-                      </div>
+                    <div className="flex items-center justify-between gap-2 mt-0.5">
+                      <p className="text-sm text-gray-500 truncate">
+                        {convo.last_message?.content || 'No messages yet'}
+                      </p>
+                      {(convo.unread_count ?? 0) > 0 && (
+                        <Badge className="bg-red-500 text-white text-xs h-5 min-w-[20px] px-1.5 shrink-0">
+                          {convo.unread_count}
+                        </Badge>
+                      )}
                     </div>
                   </div>
-                </div>
+                </button>
               ))
             )}
           </div>
         </div>
 
-        {/* Messages Area */}
-        <div className="flex-1 flex flex-col">
+        {/* Messages Area - hidden on mobile when viewing list */}
+        <div className={`
+          flex-1 flex flex-col bg-gray-50
+          ${mobileView === 'list' ? 'hidden md:flex' : 'flex'}
+        `}>
           {selectedConversation ? (
             <>
-              {/* Chat Header */}
-              <div className="p-4 border-b flex items-center gap-3">
+              {/* Chat Header - desktop only (mobile shows in main header) */}
+              <div className="hidden md:flex p-4 border-b bg-white items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
                   {selectedConversation.other_participant?.avatar_url ? (
                     <img
@@ -571,10 +630,14 @@ export default function MessagesPage() {
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {messages.length === 0 ? (
                   <div className="text-center text-gray-500 py-8">
-                    <p>No messages yet. Start the conversation!</p>
+                    <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                      <Send className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <p className="font-medium">No messages yet</p>
+                    <p className="text-sm">Send a message to start the conversation</p>
                   </div>
                 ) : (
                   messages.map(message => {
@@ -582,25 +645,30 @@ export default function MessagesPage() {
                     return (
                       <div
                         key={message.id}
-                        className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                        className={`flex ${isOwn ? 'justify-end' : 'justify-start'} animate-message`}
                       >
                         <div
-                          className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                            isOwn
-                              ? 'bg-red-500 text-white'
-                              : 'bg-gray-100 text-gray-900'
-                          }`}
+                          className={`
+                            max-w-[85%] sm:max-w-[75%] md:max-w-[70%]
+                            rounded-2xl px-4 py-2.5
+                            ${isOwn
+                              ? 'bg-red-500 text-white rounded-br-md'
+                              : 'bg-white text-gray-900 rounded-bl-md shadow-sm'
+                            }
+                          `}
                         >
-                          <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                          <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">
+                            {message.content}
+                          </p>
                           <div className={`flex items-center gap-1 mt-1 text-xs ${
                             isOwn ? 'text-red-100 justify-end' : 'text-gray-500'
                           }`}>
                             <span>{formatTime(message.created_at)}</span>
                             {isOwn && (
                               message.is_read ? (
-                                <CheckCheck className="h-3 w-3" />
+                                <CheckCheck className="h-3.5 w-3.5" />
                               ) : (
-                                <Check className="h-3 w-3" />
+                                <Check className="h-3.5 w-3.5" />
                               )
                             )}
                           </div>
@@ -613,8 +681,8 @@ export default function MessagesPage() {
               </div>
 
               {/* Message Input */}
-              <form onSubmit={sendMessage} className="p-4 border-t">
-                <div className="flex gap-2">
+              <form onSubmit={sendMessage} className="p-3 md:p-4 border-t bg-white safe-bottom">
+                <div className="flex gap-2 items-end">
                   <Input
                     ref={messageInputRef}
                     value={newMessage}
@@ -622,8 +690,14 @@ export default function MessagesPage() {
                     placeholder="Type a message..."
                     disabled={sendingMessage}
                     className="flex-1"
+                    enterKeyHint="send"
                   />
-                  <Button type="submit" disabled={sendingMessage || !newMessage.trim()}>
+                  <Button
+                    type="submit"
+                    disabled={sendingMessage || !newMessage.trim()}
+                    size="icon"
+                    className="shrink-0"
+                  >
                     {sendingMessage ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
@@ -634,22 +708,40 @@ export default function MessagesPage() {
               </form>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-gray-500">
+            <div className="flex-1 flex items-center justify-center text-gray-500 p-8">
               <div className="text-center">
-                <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="font-medium">Select a conversation</p>
-                <p className="text-sm">or start a new one</p>
+                <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                  <MessageSquare className="h-8 w-8 text-gray-400" />
+                </div>
+                <p className="font-medium text-lg">Select a conversation</p>
+                <p className="text-sm mt-1">or start a new one</p>
+                <Button className="mt-4" variant="outline" onClick={openNewConversation}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Conversation
+                </Button>
               </div>
             </div>
           )}
         </div>
       </div>
 
+      {/* Mobile Floating Action Button */}
+      {mobileView === 'list' && (
+        <button
+          onClick={openNewConversation}
+          className="md:hidden fixed bottom-20 right-4 z-40 h-14 w-14 rounded-full bg-red-600 text-white shadow-lg flex items-center justify-center hover:bg-red-700 active:scale-95 transition-transform touch-manipulation"
+          aria-label="New conversation"
+        >
+          <Plus className="h-6 w-6" />
+        </button>
+      )}
+
       {/* New Conversation Modal */}
       <Modal
         isOpen={isNewConversationOpen}
         onClose={() => setIsNewConversationOpen(false)}
         title="New Conversation"
+        size="md"
       >
         <div className="space-y-4">
           <div className="relative">
@@ -662,35 +754,35 @@ export default function MessagesPage() {
             />
           </div>
 
-          <div className="max-h-64 overflow-y-auto space-y-2">
+          <div className="max-h-[50vh] overflow-y-auto space-y-2">
             {filteredMembers.length === 0 ? (
-              <p className="text-center text-gray-500 py-4">No members found</p>
+              <p className="text-center text-gray-500 py-6">No members found</p>
             ) : (
               filteredMembers.map(member => (
-                <div
+                <button
                   key={member.id}
                   onClick={() => startConversation(member.id)}
-                  className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                  className="w-full flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 active:bg-gray-100 text-left touch-manipulation min-h-[64px]"
                 >
-                  <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                  <div className="h-11 w-11 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
                     {member.avatar_url ? (
                       <img
                         src={member.avatar_url}
                         alt=""
-                        className="h-10 w-10 rounded-full object-cover"
+                        className="h-11 w-11 rounded-full object-cover"
                       />
                     ) : (
                       <User className="h-5 w-5 text-gray-500" />
                     )}
                   </div>
-                  <div className="flex-1">
-                    <p className="font-medium">{member.full_name || 'No Name'}</p>
-                    <p className="text-sm text-gray-500">{member.email}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{member.full_name || 'No Name'}</p>
+                    <p className="text-sm text-gray-500 truncate">{member.email}</p>
                   </div>
                   <Badge className={getRoleBadgeColor(member.role)}>
                     {member.role}
                   </Badge>
-                </div>
+                </button>
               ))
             )}
           </div>

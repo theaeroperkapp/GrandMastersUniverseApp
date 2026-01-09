@@ -14,10 +14,11 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           type={type}
           className={cn(
-            'flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm',
+            'flex h-11 min-h-[44px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-base',
             'placeholder:text-gray-400',
             'focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent',
             'disabled:cursor-not-allowed disabled:opacity-50',
+            'touch-manipulation', // Prevents 300ms delay on mobile
             error && 'border-red-500 focus:ring-red-500',
             className
           )}
