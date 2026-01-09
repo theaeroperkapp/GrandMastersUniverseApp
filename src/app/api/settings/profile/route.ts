@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function PUT(request: Request) {
   try {
@@ -19,11 +18,9 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Full name is required' }, { status: 400 })
     }
 
-    // Use admin client to bypass RLS
-    const adminClient = createAdminClient()
-
+    // Use authenticated client - RLS should allow users to update their own profile
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: updateError } = await (adminClient as any)
+    const { error: updateError } = await (supabase as any)
       .from('profiles')
       .update({
         full_name: full_name.trim(),
@@ -34,7 +31,7 @@ export async function PUT(request: Request) {
 
     if (updateError) {
       console.error('Error updating profile:', updateError)
-      return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 })
+      return NextResponse.json({ error: updateError.message || 'Failed to update profile' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })
