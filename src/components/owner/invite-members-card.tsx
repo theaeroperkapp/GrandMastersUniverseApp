@@ -17,7 +17,8 @@ export default function InviteMembersCard({ schoolCode, schoolName }: InviteMemb
   const [copiedLink, setCopiedLink] = useState(false)
   const [showQR, setShowQR] = useState(false)
 
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+  // Use environment variable for production URL, fallback to window.location.origin
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '')
   const inviteLink = `${baseUrl}/signup?code=${schoolCode}`
 
   const copyToClipboard = async (text: string, type: 'code' | 'link') => {
