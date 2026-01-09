@@ -85,6 +85,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const body = await request.json()
     const content = sanitizeString(body.content)
+    const mentions: string[] = Array.isArray(body.mentions) ? body.mentions : []
 
     if (!content || !isValidLength(content, 1, 1000)) {
       return NextResponse.json({ error: 'Comment must be between 1 and 1000 characters' }, { status: 400 })
@@ -124,16 +125,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Failed to create comment' }, { status: 500 })
     }
 
+    // Get commenter name for notifications
+    const { data: commenterProfile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single()
+
+    const commenterName = (commenterProfile as { full_name: string } | null)?.full_name || 'Someone'
+
     // Create notification for post author (if not commenting on own post)
     if (post.author_id !== user.id) {
-      const { data: commenterProfile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', user.id)
-        .single()
-
-      const commenterName = (commenterProfile as { full_name: string } | null)?.full_name || 'Someone'
-
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (adminClient as any)
         .from('notifications')
@@ -143,6 +145,24 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           title: 'New Comment',
           message: `${commenterName} commented on your post`,
         })
+    }
+
+    // Send notifications to mentioned users
+    if (mentions.length > 0) {
+      const mentionNotifications = mentions
+        .filter(mentionedUserId => mentionedUserId !== user.id && mentionedUserId !== post.author_id)
+        .map(mentionedUserId => ({
+          user_id: mentionedUserId,
+          type: 'mention',
+          title: 'You were mentioned',
+          message: `${commenterName} mentioned you in a comment`,
+        }))
+
+      if (mentionNotifications.length > 0) {
+        await (adminClient as any)
+          .from('notifications')
+          .insert(mentionNotifications)
+      }
     }
 
     return NextResponse.json(comment)

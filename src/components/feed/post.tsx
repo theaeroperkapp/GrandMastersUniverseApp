@@ -8,6 +8,7 @@ import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Heart, MessageCircle, Share2, MoreHorizontal, Trash2, Megaphone, Send, ChevronDown, ChevronUp } from 'lucide-react'
+import { MentionInput, renderTextWithMentions } from '@/components/ui/mention-input'
 import { formatRelativeTime } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import type { UserRole } from '@/types/database'
@@ -61,6 +62,7 @@ export function Post({ post, currentUser, onDelete }: PostProps) {
   const [commentCount, setCommentCount] = useState(post.comments[0]?.count || 0)
   const [loadingComments, setLoadingComments] = useState(false)
   const [newComment, setNewComment] = useState('')
+  const [commentMentions, setCommentMentions] = useState<string[]>([])
   const [submittingComment, setSubmittingComment] = useState(false)
 
   const canDelete = currentUser.id === post.author.id ||
@@ -281,7 +283,7 @@ export function Post({ post, currentUser, onDelete }: PostProps) {
       const response = await fetch(`/api/posts/${post.id}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: newComment.trim() }),
+        body: JSON.stringify({ content: newComment.trim(), mentions: commentMentions }),
       })
 
       if (!response.ok) {
@@ -293,6 +295,7 @@ export function Post({ post, currentUser, onDelete }: PostProps) {
       setComments([...comments, comment])
       setCommentCount(commentCount + 1)
       setNewComment('')
+      setCommentMentions([])
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to post comment')
     } finally {
@@ -412,7 +415,7 @@ export function Post({ post, currentUser, onDelete }: PostProps) {
       {/* Content */}
       {post.content && (
         <div className="px-4 pb-3">
-          <p className="whitespace-pre-wrap text-gray-900 dark:text-gray-100">{post.content}</p>
+          <p className="whitespace-pre-wrap text-gray-900 dark:text-gray-100">{renderTextWithMentions(post.content)}</p>
         </div>
       )}
 
@@ -469,11 +472,11 @@ export function Post({ post, currentUser, onDelete }: PostProps) {
                 size="sm"
               />
               <div className="flex-1 flex gap-2">
-                <input
-                  type="text"
+                <MentionInput
                   value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Write a comment..."
+                  onChange={setNewComment}
+                  onMentionsChange={setCommentMentions}
+                  placeholder="Write a comment... Use @ to mention"
                   className="flex-1 rounded-full border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                   maxLength={1000}
                 />
@@ -520,7 +523,7 @@ export function Post({ post, currentUser, onDelete }: PostProps) {
                             {comment.author.full_name}
                           </Link>
                           <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                            {comment.content}
+                            {renderTextWithMentions(comment.content)}
                           </p>
                         </div>
                         <div className="flex items-center gap-4 mt-1 px-2">

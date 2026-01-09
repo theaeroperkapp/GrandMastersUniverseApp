@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
+import { MentionInput } from '@/components/ui/mention-input'
 import { Image, X, Facebook, Globe } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { UserRole } from '@/types/database'
@@ -23,6 +23,7 @@ interface PostFormProps {
 
 export function PostForm({ currentUser, onPostCreated, canPost, postsRemaining }: PostFormProps) {
   const [content, setContent] = useState('')
+  const [mentions, setMentions] = useState<string[]>([])
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -74,6 +75,7 @@ export function PostForm({ currentUser, onPostCreated, canPost, postsRemaining }
       formData.append('content', content)
       formData.append('school_id', currentUser.school_id)
       formData.append('share_to_facebook', String(shareToFacebook))
+      formData.append('mentions', JSON.stringify(mentions))
       if (imageFile) {
         formData.append('image', imageFile)
       }
@@ -91,6 +93,7 @@ export function PostForm({ currentUser, onPostCreated, canPost, postsRemaining }
       const newPost = await response.json()
       onPostCreated(newPost)
       setContent('')
+      setMentions([])
       removeImage()
       setShareToFacebook(false)
       toast.success('Post created!')
@@ -110,12 +113,15 @@ export function PostForm({ currentUser, onPostCreated, canPost, postsRemaining }
           size="md"
         />
         <div className="flex-1">
-          <Textarea
-            placeholder="Share something with your school..."
+          <MentionInput
+            placeholder="Share something with your school... Use @ to mention someone"
             value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="min-h-[80px] resize-none border-0 p-0 focus:ring-0"
+            onChange={setContent}
+            onMentionsChange={setMentions}
+            className="min-h-[80px] resize-none border-0 p-0 focus:ring-0 bg-transparent text-gray-900 dark:text-white placeholder-gray-500"
             disabled={!canPost && !imageFile}
+            multiline
+            rows={3}
           />
 
           {/* Image Preview */}

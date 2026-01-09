@@ -28,6 +28,7 @@ import {
   Info,
   CheckCircle,
   XCircle,
+  AtSign,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -57,6 +58,7 @@ const typeIcons: Record<string, { icon: React.ElementType; color: string; bg: st
   system: { icon: Settings, color: 'text-gray-600', bg: 'bg-gray-100', gradient: 'from-gray-400 to-gray-600' },
   like: { icon: Heart, color: 'text-pink-600', bg: 'bg-pink-100', gradient: 'from-pink-400 to-pink-600' },
   comment: { icon: MessageCircle, color: 'text-teal-600', bg: 'bg-teal-100', gradient: 'from-teal-400 to-teal-600' },
+  mention: { icon: AtSign, color: 'text-violet-600', bg: 'bg-violet-100', gradient: 'from-violet-400 to-violet-600' },
   contract: { icon: FileText, color: 'text-cyan-600', bg: 'bg-cyan-100', gradient: 'from-cyan-400 to-cyan-600' },
   info: { icon: Info, color: 'text-sky-600', bg: 'bg-sky-100', gradient: 'from-sky-400 to-sky-600' },
 }

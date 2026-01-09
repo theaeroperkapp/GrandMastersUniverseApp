@@ -44,11 +44,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Create notification for comment author (if not liking own comment)
-    const { data: comment } = await supabase
+    const { data: commentData } = await supabase
       .from('comments')
       .select('author_id')
       .eq('id', commentId)
       .single()
+
+    const comment = commentData as { author_id: string } | null
 
     if (comment && comment.author_id !== user.id) {
       const { data: likerProfile } = await supabase

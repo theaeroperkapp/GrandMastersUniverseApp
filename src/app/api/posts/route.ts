@@ -19,7 +19,16 @@ export async function POST(request: NextRequest) {
     const rawContent = formData.get('content') as string
     const rawSchoolId = formData.get('school_id') as string
     const shareToFacebook = formData.get('share_to_facebook') === 'true'
+    const mentionsJson = formData.get('mentions') as string
     const image = formData.get('image') as File | null
+
+    // Parse mentions
+    let mentions: string[] = []
+    try {
+      mentions = mentionsJson ? JSON.parse(mentionsJson) : []
+    } catch {
+      mentions = []
+    }
 
     // Sanitize inputs
     const content = sanitizeString(rawContent)
@@ -131,6 +140,32 @@ export async function POST(request: NextRequest) {
         p_school_id: schoolId,
         p_year_month: yearMonth,
       })
+    }
+
+    // Send notifications to mentioned users
+    if (mentions.length > 0) {
+      const { data: authorProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single()
+
+      const authorName = (authorProfile as { full_name: string } | null)?.full_name || 'Someone'
+
+      const notifications = mentions
+        .filter(mentionedUserId => mentionedUserId !== user.id) // Don't notify self
+        .map(mentionedUserId => ({
+          user_id: mentionedUserId,
+          type: 'mention',
+          title: 'You were mentioned',
+          message: `${authorName} mentioned you in a post`,
+        }))
+
+      if (notifications.length > 0) {
+        await (adminClient as any)
+          .from('notifications')
+          .insert(notifications)
+      }
     }
 
     return NextResponse.json({
