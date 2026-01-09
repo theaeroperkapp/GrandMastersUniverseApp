@@ -312,13 +312,13 @@ export default function StaffPage() {
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'owner':
-        return 'bg-purple-100 text-purple-800'
+        return 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200'
       case 'admin':
-        return 'bg-blue-100 text-blue-800'
+        return 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
       case 'instructor':
-        return 'bg-green-100 text-green-800'
+        return 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
       default:
-        return 'bg-gray-100 text-gray-800'
+        return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
     }
   }
 
@@ -328,15 +328,15 @@ export default function StaffPage() {
   )
 
   if (loading) {
-    return <div className="p-4 md:p-8">Loading staff...</div>
+    return <div className="p-4 md:p-8 text-gray-900 dark:text-white">Loading staff...</div>
   }
 
   return (
     <div className="p-4 md:p-8">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold">Staff</h1>
-          <p className="text-gray-600 text-sm">Manage your school's staff members</p>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Staff</h1>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">Manage your school's staff members</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={openPromoteModal} className="w-full sm:w-auto">
@@ -362,8 +362,8 @@ export default function StaffPage() {
       {filteredStaff.length === 0 ? (
         <Card>
           <CardContent className="p-6 md:p-8 text-center">
-            <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-500 mb-4 text-sm md:text-base">No staff members found. Invite staff members to help manage your school.</p>
+            <Users className="h-12 w-12 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
+            <p className="text-gray-500 dark:text-gray-400 mb-4 text-sm md:text-base">No staff members found. Invite staff members to help manage your school.</p>
             <Button onClick={openInviteModal} className="w-full sm:w-auto">
               <UserPlus className="h-4 w-4 mr-2" />
               Invite First Staff Member
@@ -390,7 +390,7 @@ export default function StaffPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-500 mb-3 truncate">{member.email}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 truncate">{member.email}</p>
                 <div className="flex flex-wrap gap-1.5">
                   <Badge className={cn(getRoleBadgeColor(member.role), 'text-xs')}>
                     {member.role}
@@ -402,7 +402,7 @@ export default function StaffPage() {
                   ))}
                 </div>
                 {!member.is_approved && (
-                  <p className="text-xs text-amber-600 mt-2">Pending approval</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">Pending approval</p>
                 )}
               </CardContent>
             </Card>
@@ -419,25 +419,25 @@ export default function StaffPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <div className="p-3 bg-purple-50 rounded-lg">
-              <h3 className="font-medium text-purple-800 text-sm">Owner</h3>
-              <p className="text-xs text-purple-600">Full access including subscription management</p>
+            <div className="p-3 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
+              <h3 className="font-medium text-purple-800 dark:text-purple-200 text-sm">Owner</h3>
+              <p className="text-xs text-purple-600 dark:text-purple-300">Full access including subscription management</p>
             </div>
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <h3 className="font-medium text-blue-800 text-sm">Admin</h3>
-              <p className="text-xs text-blue-600">Full access except subscription settings</p>
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+              <h3 className="font-medium text-blue-800 dark:text-blue-200 text-sm">Admin</h3>
+              <p className="text-xs text-blue-600 dark:text-blue-300">Full access except subscription settings</p>
             </div>
-            <div className="p-3 bg-green-50 rounded-lg">
-              <h3 className="font-medium text-green-800 text-sm">Instructor</h3>
-              <p className="text-xs text-green-600">Manage classes, students, and belts</p>
+            <div className="p-3 bg-green-50 dark:bg-green-900/30 rounded-lg">
+              <h3 className="font-medium text-green-800 dark:text-green-200 text-sm">Instructor</h3>
+              <p className="text-xs text-green-600 dark:text-green-300">Manage classes, students, and belts</p>
             </div>
-            <div className="pt-3 border-t">
-              <h4 className="font-medium mb-2 text-sm">Additional Permissions</h4>
+            <div className="pt-3 border-t dark:border-gray-700">
+              <h4 className="font-medium mb-2 text-sm text-gray-900 dark:text-white">Additional Permissions</h4>
               <div className="space-y-2 sm:space-y-0 sm:grid sm:gap-2 sm:grid-cols-3">
                 {SUB_ROLES.map((role) => (
-                  <div key={role.value} className="p-2 bg-gray-50 rounded">
-                    <p className="font-medium text-xs">{role.label}</p>
-                    <p className="text-xs text-gray-500">{role.description}</p>
+                  <div key={role.value} className="p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                    <p className="font-medium text-xs text-gray-900 dark:text-white">{role.label}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{role.description}</p>
                   </div>
                 ))}
               </div>
@@ -494,7 +494,7 @@ export default function StaffPage() {
             <Label>Additional Permissions</Label>
             <div className="space-y-2">
               {SUB_ROLES.map((role) => (
-                <label key={role.value} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer touch-manipulation min-h-[44px]">
+                <label key={role.value} className="flex items-center gap-3 p-3 border dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer touch-manipulation min-h-[44px]">
                   <input
                     type="checkbox"
                     checked={inviteForm.sub_roles.includes(role.value)}
@@ -502,8 +502,8 @@ export default function StaffPage() {
                     className="rounded h-5 w-5"
                   />
                   <div>
-                    <span className="font-medium text-sm">{role.label}</span>
-                    <p className="text-xs text-gray-500">{role.description}</p>
+                    <span className="font-medium text-sm text-gray-900 dark:text-white">{role.label}</span>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{role.description}</p>
                   </div>
                 </label>
               ))}
@@ -535,7 +535,7 @@ export default function StaffPage() {
               id="edit_role"
               value={editForm.role}
               onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-              className="w-full h-11 min-h-[44px] px-3 py-2 border rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full h-11 min-h-[44px] px-3 py-2 border dark:border-gray-700 rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             >
               {ALL_ROLES.map((role) => (
                 <option key={role.value} value={role.value}>{role.label}</option>

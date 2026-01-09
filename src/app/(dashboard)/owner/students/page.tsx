@@ -480,18 +480,18 @@ export default function StudentsPage() {
   )
 
   if (loading) {
-    return <div className="p-4 md:p-8">Loading members...</div>
+    return <div className="p-4 md:p-8 text-gray-900 dark:text-white">Loading members...</div>
   }
 
   return (
     <div className="p-4 md:p-8">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold">Members</h1>
-          <p className="text-gray-500 text-sm">Approved students and parents at your school</p>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Members</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Approved students and parents at your school</p>
         </div>
         <div className="flex items-center justify-between sm:justify-end gap-4">
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
             {members.length} members
           </div>
           <Button onClick={() => setShowAddModal(true)} className="flex-shrink-0">
@@ -512,9 +512,9 @@ export default function StudentsPage() {
 
       {filteredMembers.length === 0 ? (
         <Card>
-          <CardContent className="p-6 md:p-8 text-center text-gray-500">
-            <User className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Members Yet</h3>
+          <CardContent className="p-6 md:p-8 text-center text-gray-500 dark:text-gray-400">
+            <User className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Members Yet</h3>
             <p className="text-sm md:text-base">Members will appear here after they sign up with your school code and you approve them.</p>
           </CardContent>
         </Card>
@@ -530,8 +530,8 @@ export default function StudentsPage() {
                     size="lg"
                   />
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium truncate">{member.full_name}</h3>
-                    <p className="text-sm text-gray-500 truncate">{member.email || 'No email'}</p>
+                    <h3 className="font-medium truncate text-gray-900 dark:text-white">{member.full_name}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{member.email || 'No email'}</p>
                     <div className="flex flex-wrap items-center gap-1.5 mt-2">
                       <Badge variant="secondary" className="capitalize text-xs">
                         {member.role}
@@ -585,8 +585,8 @@ export default function StudentsPage() {
         {selectedMember && (
           <div className="space-y-6" ref={qrRef}>
             <div className="text-center">
-              <h3 className="text-lg font-semibold">{selectedMember.full_name}</h3>
-              <p className="text-sm text-gray-500">{selectedMember.email}</p>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{selectedMember.full_name}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{selectedMember.email}</p>
               <Badge variant="secondary" className="capitalize mt-2">
                 {selectedMember.role}
               </Badge>
@@ -602,7 +602,7 @@ export default function StudentsPage() {
                 value={selectedMember.family_id || ''}
                 onChange={(e) => updateFamily(e.target.value || null)}
                 disabled={updatingFamily}
-                className="w-full h-11 min-h-[44px] px-3 py-2 border rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full h-11 min-h-[44px] px-3 py-2 border dark:border-gray-700 rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               >
                 <option value="">No family assigned</option>
                 {families.map((family) => (
@@ -612,7 +612,7 @@ export default function StudentsPage() {
                 ))}
               </select>
               {families.length === 0 && (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   Families are created when parents are approved
                 </p>
               )}
@@ -629,7 +629,7 @@ export default function StudentsPage() {
                   value={selectedMember.student_profile?.belt_rank_id || ''}
                   onChange={(e) => updateBeltRank(e.target.value || null)}
                   disabled={updatingBelt}
-                  className="w-full h-11 min-h-[44px] px-3 py-2 border rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full h-11 min-h-[44px] px-3 py-2 border dark:border-gray-700 rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 >
                   <option value="">No belt assigned</option>
                   {belts.map((belt) => (
@@ -643,8 +643,8 @@ export default function StudentsPage() {
 
             {/* QR Code */}
             <div className="flex flex-col items-center">
-              <p className="text-sm text-gray-500 mb-2">QR Code for Check-in</p>
-              <div className="p-4 bg-white border rounded-lg">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">QR Code for Check-in</p>
+              <div className="p-4 bg-white dark:bg-gray-100 border dark:border-gray-300 rounded-lg">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${selectedMember.id}`}
                   alt="QR Code"
@@ -655,14 +655,14 @@ export default function StudentsPage() {
 
             {/* PIN */}
             <div className="flex flex-col items-center">
-              <p className="text-sm text-gray-500 mb-2">PIN Code</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">PIN Code</p>
               {memberPin ? (
-                <div className="text-4xl font-bold tracking-widest bg-gray-100 px-6 py-3 rounded-lg">
+                <div className="text-4xl font-bold tracking-widest bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white px-6 py-3 rounded-lg">
                   {memberPin}
                 </div>
               ) : (
                 <>
-                  <div className="text-gray-400 italic mb-3">No PIN assigned</div>
+                  <div className="text-gray-400 dark:text-gray-500 italic mb-3">No PIN assigned</div>
                   <Button
                     size="sm"
                     variant="outline"
@@ -727,7 +727,7 @@ export default function StudentsPage() {
               onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
               placeholder="Enter email address"
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Leave blank for minors without email
             </p>
           </div>
@@ -738,7 +738,7 @@ export default function StudentsPage() {
               id="role"
               value={newStudent.role}
               onChange={(e) => setNewStudent({ ...newStudent, role: e.target.value as 'student' | 'parent' })}
-              className="w-full h-11 min-h-[44px] px-3 py-2 border rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full h-11 min-h-[44px] px-3 py-2 border dark:border-gray-700 rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             >
               <option value="student">Student</option>
               <option value="parent">Parent</option>
@@ -752,7 +752,7 @@ export default function StudentsPage() {
                 id="belt_rank_id"
                 value={newStudent.belt_rank_id}
                 onChange={(e) => setNewStudent({ ...newStudent, belt_rank_id: e.target.value })}
-                className="w-full h-11 min-h-[44px] px-3 py-2 border rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full h-11 min-h-[44px] px-3 py-2 border dark:border-gray-700 rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               >
                 <option value="">No belt assigned</option>
                 {belts.map((belt) => (
@@ -771,7 +771,7 @@ export default function StudentsPage() {
                 id="family_id"
                 value={newStudent.family_id}
                 onChange={(e) => setNewStudent({ ...newStudent, family_id: e.target.value })}
-                className="w-full h-11 min-h-[44px] px-3 py-2 border rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full h-11 min-h-[44px] px-3 py-2 border dark:border-gray-700 rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               >
                 <option value="">No family assigned</option>
                 {families.map((family) => (

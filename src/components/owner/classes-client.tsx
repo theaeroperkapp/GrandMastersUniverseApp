@@ -189,7 +189,7 @@ export function ClassesClient({ initialClasses, instructors, belts, schoolId }: 
   return (
     <>
       <div className="flex justify-end">
-        <Button onClick={openCreateModal}>
+        <Button onClick={openCreateModal} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Add Class
         </Button>
@@ -199,8 +199,8 @@ export function ClassesClient({ initialClasses, instructors, belts, schoolId }: 
         {classesByDay.map(({ day, classes: dayClasses }) => (
           dayClasses.length > 0 && (
             <Card key={day}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base md:text-lg">
                   <Calendar className="h-5 w-5" />
                   {day}
                 </CardTitle>
@@ -211,45 +211,93 @@ export function ClassesClient({ initialClasses, instructors, belts, schoolId }: 
                     const instructor = instructors.find(i => i.id === cls.instructor_id)
                     const belt = belts.find(b => b.id === cls.belt_requirement_id)
                     return (
-                      <div key={cls.id} className={`p-4 rounded-lg border ${cls.is_active ? 'bg-white' : 'bg-gray-50 opacity-60'}`}>
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-semibold">{cls.name}</h3>
-                              {belt && (
-                                <Badge
-                                  style={{ backgroundColor: belt.color, color: belt.color === '#FFFFFF' || belt.color === '#FFFF00' ? '#000' : '#fff' }}
-                                >
-                                  {belt.name}
-                                </Badge>
-                              )}
-                              {!cls.is_active && <Badge variant="secondary">Inactive</Badge>}
-                            </div>
-                            {cls.description && <p className="text-sm text-gray-500 mb-2">{cls.description}</p>}
-                            <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-4 w-4" />
-                                {formatTime(cls.start_time)} - {formatTime(cls.end_time)}
-                              </span>
-                              {cls.max_capacity && (
-                                <span className="flex items-center gap-1">
-                                  <Users className="h-4 w-4" />
-                                  Max {cls.max_capacity}
-                                </span>
-                              )}
-                              {instructor && <span>Instructor: {instructor.full_name}</span>}
+                      <div key={cls.id} className={`p-3 md:p-4 rounded-lg border ${cls.is_active ? 'bg-white' : 'bg-gray-50 opacity-60'}`}>
+                        {/* Mobile Layout */}
+                        <div className="md:hidden">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold truncate">{cls.name}</h3>
+                              <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                {belt && (
+                                  <Badge
+                                    className="text-xs"
+                                    style={{ backgroundColor: belt.color, color: belt.color === '#FFFFFF' || belt.color === '#FFFF00' ? '#000' : '#fff' }}
+                                  >
+                                    {belt.name}
+                                  </Badge>
+                                )}
+                                {!cls.is_active && <Badge variant="secondary" className="text-xs">Inactive</Badge>}
+                              </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => toggleActive(cls)}>
+                          {cls.description && <p className="text-sm text-gray-500 mb-2">{cls.description}</p>}
+                          <div className="space-y-1 text-sm text-gray-600 mb-3">
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-4 w-4 flex-shrink-0" />
+                              <span>{formatTime(cls.start_time)} - {formatTime(cls.end_time)}</span>
+                            </div>
+                            {cls.max_capacity && (
+                              <div className="flex items-center gap-1">
+                                <Users className="h-4 w-4 flex-shrink-0" />
+                                <span>Max {cls.max_capacity}</span>
+                              </div>
+                            )}
+                            {instructor && <div className="truncate">Instructor: {instructor.full_name}</div>}
+                          </div>
+                          <div className="flex items-center gap-2 pt-2 border-t">
+                            <Button variant="outline" size="sm" onClick={() => toggleActive(cls)} className="flex-1 touch-manipulation">
                               {cls.is_active ? 'Deactivate' : 'Activate'}
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => openEditModal(cls)}>
+                            <Button variant="ghost" size="sm" onClick={() => openEditModal(cls)} className="h-9 w-9 p-0 touch-manipulation">
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(cls.id)}>
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(cls.id)} className="h-9 w-9 p-0 touch-manipulation">
                               <Trash2 className="h-4 w-4 text-red-500" />
                             </Button>
+                          </div>
+                        </div>
+
+                        {/* Desktop Layout */}
+                        <div className="hidden md:block">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-semibold">{cls.name}</h3>
+                                {belt && (
+                                  <Badge
+                                    style={{ backgroundColor: belt.color, color: belt.color === '#FFFFFF' || belt.color === '#FFFF00' ? '#000' : '#fff' }}
+                                  >
+                                    {belt.name}
+                                  </Badge>
+                                )}
+                                {!cls.is_active && <Badge variant="secondary">Inactive</Badge>}
+                              </div>
+                              {cls.description && <p className="text-sm text-gray-500 mb-2">{cls.description}</p>}
+                              <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-4 w-4" />
+                                  {formatTime(cls.start_time)} - {formatTime(cls.end_time)}
+                                </span>
+                                {cls.max_capacity && (
+                                  <span className="flex items-center gap-1">
+                                    <Users className="h-4 w-4" />
+                                    Max {cls.max_capacity}
+                                  </span>
+                                )}
+                                {instructor && <span>Instructor: {instructor.full_name}</span>}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button variant="ghost" size="sm" onClick={() => toggleActive(cls)}>
+                                {cls.is_active ? 'Deactivate' : 'Activate'}
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => openEditModal(cls)}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleDelete(cls.id)}>
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -263,10 +311,10 @@ export function ClassesClient({ initialClasses, instructors, belts, schoolId }: 
 
         {classes.length === 0 && (
           <Card>
-            <CardContent className="py-12 text-center">
+            <CardContent className="py-8 md:py-12 text-center">
               <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500 mb-4">No classes scheduled yet</p>
-              <Button onClick={openCreateModal}>
+              <p className="text-gray-500 mb-4 text-sm md:text-base">No classes scheduled yet</p>
+              <Button onClick={openCreateModal} className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Your First Class
               </Button>
@@ -290,14 +338,26 @@ export function ClassesClient({ initialClasses, instructors, belts, schoolId }: 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="day_of_week">Day of Week *</Label>
-              <select id="day_of_week" value={formData.day_of_week} onChange={(e) => setFormData({ ...formData, day_of_week: parseInt(e.target.value) })} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" required>
+              <select
+                id="day_of_week"
+                value={formData.day_of_week}
+                onChange={(e) => setFormData({ ...formData, day_of_week: parseInt(e.target.value) })}
+                className="w-full h-11 min-h-[44px] px-3 py-2 border rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500"
+                required
+              >
                 {DAYS_OF_WEEK.map((day, index) => (<option key={day} value={index}>{day}</option>))}
               </select>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="belt_requirement_id">Belt Level *</Label>
-              <select id="belt_requirement_id" value={formData.belt_requirement_id} onChange={(e) => setFormData({ ...formData, belt_requirement_id: e.target.value })} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" required>
+              <select
+                id="belt_requirement_id"
+                value={formData.belt_requirement_id}
+                onChange={(e) => setFormData({ ...formData, belt_requirement_id: e.target.value })}
+                className="w-full h-11 min-h-[44px] px-3 py-2 border rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500"
+                required
+              >
                 <option value="">Select belt level</option>
                 {belts.map(b => (<option key={b.id} value={b.id}>{b.name}</option>))}
               </select>
@@ -307,7 +367,12 @@ export function ClassesClient({ initialClasses, instructors, belts, schoolId }: 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="instructor_id">Instructor</Label>
-              <select id="instructor_id" value={formData.instructor_id} onChange={(e) => setFormData({ ...formData, instructor_id: e.target.value })} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+              <select
+                id="instructor_id"
+                value={formData.instructor_id}
+                onChange={(e) => setFormData({ ...formData, instructor_id: e.target.value })}
+                className="w-full h-11 min-h-[44px] px-3 py-2 border rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
                 <option value="">Select instructor</option>
                 {instructors.map(i => (<option key={i.id} value={i.id}>{i.full_name}</option>))}
               </select>
@@ -330,9 +395,9 @@ export function ClassesClient({ initialClasses, instructors, belts, schoolId }: 
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button type="submit" isLoading={isLoading}>{editingClass ? 'Update Class' : 'Create Class'}</Button>
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className="w-full sm:w-auto">Cancel</Button>
+            <Button type="submit" isLoading={isLoading} className="w-full sm:w-auto">{editingClass ? 'Update Class' : 'Create Class'}</Button>
           </div>
         </form>
       </Modal>

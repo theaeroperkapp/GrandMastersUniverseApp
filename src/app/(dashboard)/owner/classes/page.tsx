@@ -73,10 +73,10 @@ export default async function ClassesPage() {
   const belts = [...(defaultBelts || []), ...(customBelts || [])]
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Class Schedule</h1>
-        <p className="text-gray-600">Manage your school's class schedule</p>
+        <h1 className="text-xl md:text-2xl font-bold">Class Schedule</h1>
+        <p className="text-gray-600 text-sm">Manage your school's class schedule</p>
       </div>
 
       <ClassesClient
