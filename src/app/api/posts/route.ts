@@ -25,8 +25,8 @@ export async function POST(request: NextRequest) {
     const content = sanitizeString(rawContent)
     const schoolId = sanitizeString(rawSchoolId)
 
-    // Validate inputs
-    const validation = validatePostInput({ content, school_id: schoolId })
+    // Validate inputs (pass hasImage so content is optional if image provided)
+    const validation = validatePostInput({ content, school_id: schoolId, hasImage: !!image })
     if (!validation.isValid) {
       return NextResponse.json({ error: formatValidationErrors(validation.errors) }, { status: 400 })
     }

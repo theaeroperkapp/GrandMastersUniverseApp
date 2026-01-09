@@ -172,6 +172,7 @@ export function validateEventInput(input: EventInput): ValidationResult {
 export interface PostInput {
   content: string
   school_id: string
+  hasImage?: boolean
 }
 
 export function validatePostInput(input: PostInput): ValidationResult {
@@ -181,8 +182,14 @@ export function validatePostInput(input: PostInput): ValidationResult {
     errors.push({ field: 'school_id', message: 'Invalid school ID' })
   }
 
-  if (!input.content || !isValidLength(input.content, 1, 5000)) {
-    errors.push({ field: 'content', message: 'Content must be between 1 and 5000 characters' })
+  // Content is required unless there's an image
+  // Max length is 2000 characters
+  if (!input.hasImage && !input.content) {
+    errors.push({ field: 'content', message: 'Content or image is required' })
+  }
+
+  if (input.content && !isValidLength(input.content, 0, 2000)) {
+    errors.push({ field: 'content', message: 'Content must be under 2000 characters' })
   }
 
   return { isValid: errors.length === 0, errors }
