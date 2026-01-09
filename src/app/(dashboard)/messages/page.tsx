@@ -736,43 +736,116 @@ export default function MessagesPage() {
         </button>
       )}
 
-      {/* New Conversation Modal */}
-      <Modal
-        isOpen={isNewConversationOpen}
-        onClose={() => setIsNewConversationOpen(false)}
-        title="New Conversation"
-        size="md"
-      >
-        <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search members..."
-              value={memberSearchTerm}
-              onChange={(e) => setMemberSearchTerm(e.target.value)}
-              className="pl-9"
-            />
+      {/* New Conversation Modal - Desktop */}
+      <div className="hidden md:block">
+        <Modal
+          isOpen={isNewConversationOpen}
+          onClose={() => setIsNewConversationOpen(false)}
+          title="New Conversation"
+          size="md"
+        >
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search members..."
+                value={memberSearchTerm}
+                onChange={(e) => setMemberSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            <div className="max-h-[50vh] overflow-y-auto space-y-2">
+              {filteredMembers.length === 0 ? (
+                <p className="text-center text-gray-500 py-6">No members found</p>
+              ) : (
+                filteredMembers.map(member => (
+                  <button
+                    key={member.id}
+                    onClick={() => startConversation(member.id)}
+                    className="w-full flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 active:bg-gray-100 text-left touch-manipulation min-h-[64px]"
+                  >
+                    <div className="h-11 w-11 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                      {member.avatar_url ? (
+                        <img
+                          src={member.avatar_url}
+                          alt=""
+                          className="h-11 w-11 rounded-full object-cover"
+                        />
+                      ) : (
+                        <User className="h-5 w-5 text-gray-500" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{member.full_name || 'No Name'}</p>
+                      <p className="text-sm text-gray-500 truncate">{member.email}</p>
+                    </div>
+                    <Badge className={getRoleBadgeColor(member.role)}>
+                      {member.role}
+                    </Badge>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </Modal>
+      </div>
+
+      {/* New Conversation - Mobile Full Screen */}
+      {isNewConversationOpen && (
+        <div className="md:hidden fixed inset-0 z-50 bg-white animate-slide-up">
+          {/* Header */}
+          <div className="sticky top-0 bg-white border-b z-10 safe-top">
+            <div className="flex items-center gap-3 p-4">
+              <button
+                onClick={() => setIsNewConversationOpen(false)}
+                className="flex items-center justify-center w-10 h-10 -ml-2 rounded-lg hover:bg-gray-100 touch-manipulation"
+                aria-label="Close"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <h2 className="font-semibold text-lg">New Message</h2>
+            </div>
+
+            {/* Search */}
+            <div className="px-4 pb-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search members..."
+                  value={memberSearchTerm}
+                  onChange={(e) => setMemberSearchTerm(e.target.value)}
+                  className="pl-9"
+                  autoFocus
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="max-h-[50vh] overflow-y-auto space-y-2">
+          {/* Members List */}
+          <div className="overflow-y-auto h-[calc(100dvh-130px)] safe-bottom">
             {filteredMembers.length === 0 ? (
-              <p className="text-center text-gray-500 py-6">No members found</p>
+              <div className="p-8 text-center text-gray-500">
+                <User className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="font-medium">No members found</p>
+                <p className="text-sm mt-1">Try a different search term</p>
+              </div>
             ) : (
               filteredMembers.map(member => (
                 <button
                   key={member.id}
                   onClick={() => startConversation(member.id)}
-                  className="w-full flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 active:bg-gray-100 text-left touch-manipulation min-h-[64px]"
+                  className="w-full flex items-center gap-3 p-4 border-b active:bg-gray-50 text-left touch-manipulation"
                 >
-                  <div className="h-11 w-11 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                  <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
                     {member.avatar_url ? (
                       <img
                         src={member.avatar_url}
                         alt=""
-                        className="h-11 w-11 rounded-full object-cover"
+                        className="h-12 w-12 rounded-full object-cover"
                       />
                     ) : (
-                      <User className="h-5 w-5 text-gray-500" />
+                      <User className="h-6 w-6 text-gray-500" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -787,7 +860,7 @@ export default function MessagesPage() {
             )}
           </div>
         </div>
-      </Modal>
+      )}
     </div>
   )
 }
