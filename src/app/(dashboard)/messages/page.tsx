@@ -462,11 +462,11 @@ export default function MessagesPage() {
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'owner': return 'bg-purple-100 text-purple-800'
-      case 'admin': return 'bg-blue-100 text-blue-800'
-      case 'instructor': return 'bg-green-100 text-green-800'
-      case 'parent': return 'bg-amber-100 text-amber-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'owner': return 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200'
+      case 'admin': return 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+      case 'instructor': return 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+      case 'parent': return 'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200'
+      default: return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
     }
   }
 
@@ -481,26 +481,26 @@ export default function MessagesPage() {
   return (
     <div className="h-[calc(100dvh-120px)] md:h-[calc(100vh-120px)] flex flex-col -m-4 md:-m-6">
       {/* Header - responsive with back button on mobile */}
-      <div className="p-4 border-b bg-white shrink-0">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shrink-0">
         <div className="flex items-center gap-3">
           {/* Mobile back button - only show when in chat view */}
           {mobileView === 'chat' && selectedConversation && (
             <button
               onClick={handleBackToList}
-              className="md:hidden flex items-center justify-center w-10 h-10 -ml-2 rounded-lg hover:bg-gray-100 touch-manipulation"
+              className="md:hidden flex items-center justify-center w-10 h-10 -ml-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 touch-manipulation"
               aria-label="Back to conversations"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-200" />
             </button>
           )}
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl md:text-2xl font-bold truncate">
+            <h1 className="text-xl md:text-2xl font-bold truncate text-gray-900 dark:text-white">
               {mobileView === 'chat' && selectedConversation
                 ? selectedConversation.other_participant?.full_name || 'Chat'
                 : 'Messages'}
             </h1>
             {mobileView === 'list' && (
-              <p className="text-gray-600 text-sm hidden sm:block">Chat with instructors and members</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm hidden sm:block">Chat with instructors and members</p>
             )}
             {mobileView === 'chat' && selectedConversation?.other_participant?.role && (
               <Badge className={`${getRoleBadgeColor(selectedConversation.other_participant.role)} md:hidden`}>
@@ -514,13 +514,13 @@ export default function MessagesPage() {
       <div className="flex-1 flex overflow-hidden">
         {/* Conversations List - hidden on mobile when viewing chat */}
         <div className={`
-          w-full md:w-80 border-r flex flex-col bg-white
+          w-full md:w-80 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-950
           ${mobileView === 'chat' ? 'hidden md:flex' : 'flex'}
         `}>
           {/* Search and New Conversation Button */}
-          <div className="p-3 border-b space-y-2 shrink-0">
+          <div className="p-3 border-b border-gray-200 dark:border-gray-800 space-y-2 shrink-0">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
               <Input
                 placeholder="Search conversations..."
                 value={searchTerm}
@@ -537,7 +537,7 @@ export default function MessagesPage() {
           {/* Conversations List */}
           <div className="flex-1 overflow-y-auto">
             {filteredConversations.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">
+              <div className="p-6 text-center text-gray-500 dark:text-gray-400">
                 <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-50" />
                 <p className="font-medium">No conversations yet</p>
                 <p className="text-sm mt-1">Start a new conversation</p>
@@ -552,16 +552,16 @@ export default function MessagesPage() {
                   key={convo.id}
                   onClick={() => handleSelectConversation(convo)}
                   className={`
-                    w-full p-4 border-b flex items-start gap-3 text-left
+                    w-full p-4 border-b border-gray-200 dark:border-gray-800 flex items-start gap-3 text-left
                     transition-colors touch-manipulation
-                    active:bg-gray-100 md:hover:bg-gray-50
+                    active:bg-gray-100 dark:active:bg-gray-800 md:hover:bg-gray-50 dark:md:hover:bg-gray-900
                     min-h-[72px]
-                    ${selectedConversation?.id === convo.id ? 'bg-red-50' : ''}
+                    ${selectedConversation?.id === convo.id ? 'bg-red-50 dark:bg-red-950' : ''}
                   `}
                 >
                   {/* Avatar with Online Indicator */}
                   <div className="relative shrink-0">
-                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center ring-2 ring-white shadow-sm">
+                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center ring-2 ring-white dark:ring-gray-900 shadow-sm">
                       {convo.other_participant?.avatar_url ? (
                         <img
                           src={convo.other_participant.avatar_url}
@@ -569,7 +569,7 @@ export default function MessagesPage() {
                           className="h-12 w-12 rounded-full object-cover"
                         />
                       ) : (
-                        <User className="h-6 w-6 text-gray-500" />
+                        <User className="h-6 w-6 text-gray-500 dark:text-gray-400" />
                       )}
                     </div>
                     <OnlineIndicator status="online" className="absolute -bottom-0.5 -right-0.5" />
@@ -578,17 +578,17 @@ export default function MessagesPage() {
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="font-medium truncate text-base">
+                      <p className="font-medium truncate text-base text-gray-900 dark:text-white">
                         {convo.other_participant?.full_name || 'Unknown'}
                       </p>
                       {convo.last_message && (
-                        <span className="text-xs text-gray-500 shrink-0">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
                           {formatTime(convo.last_message.created_at)}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center justify-between gap-2 mt-0.5">
-                      <p className="text-sm text-gray-500 truncate">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
                         {convo.last_message?.content || 'No messages yet'}
                       </p>
                       {(convo.unread_count ?? 0) > 0 && (
@@ -606,15 +606,15 @@ export default function MessagesPage() {
 
         {/* Messages Area - hidden on mobile when viewing list */}
         <div className={`
-          flex-1 flex flex-col bg-gray-50
+          flex-1 flex flex-col bg-gray-50 dark:bg-gray-900
           ${mobileView === 'list' ? 'hidden md:flex' : 'flex'}
         `}>
           {selectedConversation ? (
             <>
               {/* Chat Header - desktop only (mobile shows in main header) */}
-              <div className="hidden md:flex p-4 border-b bg-white items-center gap-3">
+              <div className="hidden md:flex p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 items-center gap-3">
                 <div className="relative">
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center ring-2 ring-white shadow-sm">
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center ring-2 ring-white dark:ring-gray-900 shadow-sm">
                     {selectedConversation.other_participant?.avatar_url ? (
                       <img
                         src={selectedConversation.other_participant.avatar_url}
@@ -622,20 +622,20 @@ export default function MessagesPage() {
                         className="h-10 w-10 rounded-full object-cover"
                       />
                     ) : (
-                      <User className="h-5 w-5 text-gray-500" />
+                      <User className="h-5 w-5 text-gray-500 dark:text-gray-400" />
                     )}
                   </div>
                   <OnlineIndicator status="online" size="sm" className="absolute -bottom-0.5 -right-0.5" />
                 </div>
                 <div>
-                  <p className="font-medium">
+                  <p className="font-medium text-gray-900 dark:text-white">
                     {selectedConversation.other_participant?.full_name || 'Unknown'}
                   </p>
                   <div className="flex items-center gap-2">
                     <Badge className={getRoleBadgeColor(selectedConversation.other_participant?.role || '')}>
                       {selectedConversation.other_participant?.role}
                     </Badge>
-                    <span className="text-xs text-green-600 font-medium">Online</span>
+                    <span className="text-xs text-green-600 dark:text-green-400 font-medium">Online</span>
                   </div>
                 </div>
               </div>
@@ -643,9 +643,9 @@ export default function MessagesPage() {
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {messages.length === 0 ? (
-                  <div className="text-center text-gray-500 py-8">
-                    <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                      <Send className="h-5 w-5 text-gray-400" />
+                  <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+                    <div className="h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-3">
+                      <Send className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                     </div>
                     <p className="font-medium">No messages yet</p>
                     <p className="text-sm">Send a message to start the conversation</p>
@@ -661,10 +661,10 @@ export default function MessagesPage() {
                         <div
                           className={`
                             max-w-[85%] sm:max-w-[75%] md:max-w-[70%]
-                            px-4 py-2.5 shadow-sm
+                            px-4 py-2.5 shadow-sm rounded-2xl
                             ${isOwn
-                              ? 'message-sent text-white'
-                              : 'message-received text-gray-900'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white'
                             }
                           `}
                         >
@@ -672,7 +672,7 @@ export default function MessagesPage() {
                             {message.content}
                           </p>
                           <div className={`flex items-center gap-1.5 mt-1.5 text-xs ${
-                            isOwn ? 'text-white/70 justify-end' : 'text-gray-400'
+                            isOwn ? 'text-white/70 justify-end' : 'text-gray-400 dark:text-gray-500'
                           }`}>
                             <span>{formatTime(message.created_at)}</span>
                             {isOwn && (
@@ -692,7 +692,7 @@ export default function MessagesPage() {
               </div>
 
               {/* Message Input - Premium */}
-              <form onSubmit={sendMessage} className="p-3 md:p-4 border-t bg-white safe-bottom">
+              <form onSubmit={sendMessage} className="p-3 md:p-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 safe-bottom">
                 <div className="flex gap-2 items-end">
                   <div className="flex-1 relative">
                     <Input
@@ -701,14 +701,14 @@ export default function MessagesPage() {
                       onChange={(e) => setNewMessage(e.target.value)}
                       placeholder="Type a message..."
                       disabled={sendingMessage}
-                      className="pr-4 rounded-full border-gray-200 focus:border-red-300 focus:ring-red-100"
+                      className="pr-4 rounded-full border-gray-200 dark:border-gray-700 focus:border-red-300 focus:ring-red-100"
                       enterKeyHint="send"
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={sendingMessage || !newMessage.trim()}
-                    className="shrink-0 h-10 w-10 rounded-full btn-gradient-red text-white flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed press-scale transition-all shadow-lg shadow-red-200 hover:shadow-red-300"
+                    className="shrink-0 h-10 w-10 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-red-200 dark:shadow-red-900/30"
                   >
                     {sendingMessage ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -720,10 +720,10 @@ export default function MessagesPage() {
               </form>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-gray-500 p-8">
+            <div className="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400 p-8">
               <div className="text-center">
-                <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                  <MessageSquare className="h-8 w-8 text-gray-400" />
+                <div className="h-16 w-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-4">
+                  <MessageSquare className="h-8 w-8 text-gray-400 dark:text-gray-500" />
                 </div>
                 <p className="font-medium text-lg">Select a conversation</p>
                 <p className="text-sm mt-1">or start a new one</p>
@@ -769,15 +769,15 @@ export default function MessagesPage() {
 
             <div className="max-h-[50vh] overflow-y-auto space-y-2">
               {filteredMembers.length === 0 ? (
-                <p className="text-center text-gray-500 py-6">No members found</p>
+                <p className="text-center text-gray-500 dark:text-gray-400 py-6">No members found</p>
               ) : (
                 filteredMembers.map(member => (
                   <button
                     key={member.id}
                     onClick={() => startConversation(member.id)}
-                    className="w-full flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 active:bg-gray-100 text-left touch-manipulation min-h-[64px]"
+                    className="w-full flex items-center gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 active:bg-gray-100 dark:active:bg-gray-700 text-left touch-manipulation min-h-[64px]"
                   >
-                    <div className="h-11 w-11 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                    <div className="h-11 w-11 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0">
                       {member.avatar_url ? (
                         <img
                           src={member.avatar_url}
@@ -785,12 +785,12 @@ export default function MessagesPage() {
                           className="h-11 w-11 rounded-full object-cover"
                         />
                       ) : (
-                        <User className="h-5 w-5 text-gray-500" />
+                        <User className="h-5 w-5 text-gray-500 dark:text-gray-400" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{member.full_name || 'No Name'}</p>
-                      <p className="text-sm text-gray-500 truncate">{member.email}</p>
+                      <p className="font-medium truncate text-gray-900 dark:text-white">{member.full_name || 'No Name'}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{member.email}</p>
                     </div>
                     <Badge className={getRoleBadgeColor(member.role)}>
                       {member.role}
@@ -805,24 +805,24 @@ export default function MessagesPage() {
 
       {/* New Conversation - Mobile Full Screen */}
       {isNewConversationOpen && (
-        <div className="md:hidden fixed inset-0 z-50 bg-white animate-slide-up">
+        <div className="md:hidden fixed inset-0 z-50 bg-white dark:bg-gray-950 animate-slide-up">
           {/* Header */}
-          <div className="sticky top-0 bg-white border-b z-10 safe-top">
+          <div className="sticky top-0 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 z-10 safe-top">
             <div className="flex items-center gap-3 p-4">
               <button
                 onClick={() => setIsNewConversationOpen(false)}
-                className="flex items-center justify-center w-10 h-10 -ml-2 rounded-lg hover:bg-gray-100 touch-manipulation"
+                className="flex items-center justify-center w-10 h-10 -ml-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 touch-manipulation"
                 aria-label="Close"
               >
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-200" />
               </button>
-              <h2 className="font-semibold text-lg">New Message</h2>
+              <h2 className="font-semibold text-lg text-gray-900 dark:text-white">New Message</h2>
             </div>
 
             {/* Search */}
             <div className="px-4 pb-3">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                 <Input
                   placeholder="Search members..."
                   value={memberSearchTerm}
@@ -837,7 +837,7 @@ export default function MessagesPage() {
           {/* Members List */}
           <div className="overflow-y-auto h-[calc(100dvh-130px)] safe-bottom">
             {filteredMembers.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
                 <User className="h-12 w-12 mx-auto mb-3 opacity-50" />
                 <p className="font-medium">No members found</p>
                 <p className="text-sm mt-1">Try a different search term</p>
@@ -847,9 +847,9 @@ export default function MessagesPage() {
                 <button
                   key={member.id}
                   onClick={() => startConversation(member.id)}
-                  className="w-full flex items-center gap-3 p-4 border-b active:bg-gray-50 text-left touch-manipulation"
+                  className="w-full flex items-center gap-3 p-4 border-b border-gray-200 dark:border-gray-800 active:bg-gray-50 dark:active:bg-gray-900 text-left touch-manipulation"
                 >
-                  <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                  <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0">
                     {member.avatar_url ? (
                       <img
                         src={member.avatar_url}
@@ -857,12 +857,12 @@ export default function MessagesPage() {
                         className="h-12 w-12 rounded-full object-cover"
                       />
                     ) : (
-                      <User className="h-6 w-6 text-gray-500" />
+                      <User className="h-6 w-6 text-gray-500 dark:text-gray-400" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{member.full_name || 'No Name'}</p>
-                    <p className="text-sm text-gray-500 truncate">{member.email}</p>
+                    <p className="font-medium truncate text-gray-900 dark:text-white">{member.full_name || 'No Name'}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{member.email}</p>
                   </div>
                   <Badge className={getRoleBadgeColor(member.role)}>
                     {member.role}

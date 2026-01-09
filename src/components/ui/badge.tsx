@@ -6,12 +6,12 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 const variants = {
-  default: 'bg-red-100 text-red-700',
-  secondary: 'bg-gray-100 text-gray-700',
-  success: 'bg-green-100 text-green-700',
-  warning: 'bg-yellow-100 text-yellow-700',
-  destructive: 'bg-red-100 text-red-700',
-  outline: 'border border-gray-300 text-gray-700',
+  default: 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300',
+  secondary: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300',
+  success: 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300',
+  warning: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300',
+  destructive: 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300',
+  outline: 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300',
 }
 
 export function Badge({ className, variant = 'default', ...props }: BadgeProps) {
