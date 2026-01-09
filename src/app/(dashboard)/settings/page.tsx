@@ -95,28 +95,36 @@ export default function SettingsPage() {
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!profile) return
+
+    if (!profile) {
+      toast.error('Profile not loaded')
+      return
+    }
 
     setSavingProfile(true)
 
     try {
-      const supabase = createClient()
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.from('profiles') as any)
-        .update({
+      // Use API route to update profile (bypasses RLS issues)
+      const response = await fetch('/api/settings/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           full_name: fullName,
           phone: phone || null,
-        })
-        .eq('id', profile.id)
+        }),
+      })
 
-      if (error) throw error
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update profile')
+      }
 
       toast.success('Profile updated successfully')
       setProfile({ ...profile, full_name: fullName, phone: phone || null })
     } catch (error) {
       console.error('Error updating profile:', error)
-      toast.error('Failed to update profile')
+      toast.error(error instanceof Error ? error.message : 'Failed to update profile')
     } finally {
       setSavingProfile(false)
     }
@@ -128,23 +136,23 @@ export default function SettingsPage() {
     setSavingNotifications(true)
 
     try {
-      const supabase = createClient()
+      // Use API route to update notifications (bypasses RLS issues)
+      const response = await fetch('/api/settings/notifications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(notifications),
+      })
 
-      // Upsert notification settings
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.from('user_settings') as any)
-        .upsert({
-          user_id: profile.id,
-          ...notifications,
-          updated_at: new Date().toISOString(),
-        })
+      const result = await response.json()
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save notification settings')
+      }
 
       toast.success('Notification settings saved')
     } catch (error) {
       console.error('Error saving notifications:', error)
-      toast.error('Failed to save notification settings')
+      toast.error(error instanceof Error ? error.message : 'Failed to save notification settings')
     } finally {
       setSavingNotifications(false)
     }
@@ -255,9 +263,21 @@ export default function SettingsPage() {
               />
             </div>
 
-            <Button type="submit" isLoading={savingProfile}>
-              <Save className="h-4 w-4 mr-2" />
-              Save Profile
+            <Button type="submit" disabled={savingProfile}>
+              {savingProfile ? (
+                <span className="flex items-center">
+                  <svg className="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Saving...
+                </span>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Profile
+                </>
+              )}
             </Button>
           </form>
         </CardContent>
@@ -354,9 +374,21 @@ export default function SettingsPage() {
               </button>
             </div>
 
-            <Button onClick={handleSaveNotifications} isLoading={savingNotifications}>
-              <Save className="h-4 w-4 mr-2" />
-              Save Notifications
+            <Button type="button" onClick={handleSaveNotifications} disabled={savingNotifications}>
+              {savingNotifications ? (
+                <span className="flex items-center">
+                  <svg className="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Saving...
+                </span>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Notifications
+                </>
+              )}
             </Button>
           </div>
         </CardContent>
@@ -400,9 +432,21 @@ export default function SettingsPage() {
               )}
             </div>
 
-            <Button type="submit" isLoading={savingPassword}>
-              <Lock className="h-4 w-4 mr-2" />
-              Update Password
+            <Button type="submit" disabled={savingPassword}>
+              {savingPassword ? (
+                <span className="flex items-center">
+                  <svg className="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Updating...
+                </span>
+              ) : (
+                <>
+                  <Lock className="h-4 w-4 mr-2" />
+                  Update Password
+                </>
+              )}
             </Button>
           </form>
         </CardContent>
