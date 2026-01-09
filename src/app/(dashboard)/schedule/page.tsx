@@ -117,7 +117,7 @@ export default function SchedulePage() {
   }
 
   if (loading) {
-    return <div className="p-8">Loading schedule...</div>
+    return <div className="p-8 text-gray-900 dark:text-white">Loading schedule...</div>
   }
 
   return (
@@ -125,8 +125,8 @@ export default function SchedulePage() {
       <div className="flex items-center gap-3 mb-6">
         <Calendar className="h-8 w-8 text-red-500" />
         <div>
-          <h1 className="text-2xl font-bold">Class Schedule</h1>
-          <p className="text-gray-600">View weekly class schedule</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Class Schedule</h1>
+          <p className="text-gray-600 dark:text-gray-400">View weekly class schedule</p>
         </div>
       </div>
 
@@ -143,8 +143,8 @@ export default function SchedulePage() {
                 selectedDay === index
                   ? 'bg-red-500 text-white'
                   : isToday
-                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
             >
               <span className="text-xs font-medium">{DAY_ABBREVIATIONS[index]}</span>
@@ -157,7 +157,7 @@ export default function SchedulePage() {
 
       {/* Selected Day's Classes */}
       <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
           {DAYS_OF_WEEK[selectedDay]}
           {selectedDay === new Date().getDay() && (
             <Badge className="bg-green-500">Today</Badge>
@@ -166,7 +166,7 @@ export default function SchedulePage() {
 
         {getClassesForDay(selectedDay).length === 0 ? (
           <Card>
-            <CardContent className="p-8 text-center text-gray-500">
+            <CardContent className="p-8 text-center text-gray-500 dark:text-gray-400">
               <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p className="font-medium">No classes scheduled</p>
               <p className="text-sm">There are no classes on {DAYS_OF_WEEK[selectedDay]}.</p>
@@ -195,7 +195,7 @@ export default function SchedulePage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-gray-600">
+                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                       <Clock className="h-4 w-4" />
                       <span>
                         {formatTime(cls.start_time)} - {formatTime(cls.end_time)}
@@ -203,21 +203,21 @@ export default function SchedulePage() {
                     </div>
 
                     {cls.instructor && (
-                      <div className="flex items-center gap-2 text-gray-600">
+                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                         <User className="h-4 w-4" />
                         <span>{cls.instructor.full_name}</span>
                       </div>
                     )}
 
                     {cls.max_capacity && (
-                      <div className="flex items-center gap-2 text-gray-600">
+                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                         <Users className="h-4 w-4" />
                         <span>Max {cls.max_capacity} students</span>
                       </div>
                     )}
 
                     {cls.description && (
-                      <p className="text-sm text-gray-500 mt-2">{cls.description}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{cls.description}</p>
                     )}
                   </div>
                 </CardContent>
@@ -236,12 +236,12 @@ export default function SchedulePage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[600px]">
               <thead>
-                <tr className="border-b">
+                <tr className="border-b border-gray-200 dark:border-gray-700">
                   {DAYS_OF_WEEK.map((day, index) => (
                     <th
                       key={day}
                       className={`px-2 py-3 text-sm font-medium text-center ${
-                        index === new Date().getDay() ? 'bg-red-50 text-red-700' : 'text-gray-600'
+                        index === new Date().getDay() ? 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300' : 'text-gray-600 dark:text-gray-400'
                       }`}
                     >
                       {DAY_ABBREVIATIONS[index]}
@@ -256,22 +256,22 @@ export default function SchedulePage() {
                     return (
                       <td
                         key={day}
-                        className={`px-2 py-3 align-top border-r last:border-r-0 ${
-                          index === new Date().getDay() ? 'bg-red-50' : ''
+                        className={`px-2 py-3 align-top border-r border-gray-200 dark:border-gray-700 last:border-r-0 ${
+                          index === new Date().getDay() ? 'bg-red-50 dark:bg-red-950' : ''
                         }`}
                       >
                         <div className="space-y-2">
                           {dayClasses.length === 0 ? (
-                            <p className="text-xs text-gray-400 text-center">-</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 text-center">-</p>
                           ) : (
                             dayClasses.map((cls) => (
                               <div
                                 key={cls.id}
-                                className="p-2 bg-white rounded border text-xs cursor-pointer hover:bg-gray-50"
+                                className="p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                                 onClick={() => setSelectedDay(index)}
                               >
-                                <p className="font-medium truncate">{cls.name}</p>
-                                <p className="text-gray-500">
+                                <p className="font-medium truncate text-gray-900 dark:text-white">{cls.name}</p>
+                                <p className="text-gray-500 dark:text-gray-400">
                                   {formatTime(cls.start_time)}
                                 </p>
                               </div>
