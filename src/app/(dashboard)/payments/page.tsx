@@ -373,7 +373,7 @@ export default function PaymentsPage() {
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3 mb-6">
         <Card className="glass border-0 overflow-hidden group hover:shadow-lg transition-all duration-300">
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/10" />
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/10 pointer-events-none" />
           <CardContent className="p-5 relative">
             <div className="flex items-center justify-between">
               <div>
@@ -395,7 +395,7 @@ export default function PaymentsPage() {
         </Card>
 
         <Card className="glass border-0 overflow-hidden group hover:shadow-lg transition-all duration-300">
-          <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/10" />
+          <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/10 pointer-events-none" />
           <CardContent className="p-5 relative">
             <div className="flex items-center justify-between">
               <div>
@@ -416,7 +416,7 @@ export default function PaymentsPage() {
         </Card>
 
         <Card className="glass border-0 overflow-hidden group hover:shadow-lg transition-all duration-300">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/10" />
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/10 pointer-events-none" />
           <CardContent className="p-5 relative">
             <div className="flex items-center justify-between">
               <div>

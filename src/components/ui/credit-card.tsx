@@ -57,7 +57,7 @@ export function CreditCard({
       <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
 
       {/* Pattern overlay */}
-      <div className="absolute inset-0 opacity-10">
+      <div className="absolute inset-0 opacity-10 pointer-events-none">
         <div className="absolute top-4 right-4 w-24 h-24 rounded-full border-2 border-white/30" />
         <div className="absolute top-8 right-8 w-16 h-16 rounded-full border-2 border-white/20" />
       </div>
@@ -103,7 +103,7 @@ export function CreditCard({
 
       {/* Hover actions */}
       {(onSetDefault || onDelete) && (
-        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity flex items-center justify-center gap-3">
           {!isDefault && onSetDefault && (
             <button
               onClick={(e) => {

@@ -1,7 +1,16 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+// GET handler for browser access
+export async function GET() {
+  return syncProfiles()
+}
+
 export async function POST() {
+  return syncProfiles()
+}
+
+async function syncProfiles() {
   try {
     const adminClient = createAdminClient()
 
@@ -22,12 +31,13 @@ export async function POST() {
         .eq('id', user.id)
         .single()
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const anyAdminClient = adminClient as any
+      const metadata = user.user_metadata || {}
+
       if (!existingProfile) {
         // Create missing profile from user metadata
-        const metadata = user.user_metadata || {}
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error: insertError } = await (adminClient as any)
+        const { error: insertError } = await anyAdminClient
           .from('profiles')
           .insert({
             id: user.id,
@@ -51,10 +61,41 @@ export async function POST() {
           })
         }
       } else {
-        results.push({
-          email: user.email || 'unknown',
-          status: 'already_exists'
-        })
+        // Check if profile needs school_id update
+        const { data: fullProfile } = await anyAdminClient
+          .from('profiles')
+          .select('school_id')
+          .eq('id', user.id)
+          .single()
+
+        if (!fullProfile?.school_id && metadata.school_id) {
+          // Update profile with school_id from metadata
+          const { error: updateError } = await anyAdminClient
+            .from('profiles')
+            .update({
+              school_id: metadata.school_id,
+              role: metadata.role || fullProfile?.role || 'student',
+            })
+            .eq('id', user.id)
+
+          if (updateError) {
+            results.push({
+              email: user.email || 'unknown',
+              status: 'update_error',
+              error: updateError.message
+            })
+          } else {
+            results.push({
+              email: user.email || 'unknown',
+              status: 'updated_school_id'
+            })
+          }
+        } else {
+          results.push({
+            email: user.email || 'unknown',
+            status: 'already_exists'
+          })
+        }
       }
     }
 
