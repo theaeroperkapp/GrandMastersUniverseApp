@@ -53,6 +53,16 @@ export async function GET(request: NextRequest) {
 
       customerId = family?.stripe_customer_id || null
     }
+    // Fallback to individual profile billing
+    else {
+      const { data: profileBilling } = await adminClient
+        .from('profiles')
+        .select('stripe_customer_id')
+        .eq('id', user.id)
+        .single() as { data: { stripe_customer_id: string | null } | null }
+
+      customerId = profileBilling?.stripe_customer_id || null
+    }
 
     if (!customerId) {
       return NextResponse.json({ payment_methods: [], default_payment_method: null })
@@ -174,6 +184,37 @@ export async function POST(request: NextRequest) {
             .from('families')
             .update({ stripe_customer_id: customerId })
             .eq('id', family.id)
+        }
+      }
+    }
+    // Fallback to individual profile billing
+    else {
+      // Get or create stripe customer for individual profile
+      const { data: profileData } = await adminClient
+        .from('profiles')
+        .select('id, stripe_customer_id')
+        .eq('id', user.id)
+        .single() as { data: { id: string; stripe_customer_id: string | null } | null }
+
+      if (profileData) {
+        customerId = profileData.stripe_customer_id
+        entityId = profileData.id
+        entityType = 'family' // Use 'family' type for compatibility
+
+        // Create customer if not exists
+        if (!customerId) {
+          const newCustomer = await createCustomer(
+            profile.email || user.email || '',
+            profile.full_name || 'Individual',
+            { profile_id: profileData.id, type: 'individual' }
+          )
+          customerId = newCustomer.id
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (adminClient as any)
+            .from('profiles')
+            .update({ stripe_customer_id: customerId })
+            .eq('id', profileData.id)
         }
       }
     }
