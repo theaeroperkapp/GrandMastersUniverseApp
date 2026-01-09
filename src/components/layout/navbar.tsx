@@ -39,13 +39,79 @@ interface NavbarProps {
   unreadMessages: number
 }
 
-export function Navbar({ user, unreadNotifications: initialUnreadNotifications, unreadMessages }: NavbarProps) {
+export function Navbar({ user, unreadNotifications: initialUnreadNotifications, unreadMessages: initialUnreadMessages }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [messageShake, setMessageShake] = useState(false)
+  const [unreadMessages, setUnreadMessages] = useState(initialUnreadMessages)
   const pathname = usePathname()
   const router = useRouter()
+
+  // Real-time subscription for unread messages
+  useEffect(() => {
+    const supabase = createClient()
+
+    // Fetch initial unread count
+    const fetchUnreadCount = async () => {
+      const { count } = await supabase
+        .from('messages')
+        .select('*, conversations!inner(*)', { count: 'exact', head: true })
+        .eq('is_read', false)
+        .neq('sender_id', user.id)
+        .or(`participant_one.eq.${user.id},participant_two.eq.${user.id}`, { foreignTable: 'conversations' })
+
+      setUnreadMessages(count || 0)
+    }
+
+    // Subscribe to new messages
+    const channel = supabase
+      .channel('navbar-messages')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+        },
+        async (payload) => {
+          const newMsg = payload.new as { sender_id: string; conversation_id: string }
+          // Only count if message is from someone else
+          if (newMsg.sender_id !== user.id) {
+            // Check if this message is in a conversation the user is part of
+            const { data: convo } = await supabase
+              .from('conversations')
+              .select('id')
+              .eq('id', newMsg.conversation_id)
+              .or(`participant_one.eq.${user.id},participant_two.eq.${user.id}`)
+              .single()
+
+            if (convo) {
+              setUnreadMessages(prev => prev + 1)
+              setMessageShake(true)
+              setTimeout(() => setMessageShake(false), 800)
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+        },
+        () => {
+          // Refetch count when messages are updated (e.g., marked as read)
+          fetchUnreadCount()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user.id])
 
   // Close all menus on route change
   useEffect(() => {
@@ -143,9 +209,15 @@ export function Navbar({ user, unreadNotifications: initialUnreadNotifications, 
               className="relative flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors touch-manipulation"
               aria-label="Messages"
             >
-              <MessageSquare className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+              <MessageSquare className={cn(
+                "h-5 w-5 text-gray-600 dark:text-gray-300 transition-transform",
+                messageShake && "animate-bell-shake"
+              )} />
               {unreadMessages > 0 && (
-                <span className="absolute top-1 right-1 h-5 w-5 bg-red-600 text-white text-xs rounded-full flex items-center justify-center font-medium">
+                <span className={cn(
+                  "absolute top-1 right-1 h-5 w-5 bg-red-600 text-white text-xs rounded-full flex items-center justify-center font-medium",
+                  messageShake && "animate-badge-bounce"
+                )}>
                   {unreadMessages > 9 ? '9+' : unreadMessages}
                 </span>
               )}
