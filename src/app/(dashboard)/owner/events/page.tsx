@@ -43,10 +43,10 @@ export default async function EventsPage() {
     .eq('school_id', profileData.school_id)
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Events</h1>
-        <p className="text-gray-600">Manage school events, tournaments, and seminars</p>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Events</h1>
+        <p className="text-gray-600 dark:text-gray-400 text-sm">Manage school events, tournaments, and seminars</p>
       </div>
 
       <EventsClient

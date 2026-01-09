@@ -245,17 +245,17 @@ export default function MyClassesPage() {
   }
 
   if (loading) {
-    return <div className="p-8">Loading your classes...</div>
+    return <div className="p-4 md:p-8 text-gray-900 dark:text-white">Loading your classes...</div>
   }
 
   if (!studentProfileId) {
     return (
-      <div className="p-8 max-w-4xl mx-auto">
+      <div className="p-4 md:p-8 max-w-4xl mx-auto">
         <Card>
-          <CardContent className="p-8 text-center">
+          <CardContent className="p-6 md:p-8 text-center">
             <BookOpen className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-            <h2 className="text-xl font-semibold mb-2">No Student Profile</h2>
-            <p className="text-gray-600 mb-4">
+            <h2 className="text-lg md:text-xl font-semibold mb-2 text-gray-900 dark:text-white">No Student Profile</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm md:text-base">
               You don&apos;t have a student profile yet. Please contact your school administrator to set up your student profile.
             </p>
           </CardContent>
@@ -265,12 +265,12 @@ export default function MyClassesPage() {
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-4 md:p-8 max-w-6xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <BookOpen className="h-8 w-8 text-red-500" />
+        <BookOpen className="h-6 md:h-8 w-6 md:w-8 text-red-500" />
         <div>
-          <h1 className="text-2xl font-bold">My Classes</h1>
-          <p className="text-gray-600">View your classes based on your belt level</p>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">My Classes</h1>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">View your classes based on your belt level</p>
         </div>
       </div>
 

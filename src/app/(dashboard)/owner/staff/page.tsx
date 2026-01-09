@@ -482,7 +482,7 @@ export default function StaffPage() {
               id="invite_role"
               value={inviteForm.role}
               onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}
-              className="w-full h-11 min-h-[44px] px-3 py-2 border rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full h-11 min-h-[44px] px-3 py-2 border dark:border-gray-700 rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             >
               {STAFF_ROLES.map((role) => (
                 <option key={role.value} value={role.value}>{role.label}</option>
@@ -542,7 +542,7 @@ export default function StaffPage() {
               ))}
             </select>
             {(editForm.role === 'student' || editForm.role === 'parent') && (
-              <p className="text-sm text-amber-600 mt-1">
+              <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
                 Changing to {editForm.role} will remove staff access.
               </p>
             )}
@@ -552,7 +552,7 @@ export default function StaffPage() {
             <Label>Additional Permissions</Label>
             <div className="space-y-2">
               {SUB_ROLES.map((role) => (
-                <label key={role.value} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer touch-manipulation min-h-[44px]">
+                <label key={role.value} className="flex items-center gap-3 p-3 border dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer touch-manipulation min-h-[44px]">
                   <input
                     type="checkbox"
                     checked={editForm.sub_roles.includes(role.value)}
@@ -560,8 +560,8 @@ export default function StaffPage() {
                     className="rounded h-5 w-5"
                   />
                   <div>
-                    <span className="font-medium text-sm">{role.label}</span>
-                    <p className="text-xs text-gray-500">{role.description}</p>
+                    <span className="font-medium text-sm text-gray-900 dark:text-white">{role.label}</span>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{role.description}</p>
                   </div>
                 </label>
               ))}
@@ -589,7 +589,7 @@ export default function StaffPage() {
           <div className="space-y-2">
             <Label htmlFor="select_member">Select Member *</Label>
             {members.length === 0 ? (
-              <p className="text-sm text-gray-500 p-3 bg-gray-50 rounded">
+              <p className="text-sm text-gray-500 dark:text-gray-400 p-3 bg-gray-50 dark:bg-gray-800 rounded">
                 No students or parents available to promote.
               </p>
             ) : (
@@ -597,7 +597,7 @@ export default function StaffPage() {
                 id="select_member"
                 value={selectedMember}
                 onChange={(e) => setSelectedMember(e.target.value)}
-                className="w-full h-11 min-h-[44px] px-3 py-2 border rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full h-11 min-h-[44px] px-3 py-2 border dark:border-gray-700 rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 required
               >
                 <option value="">Choose a member...</option>
@@ -616,7 +616,7 @@ export default function StaffPage() {
               id="promote_role"
               value={promoteForm.role}
               onChange={(e) => setPromoteForm({ ...promoteForm, role: e.target.value })}
-              className="w-full h-11 min-h-[44px] px-3 py-2 border rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full h-11 min-h-[44px] px-3 py-2 border dark:border-gray-700 rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             >
               {STAFF_ROLES.map((role) => (
                 <option key={role.value} value={role.value}>{role.label}</option>
@@ -628,7 +628,7 @@ export default function StaffPage() {
             <Label>Additional Permissions</Label>
             <div className="space-y-2">
               {SUB_ROLES.map((role) => (
-                <label key={role.value} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer touch-manipulation min-h-[44px]">
+                <label key={role.value} className="flex items-center gap-3 p-3 border dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer touch-manipulation min-h-[44px]">
                   <input
                     type="checkbox"
                     checked={promoteForm.sub_roles.includes(role.value)}
@@ -643,8 +643,8 @@ export default function StaffPage() {
                     className="rounded h-5 w-5"
                   />
                   <div>
-                    <span className="font-medium text-sm">{role.label}</span>
-                    <p className="text-xs text-gray-500">{role.description}</p>
+                    <span className="font-medium text-sm text-gray-900 dark:text-white">{role.label}</span>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{role.description}</p>
                   </div>
                 </label>
               ))}

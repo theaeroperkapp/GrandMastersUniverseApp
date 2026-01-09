@@ -20,6 +20,8 @@ import { Modal } from '@/components/ui/modal'
 import { OnlineIndicator } from '@/components/ui/online-indicator'
 import { TypingIndicator } from '@/components/ui/typing-indicator'
 import { usePresenceContext } from '@/contexts/presence-context'
+import { ReactionPicker } from '@/components/ui/reaction-picker'
+import { ReactionPill, aggregateReactions } from '@/components/ui/reaction-pill'
 import toast from 'react-hot-toast'
 
 interface Profile {
@@ -49,6 +51,14 @@ interface Message {
   is_read: boolean
   created_at: string
   sender?: Profile
+  reactions?: MessageReaction[]
+}
+
+interface MessageReaction {
+  id: string
+  message_id: string
+  user_id: string
+  emoji: string
 }
 
 export default function MessagesPage() {
@@ -75,6 +85,11 @@ export default function MessagesPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messageInputRef = useRef<HTMLInputElement>(null)
+
+  // Reaction state
+  const [activeReactionMessageId, setActiveReactionMessageId] = useState<string | null>(null)
+  const [reactionPickerPosition, setReactionPickerPosition] = useState<{ x: number; y: number } | null>(null)
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     fetchConversations()
@@ -282,19 +297,29 @@ export default function MessagesPage() {
 
     const msgs = msgsData as Message[] | null
 
-    // Get sender profiles
+    // Get sender profiles and reactions
     if (msgs && msgs.length > 0) {
       const senderIds = [...new Set(msgs.map(m => m.sender_id))]
-      const { data: sendersData } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, role, avatar_url')
-        .in('id', senderIds)
+      const messageIds = msgs.map(m => m.id)
 
-      const senders = sendersData as Profile[] | null
+      const [sendersResult, reactionsResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('id, full_name, email, role, avatar_url')
+          .in('id', senderIds),
+        supabase
+          .from('message_reactions')
+          .select('*')
+          .in('message_id', messageIds)
+      ])
+
+      const senders = sendersResult.data as Profile[] | null
+      const reactions = reactionsResult.data as MessageReaction[] | null
 
       const enrichedMessages = msgs.map(msg => ({
         ...msg,
         sender: senders?.find(s => s.id === msg.sender_id),
+        reactions: reactions?.filter(r => r.message_id === msg.id) || [],
       }))
 
       setMessages(enrichedMessages)
@@ -321,6 +346,80 @@ export default function MessagesPage() {
         c.id === conversationId ? { ...c, unread_count: 0 } : c
       )
     )
+  }
+
+  // Reaction handlers
+  const handleLongPressStart = (messageId: string, e: React.TouchEvent | React.MouseEvent) => {
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
+
+    longPressTimer.current = setTimeout(() => {
+      setActiveReactionMessageId(messageId)
+      setReactionPickerPosition({ x: clientX, y: clientY - 60 })
+    }, 500)
+  }
+
+  const handleLongPressEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+
+  const handleAddReaction = async (messageId: string, emoji: string) => {
+    if (!currentUserId) return
+
+    const supabase = createClient()
+
+    // Check if user already reacted with this emoji
+    const existingReaction = messages
+      .find(m => m.id === messageId)
+      ?.reactions?.find(r => r.user_id === currentUserId && r.emoji === emoji)
+
+    if (existingReaction) {
+      // Remove reaction
+      await supabase
+        .from('message_reactions')
+        .delete()
+        .eq('id', existingReaction.id)
+
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === messageId
+            ? { ...msg, reactions: msg.reactions?.filter(r => r.id !== existingReaction.id) }
+            : msg
+        )
+      )
+    } else {
+      // Add reaction
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from('message_reactions') as any)
+        .insert({
+          message_id: messageId,
+          user_id: currentUserId,
+          emoji,
+        })
+        .select()
+        .single()
+
+      if (!error && data) {
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === messageId
+              ? { ...msg, reactions: [...(msg.reactions || []), data as MessageReaction] }
+              : msg
+          )
+        )
+      }
+    }
+
+    setActiveReactionMessageId(null)
+    setReactionPickerPosition(null)
+  }
+
+  const handleCopyMessage = (content: string) => {
+    navigator.clipboard.writeText(content)
+    toast.success('Copied to clipboard')
   }
 
   const sendMessage = async (e: React.FormEvent) => {
@@ -665,36 +764,94 @@ export default function MessagesPage() {
                 ) : (
                   messages.map(message => {
                     const isOwn = message.sender_id === currentUserId
+                    const aggregatedReactions = aggregateReactions(
+                      message.reactions || [],
+                      currentUserId || ''
+                    )
+                    const userReactions = message.reactions
+                      ?.filter(r => r.user_id === currentUserId)
+                      .map(r => r.emoji) || []
+
                     return (
                       <div
                         key={message.id}
                         className={`flex ${isOwn ? 'justify-end' : 'justify-start'} animate-message`}
                       >
-                        <div
-                          className={`
-                            max-w-[85%] sm:max-w-[75%] md:max-w-[70%]
-                            px-4 py-2.5 shadow-sm rounded-2xl
-                            ${isOwn
-                              ? 'bg-red-600 text-white'
-                              : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white'
-                            }
-                          `}
-                        >
-                          <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">
-                            {message.content}
-                          </p>
-                          <div className={`flex items-center gap-1.5 mt-1.5 text-xs ${
-                            isOwn ? 'text-white/70 justify-end' : 'text-gray-400 dark:text-gray-500'
-                          }`}>
-                            <span>{formatTime(message.created_at)}</span>
-                            {isOwn && (
-                              message.is_read ? (
-                                <CheckCheck className="h-3.5 w-3.5 text-blue-300" />
-                              ) : (
-                                <Check className="h-3.5 w-3.5" />
-                              )
-                            )}
+                        <div className="relative group">
+                          <div
+                            onTouchStart={(e) => handleLongPressStart(message.id, e)}
+                            onTouchEnd={handleLongPressEnd}
+                            onTouchCancel={handleLongPressEnd}
+                            onContextMenu={(e) => {
+                              e.preventDefault()
+                              setActiveReactionMessageId(message.id)
+                              setReactionPickerPosition({ x: e.clientX, y: e.clientY - 60 })
+                            }}
+                            className={`
+                              max-w-[85%] sm:max-w-[75%] md:max-w-[70%]
+                              px-4 py-2.5 shadow-sm rounded-2xl cursor-pointer
+                              select-none transition-transform active:scale-[0.98]
+                              ${isOwn
+                                ? 'bg-red-600 text-white'
+                                : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white'
+                              }
+                            `}
+                          >
+                            <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">
+                              {message.content}
+                            </p>
+                            <div className={`flex items-center gap-1.5 mt-1.5 text-xs ${
+                              isOwn ? 'text-white/70 justify-end' : 'text-gray-400 dark:text-gray-500'
+                            }`}>
+                              <span>{formatTime(message.created_at)}</span>
+                              {isOwn && (
+                                message.is_read ? (
+                                  <CheckCheck className="h-3.5 w-3.5 text-blue-300" />
+                                ) : (
+                                  <Check className="h-3.5 w-3.5" />
+                                )
+                              )}
+                            </div>
                           </div>
+
+                          {/* Reaction Pills */}
+                          {aggregatedReactions.length > 0 && (
+                            <div className={`mt-1 ${isOwn ? 'flex justify-end' : ''}`}>
+                              <ReactionPill
+                                reactions={aggregatedReactions}
+                                onToggle={(emoji) => handleAddReaction(message.id, emoji)}
+                              />
+                            </div>
+                          )}
+
+                          {/* Reaction Picker */}
+                          {activeReactionMessageId === message.id && reactionPickerPosition && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-40"
+                                onClick={() => {
+                                  setActiveReactionMessageId(null)
+                                  setReactionPickerPosition(null)
+                                }}
+                              />
+                              <div
+                                className="fixed z-50"
+                                style={{
+                                  left: Math.min(reactionPickerPosition.x - 140, window.innerWidth - 290),
+                                  top: Math.max(reactionPickerPosition.y, 10),
+                                }}
+                              >
+                                <ReactionPicker
+                                  onSelect={(emoji) => handleAddReaction(message.id, emoji)}
+                                  onClose={() => {
+                                    setActiveReactionMessageId(null)
+                                    setReactionPickerPosition(null)
+                                  }}
+                                  existingReactions={userReactions}
+                                />
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     )

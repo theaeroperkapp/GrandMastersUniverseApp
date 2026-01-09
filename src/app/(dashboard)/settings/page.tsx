@@ -228,16 +228,16 @@ export default function SettingsPage() {
   }
 
   if (loading) {
-    return <div className="p-8 text-gray-900 dark:text-white">Loading settings...</div>
+    return <div className="p-4 md:p-8 text-gray-900 dark:text-white">Loading settings...</div>
   }
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
+    <div className="p-4 md:p-8 max-w-3xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <Settings className="h-8 w-8 text-red-500" />
+        <Settings className="h-6 md:h-8 w-6 md:w-8 text-red-500" />
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage your account preferences</p>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">Manage your account preferences</p>
         </div>
       </div>
 

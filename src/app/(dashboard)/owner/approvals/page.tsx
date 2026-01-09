@@ -33,10 +33,10 @@ export default async function ApprovalsPage() {
     .order('created_at', { ascending: false })
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Pending Approvals</h1>
-        <p className="text-gray-600">Review and approve new member requests</p>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Pending Approvals</h1>
+        <p className="text-gray-600 dark:text-gray-400 text-sm">Review and approve new member requests</p>
       </div>
 
       <ApprovalsClient

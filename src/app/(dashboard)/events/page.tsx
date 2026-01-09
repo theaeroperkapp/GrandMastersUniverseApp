@@ -297,8 +297,8 @@ export default function EventsPage() {
   return (
     <div className="p-4 md:p-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Events</h1>
-        <p className="text-gray-600 dark:text-gray-400">View upcoming events and register</p>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Events</h1>
+        <p className="text-gray-600 dark:text-gray-400 text-sm">View upcoming events and register</p>
       </div>
 
       {/* Upcoming Events Summary */}

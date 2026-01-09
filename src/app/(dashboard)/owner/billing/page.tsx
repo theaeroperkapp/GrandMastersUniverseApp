@@ -333,29 +333,29 @@ export default function BillingPage() {
   }
 
   if (loading) {
-    return <div className="p-8">Loading billing...</div>
+    return <div className="p-4 md:p-8 text-gray-900 dark:text-white">Loading billing...</div>
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
+    <div className="p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Billing</h1>
-          <p className="text-gray-600">Manage membership plans and charges</p>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Billing</h1>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">Manage membership plans and charges</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={openCreateMembershipModal}>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={openCreateMembershipModal} className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
-            Create Membership
+            Membership
           </Button>
-          <Button onClick={openChargeModal}>
+          <Button onClick={openChargeModal} className="w-full sm:w-auto">
             <DollarSign className="h-4 w-4 mr-2" />
-            Add Custom Charge
+            Add Charge
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Membership Plans</CardTitle>
@@ -364,7 +364,7 @@ export default function BillingPage() {
           <CardContent>
             {memberships.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">No membership plans created yet.</p>
+                <p className="text-gray-500 dark:text-gray-400 mb-4">No membership plans created yet.</p>
                 <Button variant="outline" size="sm" onClick={openCreateMembershipModal}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create First Membership
@@ -375,32 +375,34 @@ export default function BillingPage() {
                 {memberships.map((membership) => (
                   <div
                     key={membership.id}
-                    className={`flex justify-between items-center p-4 border rounded-lg ${!membership.is_active ? 'opacity-60' : ''}`}
+                    className={`p-4 border dark:border-gray-700 rounded-lg ${!membership.is_active ? 'opacity-60' : ''}`}
                   >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium">{membership.name}</h3>
-                        {!membership.is_active && (
-                          <Badge variant="secondary">Inactive</Badge>
+                    <div className="flex justify-between items-start gap-2 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-medium text-gray-900 dark:text-white truncate">{membership.name}</h3>
+                          {!membership.is_active && (
+                            <Badge variant="secondary" className="text-xs">Inactive</Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {formatCurrency(membership.price)}/{membership.billing_period}
+                        </p>
+                        {membership.family_discount_percent > 0 && (
+                          <p className="text-xs text-green-600 dark:text-green-400">
+                            {membership.family_discount_percent}% family discount
+                          </p>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500">
-                        {formatCurrency(membership.price)}/{membership.billing_period}
-                      </p>
-                      {membership.family_discount_percent > 0 && (
-                        <p className="text-xs text-green-600">
-                          {membership.family_discount_percent}% family discount
-                        </p>
-                      )}
                     </div>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => openEditMembershipModal(membership)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => toggleMembershipActive(membership)}>
+                    <div className="flex items-center gap-2 pt-2 border-t dark:border-gray-700">
+                      <Button variant="outline" size="sm" onClick={() => toggleMembershipActive(membership)} className="flex-1 touch-manipulation text-xs">
                         {membership.is_active ? 'Deactivate' : 'Activate'}
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => deleteMembership(membership.id)}>
+                      <Button variant="ghost" size="sm" onClick={() => openEditMembershipModal(membership)} className="h-9 w-9 p-0 touch-manipulation">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => deleteMembership(membership.id)} className="h-9 w-9 p-0 touch-manipulation">
                         <Trash2 className="h-4 w-4 text-red-500" />
                       </Button>
                     </div>
@@ -419,7 +421,7 @@ export default function BillingPage() {
           <CardContent>
             {charges.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">No custom charges yet.</p>
+                <p className="text-gray-500 dark:text-gray-400 mb-4">No custom charges yet.</p>
                 <Button variant="outline" size="sm" onClick={openChargeModal}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add First Charge
@@ -430,23 +432,23 @@ export default function BillingPage() {
                 {charges.map((charge) => (
                   <div
                     key={charge.id}
-                    className="flex justify-between items-center p-4 border rounded-lg"
+                    className="flex justify-between items-center p-4 border dark:border-gray-700 rounded-lg"
                   >
                     <div>
-                      <h3 className="font-medium">{charge.description}</h3>
-                      <p className="text-sm text-gray-500">{charge.family?.name}</p>
+                      <h3 className="font-medium text-gray-900 dark:text-white">{charge.description}</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{charge.family?.name}</p>
                       {charge.due_date && (
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
                           Due: {new Date(charge.due_date).toLocaleDateString()}
                         </p>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="text-right">
-                        <p className="font-medium">{formatCurrency(charge.amount)}</p>
+                        <p className="font-medium text-gray-900 dark:text-white">{formatCurrency(charge.amount)}</p>
                         <Badge
                           variant={charge.status === 'paid' ? 'default' : 'secondary'}
-                          className={charge.status === 'paid' ? 'bg-green-100 text-green-800' : ''}
+                          className={charge.status === 'paid' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : ''}
                         >
                           {charge.status}
                         </Badge>
@@ -511,7 +513,7 @@ export default function BillingPage() {
               value={membershipForm.description}
               onChange={(e) => setMembershipForm({ ...membershipForm, description: e.target.value })}
               placeholder="Describe what's included in this plan"
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full px-3 py-2 border dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               rows={2}
             />
           </div>
@@ -537,7 +539,7 @@ export default function BillingPage() {
                 id="billing_period"
                 value={membershipForm.billing_period}
                 onChange={(e) => setMembershipForm({ ...membershipForm, billing_period: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full h-11 min-h-[44px] px-3 py-2 border dark:border-gray-700 rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               >
                 {BILLING_PERIODS.map((period) => (
                   <option key={period.value} value={period.value}>{period.label}</option>
@@ -557,7 +559,7 @@ export default function BillingPage() {
               onChange={(e) => setMembershipForm({ ...membershipForm, family_discount_percent: e.target.value })}
               placeholder="0"
             />
-            <p className="text-xs text-gray-500">Discount applied to additional family members</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Discount applied to additional family members</p>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
@@ -584,7 +586,7 @@ export default function BillingPage() {
               id="charge_family"
               value={chargeForm.family_id}
               onChange={(e) => setChargeForm({ ...chargeForm, family_id: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full h-11 min-h-[44px] px-3 py-2 border dark:border-gray-700 rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               required
             >
               <option value="">Select a family</option>

@@ -303,15 +303,15 @@ export default function FamiliesPage() {
   )
 
   if (loading) {
-    return <div className="p-4 md:p-8">Loading families...</div>
+    return <div className="p-4 md:p-8 text-gray-900 dark:text-white">Loading families...</div>
   }
 
   return (
     <div className="p-4 md:p-8">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold">Families</h1>
-          <p className="text-gray-500 text-sm">Manage family groups at your school</p>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Families</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Manage family groups at your school</p>
         </div>
         <Button onClick={() => setShowCreateModal(true)} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
@@ -330,9 +330,9 @@ export default function FamiliesPage() {
 
       {filteredFamilies.length === 0 ? (
         <Card>
-          <CardContent className="p-6 md:p-8 text-center text-gray-500">
-            <Users className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Families Yet</h3>
+          <CardContent className="p-6 md:p-8 text-center text-gray-500 dark:text-gray-400">
+            <Users className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Families Yet</h3>
             <p className="text-sm md:text-base">Create a family to group parents and their children together.</p>
             <Button className="mt-4 w-full sm:w-auto" onClick={() => setShowCreateModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
@@ -349,18 +349,18 @@ export default function FamiliesPage() {
             return (
               <Card key={family.id} className="overflow-hidden">
                 <div
-                  className="p-4 cursor-pointer hover:bg-gray-50 transition-colors touch-manipulation"
+                  className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors touch-manipulation"
                   onClick={() => toggleExpanded(family.id)}
                 >
                   {/* Mobile Layout */}
                   <div className="md:hidden">
                     <div className="flex items-start gap-3">
-                      <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                        <Users className="h-5 w-5 text-red-600" />
+                      <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center flex-shrink-0">
+                        <Users className="h-5 w-5 text-red-600 dark:text-red-300" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <h3 className="font-semibold truncate">{family.name}</h3>
+                          <h3 className="font-semibold truncate text-gray-900 dark:text-white">{family.name}</h3>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <Badge variant="secondary" className="text-xs">
                               {memberCount}
@@ -373,7 +373,7 @@ export default function FamiliesPage() {
                           </div>
                         </div>
                         {family.primary_holder && (
-                          <p className="text-sm text-gray-500 truncate">
+                          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
                             {family.primary_holder.full_name}
                           </p>
                         )}
@@ -395,12 +395,12 @@ export default function FamiliesPage() {
                   {/* Desktop Layout */}
                   <div className="hidden md:flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
-                        <Users className="h-6 w-6 text-red-600" />
+                      <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                        <Users className="h-6 w-6 text-red-600 dark:text-red-300" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-lg">{family.name}</h3>
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <h3 className="font-semibold text-lg text-gray-900 dark:text-white">{family.name}</h3>
+                        <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
                           {family.primary_holder && (
                             <span className="flex items-center gap-1">
                               <User className="h-3 w-3" />
@@ -436,10 +436,10 @@ export default function FamiliesPage() {
                 </div>
 
                 {isExpanded && (
-                  <div className="border-t bg-gray-50 p-3 md:p-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">Family Members</h4>
+                  <div className="border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-3 md:p-4">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Family Members</h4>
                     {family.members.length === 0 ? (
-                      <p className="text-sm text-gray-500 italic">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 italic">
                         No members assigned yet. Tap "Add Members" to add students to this family.
                       </p>
                     ) : (
@@ -447,7 +447,7 @@ export default function FamiliesPage() {
                         {family.members.map((member) => (
                           <div
                             key={member.id}
-                            className="flex items-center gap-3 p-3 bg-white rounded-lg border"
+                            className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700"
                           >
                             <Avatar
                               src={member.avatar_url}
@@ -455,8 +455,8 @@ export default function FamiliesPage() {
                               size="sm"
                             />
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm truncate">{member.full_name}</p>
-                              <p className="text-xs text-gray-500 truncate md:block hidden">{member.email}</p>
+                              <p className="font-medium text-sm truncate text-gray-900 dark:text-white">{member.full_name}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate md:block hidden">{member.email}</p>
                             </div>
                             <Badge variant="outline" className="capitalize text-xs flex-shrink-0">
                               {member.role}
@@ -500,12 +500,12 @@ export default function FamiliesPage() {
             {/* Selected primary holder as chip */}
             {selectedPrimaryHolder && (
               <div className="flex flex-wrap gap-2 mb-2">
-                <div className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm">
+                <div className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full text-sm">
                   <span>{selectedPrimaryHolder.full_name}</span>
                   <button
                     type="button"
                     onClick={() => setSelectedPrimaryHolder(null)}
-                    className="hover:bg-blue-200 rounded-full p-0.5"
+                    className="hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -532,9 +532,9 @@ export default function FamiliesPage() {
 
                 {/* Dropdown results */}
                 {showPrimaryHolderDropdown && primaryHolderSearchTerm && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                     {filteredMembersForPrimaryHolder.length === 0 ? (
-                      <p className="text-sm text-gray-500 p-3">No members found</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 p-3">No members found</p>
                     ) : (
                       filteredMembersForPrimaryHolder.map((member) => (
                         <button
@@ -545,12 +545,12 @@ export default function FamiliesPage() {
                             setPrimaryHolderSearchTerm('')
                             setShowPrimaryHolderDropdown(false)
                           }}
-                          className="w-full flex items-center gap-3 p-2 hover:bg-gray-50 text-left"
+                          className="w-full flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-left"
                         >
                           <Avatar src={member.avatar_url} name={member.full_name} size="sm" />
                           <div className="flex-1">
-                            <p className="text-sm font-medium">{member.full_name}</p>
-                            <p className="text-xs text-gray-500">{member.email}</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{member.full_name}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{member.email}</p>
                           </div>
                           <Badge variant="outline" className="capitalize text-xs">
                             {member.role}
@@ -562,7 +562,7 @@ export default function FamiliesPage() {
                 )}
               </div>
             )}
-            <p className="text-xs text-gray-500">The primary holder is the main account holder responsible for billing.</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">The primary holder is the main account holder responsible for billing.</p>
           </div>
 
           <div className="space-y-2">
@@ -585,13 +585,13 @@ export default function FamiliesPage() {
                 {selectedMembers.map((member) => (
                   <div
                     key={member.id}
-                    className="flex items-center gap-1 bg-red-100 text-red-800 px-2 py-1 rounded-full text-sm"
+                    className="flex items-center gap-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-2 py-1 rounded-full text-sm"
                   >
                     <span>{member.full_name}</span>
                     <button
                       type="button"
                       onClick={() => removeMemberFromSelection(member.id)}
-                      className="hover:bg-red-200 rounded-full p-0.5"
+                      className="hover:bg-red-200 dark:hover:bg-red-800 rounded-full p-0.5"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -618,21 +618,21 @@ export default function FamiliesPage() {
 
               {/* Dropdown results */}
               {showMemberDropdown && memberSearchTerm && (
-                <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                   {filteredMembersForCreate.length === 0 ? (
-                    <p className="text-sm text-gray-500 p-3">No members found</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 p-3">No members found</p>
                   ) : (
                     filteredMembersForCreate.map((member) => (
                       <button
                         key={member.id}
                         type="button"
                         onClick={() => addMemberToSelection(member)}
-                        className="w-full flex items-center gap-3 p-2 hover:bg-gray-50 text-left"
+                        className="w-full flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-left"
                       >
                         <Avatar src={member.avatar_url} name={member.full_name} size="sm" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium">{member.full_name}</p>
-                          <p className="text-xs text-gray-500">{member.email}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{member.full_name}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{member.email}</p>
                         </div>
                         <Badge variant="outline" className="capitalize text-xs">
                           {member.role}
@@ -643,7 +643,7 @@ export default function FamiliesPage() {
                 </div>
               )}
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               {selectedMembers.length} member(s) selected
             </p>
           </div>
@@ -680,12 +680,12 @@ export default function FamiliesPage() {
       >
         <div className="space-y-4">
           {unassignedMembers.length === 0 ? (
-            <p className="text-center text-gray-500 py-4">
+            <p className="text-center text-gray-500 dark:text-gray-400 py-4">
               All members are already assigned to families.
             </p>
           ) : (
             <>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Search and select members to add to this family:
               </p>
 
@@ -695,13 +695,13 @@ export default function FamiliesPage() {
                   {membersToAdd.map((member) => (
                     <div
                       key={member.id}
-                      className="flex items-center gap-1 bg-red-100 text-red-800 px-2 py-1 rounded-full text-sm"
+                      className="flex items-center gap-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-2 py-1 rounded-full text-sm"
                     >
                       <span>{member.full_name}</span>
                       <button
                         type="button"
                         onClick={() => removeMemberFromAddList(member.id)}
-                        className="hover:bg-red-200 rounded-full p-0.5"
+                        className="hover:bg-red-200 dark:hover:bg-red-800 rounded-full p-0.5"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -728,21 +728,21 @@ export default function FamiliesPage() {
 
                 {/* Dropdown results */}
                 {showAddMemberDropdown && addMemberSearchTerm && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                     {filteredMembersForAdd.length === 0 ? (
-                      <p className="text-sm text-gray-500 p-3">No unassigned members found</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 p-3">No unassigned members found</p>
                     ) : (
                       filteredMembersForAdd.map((member) => (
                         <button
                           key={member.id}
                           type="button"
                           onClick={() => addMemberToAddList(member)}
-                          className="w-full flex items-center gap-3 p-2 hover:bg-gray-50 text-left"
+                          className="w-full flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-left"
                         >
                           <Avatar src={member.avatar_url} name={member.full_name} size="sm" />
                           <div className="flex-1">
-                            <p className="text-sm font-medium">{member.full_name}</p>
-                            <p className="text-xs text-gray-500">{member.email}</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{member.full_name}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{member.email}</p>
                           </div>
                           <Badge variant="outline" className="capitalize text-xs">
                             {member.role}
@@ -753,7 +753,7 @@ export default function FamiliesPage() {
                   </div>
                 )}
               </div>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 {membersToAdd.length} member(s) selected | {unassignedMembers.length} unassigned member(s) available
               </p>
             </>

@@ -116,10 +116,10 @@ export default async function AttendancePage() {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Attendance</h1>
-        <p className="text-gray-600">Track student attendance for classes</p>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Attendance</h1>
+        <p className="text-gray-600 dark:text-gray-400 text-sm">Track student attendance for classes</p>
       </div>
 
       <AttendanceClient

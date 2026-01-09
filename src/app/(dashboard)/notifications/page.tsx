@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Pagination } from '@/components/ui/pagination'
+import { SwipeableItem } from '@/components/ui/swipeable-item'
 import {
   Bell,
   Check,
@@ -239,100 +240,133 @@ export default function NotificationsPage() {
         </Card>
       ) : (
         <>
+          {/* Mobile swipe hint */}
+          <div className="sm:hidden mb-4 px-4 py-2 glass rounded-lg text-center">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Swipe right to mark as read • Swipe left to delete
+            </p>
+          </div>
+
           <div className="space-y-3">
             {notifications.map((notification, index) => {
               const typeConfig = typeIcons[notification.type] || typeIcons.system
               const Icon = typeConfig.icon
 
               return (
-                <div
+                <SwipeableItem
                   key={notification.id}
-                  style={{ animationDelay: `${index * 50}ms` }}
-                  className={cn(
-                    'glass rounded-xl overflow-hidden transition-all duration-300 animate-slide-up',
-                    notification.link && 'cursor-pointer hover:shadow-lg hover:scale-[1.01]',
-                    !notification.is_read && 'ring-2 ring-red-100 dark:ring-red-900 bg-red-50/30 dark:bg-red-900/20'
-                  )}
-                  onClick={() => {
-                    if (notification.link) {
-                      markAsRead(notification.id)
-                      router.push(notification.link)
-                    }
+                  onSwipeRight={!notification.is_read ? () => markAsRead(notification.id) : undefined}
+                  onSwipeLeft={() => deleteNotification(notification.id)}
+                  rightAction={{
+                    icon: <Check className="h-5 w-5" />,
+                    label: 'Read',
+                    color: 'text-white',
+                    bgColor: 'bg-green-500',
                   }}
+                  leftAction={{
+                    icon: <Trash2 className="h-5 w-5" />,
+                    label: 'Delete',
+                    color: 'text-white',
+                    bgColor: 'bg-red-500',
+                  }}
+                  disabled={notification.is_read && !notification.link}
+                  className="rounded-xl"
                 >
-                  <div className="p-4">
-                    <div className="flex gap-4">
-                      {/* Icon */}
-                      <div className={cn(
-                        'flex-shrink-0 p-3 rounded-xl bg-gradient-to-br shadow-lg',
-                        typeConfig.gradient
-                      )}>
-                        <Icon className="h-5 w-5 text-white" />
-                      </div>
+                  <div
+                    style={{ animationDelay: `${index * 50}ms` }}
+                    className={cn(
+                      'glass rounded-xl overflow-hidden transition-all duration-300 animate-slide-up',
+                      notification.link && 'cursor-pointer hover:shadow-lg hover:scale-[1.01]',
+                      !notification.is_read && 'ring-2 ring-red-100 dark:ring-red-900 bg-red-50/30 dark:bg-red-900/20'
+                    )}
+                    onClick={() => {
+                      if (notification.link) {
+                        markAsRead(notification.id)
+                        router.push(notification.link)
+                      }
+                    }}
+                  >
+                    <div className="p-4">
+                      <div className="flex gap-4">
+                        {/* Icon */}
+                        <div className={cn(
+                          'flex-shrink-0 p-3 rounded-xl bg-gradient-to-br shadow-lg',
+                          typeConfig.gradient
+                        )}>
+                          <Icon className="h-5 w-5 text-white" />
+                        </div>
 
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              {!notification.is_read && (
-                                <span className="w-2 h-2 bg-red-500 rounded-full animate-online flex-shrink-0" />
-                              )}
-                              <h3 className={cn(
-                                'font-semibold truncate',
-                                !notification.is_read ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'
-                              )}>
-                                {notification.title}
-                              </h3>
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                {!notification.is_read && (
+                                  <span className="w-2 h-2 bg-red-500 rounded-full animate-online flex-shrink-0" />
+                                )}
+                                <h3 className={cn(
+                                  'font-semibold truncate',
+                                  !notification.is_read ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'
+                                )}>
+                                  {notification.title}
+                                </h3>
+                              </div>
+                              <p className="text-gray-600 dark:text-gray-400 mt-1 line-clamp-2 text-sm">
+                                {notification.message || notification.content}
+                              </p>
+                              <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 font-medium">
+                                {getRelativeTime(notification.created_at)}
+                              </p>
                             </div>
-                            <p className="text-gray-600 dark:text-gray-400 mt-1 line-clamp-2 text-sm">
-                              {notification.message || notification.content}
-                            </p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 font-medium">
-                              {getRelativeTime(notification.created_at)}
-                            </p>
-                          </div>
 
-                          {/* Actions */}
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            {notification.link && (
-                              <ChevronRight className="h-5 w-5 text-gray-400" />
-                            )}
-                            {!notification.is_read && (
+                            {/* Actions - shown on desktop */}
+                            <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
+                              {notification.link && (
+                                <ChevronRight className="h-5 w-5 text-gray-400" />
+                              )}
+                              {!notification.is_read && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    markAsRead(notification.id)
+                                  }}
+                                  className="h-8 w-8 p-0 hover:bg-green-100 hover:text-green-600 rounded-lg transition-colors"
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  markAsRead(notification.id)
+                                  deleteNotification(notification.id)
                                 }}
-                                className="h-8 w-8 p-0 hover:bg-green-100 hover:text-green-600 rounded-lg transition-colors"
+                                className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600 rounded-lg transition-colors"
                               >
-                                <Check className="h-4 w-4" />
+                                <Trash2 className="h-4 w-4" />
                               </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                deleteNotification(notification.id)
-                              }}
-                              className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600 rounded-lg transition-colors"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            </div>
+
+                            {/* Mobile - just show chevron for linked items */}
+                            <div className="sm:hidden flex items-center flex-shrink-0">
+                              {notification.link && (
+                                <ChevronRight className="h-5 w-5 text-gray-400" />
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Progress bar for unread */}
-                  {!notification.is_read && (
-                    <div className="h-0.5 bg-gradient-to-r from-red-500 via-red-400 to-transparent" />
-                  )}
-                </div>
+                    {/* Progress bar for unread */}
+                    {!notification.is_read && (
+                      <div className="h-0.5 bg-gradient-to-r from-red-500 via-red-400 to-transparent" />
+                    )}
+                  </div>
+                </SwipeableItem>
               )
             })}
           </div>

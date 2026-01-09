@@ -122,16 +122,16 @@ export default function ProfilePage() {
   }
 
   if (loading) {
-    return <div className="p-8 text-gray-900 dark:text-white">Loading profile...</div>
+    return <div className="p-4 md:p-8 text-gray-900 dark:text-white">Loading profile...</div>
   }
 
   if (!profile) {
-    return <div className="p-8 text-gray-900 dark:text-white">Profile not found</div>
+    return <div className="p-4 md:p-8 text-gray-900 dark:text-white">Profile not found</div>
   }
 
   return (
-    <div className="p-8 max-w-2xl">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">My Profile</h1>
+    <div className="p-4 md:p-8 max-w-2xl">
+      <h1 className="text-xl md:text-2xl font-bold mb-6 text-gray-900 dark:text-white">My Profile</h1>
 
       <Card>
         <CardHeader>

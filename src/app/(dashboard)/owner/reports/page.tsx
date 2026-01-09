@@ -203,11 +203,11 @@ export default function ReportsPage() {
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Reports</h1>
-          <p className="text-gray-500 text-sm">Attendance and membership analytics</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reports</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Attendance and membership analytics</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex rounded-lg border overflow-hidden">
+          <div className="flex rounded-lg border dark:border-gray-700 overflow-hidden">
             {(['week', 'month', 'year'] as const).map((range) => (
               <button
                 key={range}
@@ -215,7 +215,7 @@ export default function ReportsPage() {
                 className={`px-4 py-2 text-sm font-medium capitalize transition-colors ${
                   dateRange === range
                     ? 'bg-red-600 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                 }`}
               >
                 {range}
@@ -234,12 +234,12 @@ export default function ReportsPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-blue-600" />
+              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-blue-600 dark:text-blue-300" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Total Check-ins</p>
-                <p className="text-2xl font-bold">{attendanceStats?.totalCheckins || 0}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Total Check-ins</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{attendanceStats?.totalCheckins || 0}</p>
               </div>
             </div>
           </CardContent>
@@ -248,12 +248,12 @@ export default function ReportsPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Users className="h-5 w-5 text-green-600" />
+              <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                <Users className="h-5 w-5 text-green-600 dark:text-green-300" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Active Students</p>
-                <p className="text-2xl font-bold">{attendanceStats?.uniqueStudents || 0}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Active Students</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{attendanceStats?.uniqueStudents || 0}</p>
               </div>
             </div>
           </CardContent>
@@ -262,12 +262,12 @@ export default function ReportsPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-purple-600" />
+              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-300" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Avg/Day</p>
-                <p className="text-2xl font-bold">{attendanceStats?.avgPerDay || 0}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Avg/Day</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{attendanceStats?.avgPerDay || 0}</p>
               </div>
             </div>
           </CardContent>
@@ -276,12 +276,12 @@ export default function ReportsPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-100 rounded-lg">
-                <Calendar className="h-5 w-5 text-amber-600" />
+              <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-lg">
+                <Calendar className="h-5 w-5 text-amber-600 dark:text-amber-300" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">New Members</p>
-                <p className="text-2xl font-bold">{memberStats?.newThisMonth || 0}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">New Members</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{memberStats?.newThisMonth || 0}</p>
               </div>
             </div>
           </CardContent>
@@ -299,7 +299,7 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent>
             {attendanceStats?.byClass.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No attendance data yet</p>
+              <p className="text-gray-500 dark:text-gray-400 text-center py-8">No attendance data yet</p>
             ) : (
               <div className="space-y-3">
                 {attendanceStats?.byClass.map(({ name, count }) => {
@@ -309,10 +309,10 @@ export default function ReportsPage() {
                   return (
                     <div key={name}>
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="font-medium">{name}</span>
-                        <span className="text-gray-500">{count} check-ins</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{name}</span>
+                        <span className="text-gray-500 dark:text-gray-400">{count} check-ins</span>
                       </div>
-                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-red-500 rounded-full transition-all"
                           style={{ width: `${percentage}%` }}
@@ -336,22 +336,22 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span className="text-gray-600">Total Members</span>
-                <span className="text-xl font-bold">{memberStats?.totalMembers || 0}</span>
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span className="text-gray-600 dark:text-gray-400">Total Members</span>
+                <span className="text-xl font-bold text-gray-900 dark:text-white">{memberStats?.totalMembers || 0}</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                <span className="text-gray-600">Students</span>
-                <span className="text-xl font-bold text-blue-600">{memberStats?.students || 0}</span>
+              <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                <span className="text-gray-600 dark:text-gray-400">Students</span>
+                <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{memberStats?.students || 0}</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                <span className="text-gray-600">Parents</span>
-                <span className="text-xl font-bold text-green-600">{memberStats?.parents || 0}</span>
+              <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/30 rounded-lg">
+                <span className="text-gray-600 dark:text-gray-400">Parents</span>
+                <span className="text-xl font-bold text-green-600 dark:text-green-400">{memberStats?.parents || 0}</span>
               </div>
               {(memberStats?.pendingApprovals || 0) > 0 && (
-                <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg">
-                  <span className="text-gray-600">Pending Approvals</span>
-                  <span className="text-xl font-bold text-amber-600">{memberStats?.pendingApprovals}</span>
+                <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/30 rounded-lg">
+                  <span className="text-gray-600 dark:text-gray-400">Pending Approvals</span>
+                  <span className="text-xl font-bold text-amber-600 dark:text-amber-400">{memberStats?.pendingApprovals}</span>
                 </div>
               )}
             </div>
@@ -368,7 +368,7 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent>
             {attendanceStats?.byDay.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No attendance data yet</p>
+              <p className="text-gray-500 dark:text-gray-400 text-center py-8">No attendance data yet</p>
             ) : (
               <div className="flex items-end justify-between gap-2 h-48">
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => {
@@ -380,13 +380,13 @@ export default function ReportsPage() {
                   return (
                     <div key={day} className="flex-1 flex flex-col items-center">
                       <div className="w-full flex flex-col items-center justify-end h-36">
-                        <span className="text-xs text-gray-500 mb-1">{count}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">{count}</span>
                         <div
                           className="w-full bg-red-500 rounded-t transition-all"
                           style={{ height: `${Math.max(height, 4)}%` }}
                         />
                       </div>
-                      <span className="text-xs text-gray-500 mt-2">{day}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 mt-2">{day}</span>
                     </div>
                   )
                 })}

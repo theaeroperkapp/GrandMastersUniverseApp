@@ -117,16 +117,16 @@ export default function SchedulePage() {
   }
 
   if (loading) {
-    return <div className="p-8 text-gray-900 dark:text-white">Loading schedule...</div>
+    return <div className="p-4 md:p-8 text-gray-900 dark:text-white">Loading schedule...</div>
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-4 md:p-8 max-w-6xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <Calendar className="h-8 w-8 text-red-500" />
+        <Calendar className="h-6 md:h-8 w-6 md:w-8 text-red-500" />
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Class Schedule</h1>
-          <p className="text-gray-600 dark:text-gray-400">View weekly class schedule</p>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Class Schedule</h1>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">View weekly class schedule</p>
         </div>
       </div>
 

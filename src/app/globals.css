@@ -557,3 +557,28 @@ body {
 .press-scale:active {
   transform: scale(0.95);
 }
+
+/* Scale-in animation for menus and popovers */
+@keyframes scale-in {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.15s ease-out;
+}
+
+/* Swipe action backgrounds */
+.swipe-action-left {
+  background: linear-gradient(90deg, transparent, #EF4444);
+}
+
+.swipe-action-right {
+  background: linear-gradient(-90deg, transparent, #10B981);
+}

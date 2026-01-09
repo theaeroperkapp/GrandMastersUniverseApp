@@ -75,8 +75,8 @@ export default async function ClassesPage() {
   return (
     <div className="p-4 md:p-8 space-y-6">
       <div>
-        <h1 className="text-xl md:text-2xl font-bold">Class Schedule</h1>
-        <p className="text-gray-600 text-sm">Manage your school's class schedule</p>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Class Schedule</h1>
+        <p className="text-gray-600 dark:text-gray-400 text-sm">Manage your school's class schedule</p>
       </div>
 
       <ClassesClient

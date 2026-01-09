@@ -86,13 +86,13 @@ export async function POST(request: NextRequest) {
       imageUrl = result.url
     }
 
-    // Create post
+    // Create post (use null for empty content to allow image-only posts)
     const { data: post, error: postError } = await (adminClient as any)
       .from('posts')
       .insert({
         school_id: schoolId,
         author_id: user.id,
-        content,
+        content: content || null,
         image_url: imageUrl,
         share_to_facebook: shareToFacebook,
       })
