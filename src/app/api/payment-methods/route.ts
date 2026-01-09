@@ -238,8 +238,9 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error creating setup intent:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json(
-      { error: 'Failed to create setup intent' },
+      { error: `Failed to create setup intent: ${errorMessage}` },
       { status: 500 }
     )
   }
