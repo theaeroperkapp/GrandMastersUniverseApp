@@ -49,7 +49,7 @@ export default function HomePage() {
             <Link href="/login">
               <Button variant="ghost">Log In</Button>
             </Link>
-            <Link href="/waitlist">
+            <Link href="/signup">
               <Button>Get Started</Button>
             </Link>
           </div>
@@ -67,7 +67,7 @@ export default function HomePage() {
             The complete platform for martial arts schools. Manage students, families, classes, events, and billing all in one place.
           </p>
           <div className="flex items-center justify-center gap-4">
-            <Link href="/waitlist">
+            <Link href="/signup">
               <Button size="lg">Start Free Trial</Button>
             </Link>
             <Link href="/features">
@@ -136,7 +136,7 @@ export default function HomePage() {
               ))}
             </ul>
 
-            <Link href="/waitlist">
+            <Link href="/signup">
               <Button className="w-full" size="lg">
                 Start 30-Day Free Trial
               </Button>
@@ -154,7 +154,7 @@ export default function HomePage() {
           <p className="text-red-100 mb-8 max-w-xl mx-auto">
             Join martial arts schools around the world using GrandMastersUniverse to manage their students and grow their business.
           </p>
-          <Link href="/waitlist">
+          <Link href="/signup">
             <Button size="lg" variant="secondary">
               Get Started Today
             </Button>

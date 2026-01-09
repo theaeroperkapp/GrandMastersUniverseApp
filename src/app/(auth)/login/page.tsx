@@ -17,6 +17,39 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect') || '/feed'
+  const message = searchParams.get('message')
+  const error = searchParams.get('error')
+
+  // Show messages based on URL params
+  const getMessage = () => {
+    if (message === 'email_confirmed') {
+      return {
+        type: 'success',
+        text: 'Email confirmed! Please wait for your school to approve your account, then sign in.',
+      }
+    }
+    if (message === 'pending_approval') {
+      return {
+        type: 'info',
+        text: 'Your account is pending approval. Please wait for your school to approve you.',
+      }
+    }
+    if (error === 'verification_failed') {
+      return {
+        type: 'error',
+        text: 'Email verification failed. Please try again or request a new confirmation email.',
+      }
+    }
+    if (error === 'auth_error') {
+      return {
+        type: 'error',
+        text: 'Authentication error. Please try signing in again.',
+      }
+    }
+    return null
+  }
+
+  const messageInfo = getMessage()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,6 +87,19 @@ function LoginForm() {
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
+          {messageInfo && (
+            <div
+              className={`p-3 rounded-lg text-sm ${
+                messageInfo.type === 'success'
+                  ? 'bg-green-50 text-green-800 border border-green-200'
+                  : messageInfo.type === 'info'
+                    ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                    : 'bg-red-50 text-red-800 border border-red-200'
+              }`}
+            >
+              {messageInfo.text}
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input

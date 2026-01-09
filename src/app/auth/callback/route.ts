@@ -8,12 +8,27 @@ export async function GET(request: Request) {
   const type = searchParams.get('type')
   const next = searchParams.get('next') ?? '/feed'
 
+  const supabase = await createClient()
+
   // Handle OAuth or magic link code exchange
   if (code) {
-    const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
+      // Check if user is approved
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_approved')
+          .eq('id', user.id)
+          .single()
+
+        const profileData = profile as { is_approved: boolean } | null
+        if (!profileData?.is_approved) {
+          return NextResponse.redirect(`${origin}/login?message=pending_approval`)
+        }
+      }
       return NextResponse.redirect(`${origin}${next}`)
     }
 
@@ -23,8 +38,6 @@ export async function GET(request: Request) {
 
   // Handle email confirmation/invite token
   if (token_hash && type) {
-    const supabase = await createClient()
-
     if (type === 'email' || type === 'signup' || type === 'invite' || type === 'magiclink') {
       const { error } = await supabase.auth.verifyOtp({
         token_hash,
@@ -36,6 +49,26 @@ export async function GET(request: Request) {
         if (type === 'invite') {
           return NextResponse.redirect(`${origin}/set-password`)
         }
+
+        // For signup, check if user needs approval
+        if (type === 'signup' || type === 'email') {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('is_approved')
+              .eq('id', user.id)
+              .single()
+
+            const profileData = profile as { is_approved: boolean } | null
+            if (!profileData?.is_approved) {
+              // Sign out and redirect to login with message
+              await supabase.auth.signOut()
+              return NextResponse.redirect(`${origin}/login?message=email_confirmed`)
+            }
+          }
+        }
+
         return NextResponse.redirect(`${origin}${next}`)
       }
 
