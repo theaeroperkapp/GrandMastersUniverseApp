@@ -47,6 +47,10 @@ export function PresenceProvider({ children, schoolId, userId, userName }: Prese
   const [isConnected, setIsConnected] = useState(false)
   const channelRef = useRef<RealtimeChannel | null>(null)
   const supabaseRef = useRef(createClient())
+  const userNameRef = useRef(userName)
+
+  // Keep userName ref updated
+  userNameRef.current = userName
 
   const isUserOnline = useCallback((targetUserId: string) => {
     const user = onlineUsers.get(targetUserId)
@@ -129,11 +133,11 @@ export function PresenceProvider({ children, schoolId, userId, userName }: Prese
           // Track this user's presence
           await channel.track({
             userId,
-            full_name: userName,
+            full_name: userNameRef.current,
             online_at: new Date().toISOString(),
             status: 'online',
           })
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           setIsConnected(false)
         }
       })
@@ -146,7 +150,7 @@ export function PresenceProvider({ children, schoolId, userId, userName }: Prese
         const newStatus = document.visibilityState === 'visible' ? 'online' : 'away'
         await channelRef.current.track({
           userId,
-          full_name: userName,
+          full_name: userNameRef.current,
           online_at: new Date().toISOString(),
           status: newStatus,
         })
@@ -168,7 +172,7 @@ export function PresenceProvider({ children, schoolId, userId, userName }: Prese
       if (channelRef.current && document.visibilityState === 'visible') {
         await channelRef.current.track({
           userId,
-          full_name: userName,
+          full_name: userNameRef.current,
           online_at: new Date().toISOString(),
           status: 'online',
         })
@@ -186,7 +190,9 @@ export function PresenceProvider({ children, schoolId, userId, userName }: Prese
       }
       setIsConnected(false)
     }
-  }, [schoolId, userId, userName])
+  // Note: userName is intentionally excluded from deps to prevent reconnection on name changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schoolId, userId])
 
   return (
     <PresenceContext.Provider

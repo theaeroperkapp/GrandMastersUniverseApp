@@ -71,7 +71,7 @@ export default function MessagesPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   // Real-time presence tracking - use onlineUsers directly to trigger re-renders
-  const { onlineUsers } = usePresenceContext()
+  const { onlineUsers, isConnected, presenceCount } = usePresenceContext()
 
   // Helper to get user status
   const getUserStatus = (targetUserId: string): 'online' | 'away' | 'offline' => {
@@ -626,7 +626,12 @@ export default function MessagesPage() {
                 : 'Messages'}
             </h1>
             {mobileView === 'list' && (
-              <p className="text-gray-600 dark:text-gray-400 text-sm hidden sm:block">Chat with instructors and members</p>
+              <div className="flex items-center gap-2">
+                <p className="text-gray-600 dark:text-gray-400 text-sm hidden sm:block">Chat with instructors and members</p>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${isConnected ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'}`}>
+                  {isConnected ? `${presenceCount} online` : 'Connecting...'}
+                </span>
+              </div>
             )}
             {mobileView === 'chat' && selectedConversation?.other_participant?.role && (
               <Badge className={`${getRoleBadgeColor(selectedConversation.other_participant.role)} md:hidden`}>
