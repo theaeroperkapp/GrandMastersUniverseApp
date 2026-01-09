@@ -79,6 +79,7 @@ export default function StudentsPage() {
   const [generatingPin, setGeneratingPin] = useState(false)
   const [updatingBelt, setUpdatingBelt] = useState(false)
   const [updatingFamily, setUpdatingFamily] = useState(false)
+  const [updatingRole, setUpdatingRole] = useState(false)
   const [updatingSubscription, setUpdatingSubscription] = useState(false)
   const [schoolId, setSchoolId] = useState<string | null>(null)
   const qrRef = useRef<HTMLDivElement>(null)
@@ -404,6 +405,48 @@ export default function StudentsPage() {
     }
   }
 
+  const updateRole = async (newRole: 'student' | 'parent') => {
+    if (!selectedMember || !schoolId) return
+
+    setUpdatingRole(true)
+    try {
+      const response = await fetch(`/api/students/${selectedMember.id}/role`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to update role')
+      }
+
+      // Update the member in the list
+      setMembers(prev => prev.map(m => {
+        if (m.id === selectedMember.id) {
+          return { ...m, role: newRole }
+        }
+        return m
+      }))
+
+      // Update selected member
+      setSelectedMember(prev => prev ? { ...prev, role: newRole } : null)
+
+      toast.success(`Role changed to ${newRole}`)
+
+      // If changed to student, they may need a belt rank and student_profile
+      if (newRole === 'student' && !selectedMember.student_profile) {
+        // Refresh to get updated data
+        const supabase = createClient()
+        await fetchMembers(supabase, schoolId)
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update role')
+    } finally {
+      setUpdatingRole(false)
+    }
+  }
+
   const updateSubscription = async (membershipId: string | null) => {
     if (!selectedMember) return
 
@@ -707,6 +750,26 @@ export default function StudentsPage() {
               <Badge variant="secondary" className="capitalize mt-2">
                 {selectedMember.role}
               </Badge>
+            </div>
+
+            {/* Role Selector */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Member Type
+              </Label>
+              <select
+                value={selectedMember.role}
+                onChange={(e) => updateRole(e.target.value as 'student' | 'parent')}
+                disabled={updatingRole}
+                className="w-full h-11 min-h-[44px] px-3 py-2 border dark:border-gray-700 rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              >
+                <option value="student">Student (can have belt ranks)</option>
+                <option value="parent">Parent/Guardian (manages family)</option>
+              </select>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Change if member selected wrong type during signup
+              </p>
             </div>
 
             {/* Family Assignment */}
