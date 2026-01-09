@@ -60,17 +60,13 @@ export function PresenceProvider({ children, schoolId, userId, userName }: Prese
   }, [onlineUsers])
 
   useEffect(() => {
-    console.log('[Presence] useEffect triggered:', { schoolId, userId, userName })
-
     if (!schoolId || !userId) {
-      console.log('[Presence] Missing schoolId or userId, not connecting')
       setIsConnected(false)
       return
     }
 
     const supabase = supabaseRef.current
     const channelName = `presence:school:${schoolId}`
-    console.log('[Presence] Setting up channel:', channelName)
 
     // Clean up existing channel if any
     if (channelRef.current) {
@@ -88,7 +84,6 @@ export function PresenceProvider({ children, schoolId, userId, userName }: Prese
     channel
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState()
-        console.log('[Presence] Sync event - raw state:', state)
         const users = new Map<string, PresenceUser>()
 
         Object.entries(state).forEach(([key, presences]) => {
@@ -104,7 +99,6 @@ export function PresenceProvider({ children, schoolId, userId, userName }: Prese
           }
         })
 
-        console.log('[Presence] Online users updated:', Array.from(users.keys()))
         setOnlineUsers(users)
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
@@ -130,19 +124,16 @@ export function PresenceProvider({ children, schoolId, userId, userName }: Prese
         })
       })
       .subscribe(async (status) => {
-        console.log('[Presence] Channel status:', status, { channelName, userId, schoolId })
         if (status === 'SUBSCRIBED') {
           setIsConnected(true)
           // Track this user's presence
-          const trackResult = await channel.track({
+          await channel.track({
             userId,
             full_name: userName,
             online_at: new Date().toISOString(),
             status: 'online',
           })
-          console.log('[Presence] Track result:', trackResult)
         } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          console.error('[Presence] Channel error or closed:', status)
           setIsConnected(false)
         }
       })
