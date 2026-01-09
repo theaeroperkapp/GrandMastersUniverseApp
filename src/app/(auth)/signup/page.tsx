@@ -88,6 +88,7 @@ function SignupForm() {
             school_id: schoolData.id,
             role: accountType,
           },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       })
 

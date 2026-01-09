@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { ApprovalsClient } from '@/components/owner/approvals-client'
 
 export default async function ApprovalsPage() {
   const supabase = await createClient()
+  const adminClient = createAdminClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -24,8 +26,8 @@ export default async function ApprovalsPage() {
     redirect('/feed')
   }
 
-  // Get pending users
-  const { data: pendingUsers } = await supabase
+  // Get pending users using admin client to bypass RLS
+  const { data: pendingUsers } = await adminClient
     .from('profiles')
     .select('*')
     .eq('school_id', profileData.school_id)
