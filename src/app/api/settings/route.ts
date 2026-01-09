@@ -28,13 +28,20 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 })
     }
 
-    // Get notification settings (may not exist)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: settingsData } = await (adminClient as any)
-      .from('user_settings')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
+    // Get notification settings (may not exist - table or record)
+    let settingsData = null
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (adminClient as any)
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+      settingsData = data
+    } catch {
+      // Table might not exist or no record found - that's ok
+      console.log('user_settings not available, using defaults')
+    }
 
     return NextResponse.json({
       profile: profileData,

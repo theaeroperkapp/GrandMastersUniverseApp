@@ -60,12 +60,12 @@ export default function SettingsPage() {
     try {
       // Use API route to fetch settings data
       const response = await fetch('/api/settings')
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error('Failed to fetch settings')
+        console.error('API error:', data)
+        throw new Error(data.error || 'Failed to fetch settings')
       }
-
-      const data = await response.json()
 
       if (data.profile) {
         setProfile(data.profile)
@@ -80,9 +80,33 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error('Error fetching settings:', error)
-      toast.error('Failed to load settings')
+      // Fallback to direct Supabase client if API fails
+      await fetchUserDataFallback()
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchUserDataFallback = async () => {
+    const supabase = createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    // Get user profile - profiles table should have public read for own profile
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, phone, avatar_url')
+      .eq('id', user.id)
+      .single()
+
+    if (profileData) {
+      const userProfile = profileData as UserProfile
+      setProfile(userProfile)
+      profileIdRef.current = userProfile.id
+      setFullName(userProfile.full_name || '')
+      setPhone(userProfile.phone || '')
+      setEmail(userProfile.email || '')
     }
   }
 
