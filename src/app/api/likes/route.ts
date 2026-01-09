@@ -43,6 +43,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to like post' }, { status: 500 })
     }
 
+    // Create notification for post author (if not liking own post)
+    const { data: postData } = await supabase
+      .from('posts')
+      .select('author_id')
+      .eq('id', post_id)
+      .single()
+
+    const post = postData as { author_id: string } | null
+
+    if (post && post.author_id !== user.id) {
+      const { data: likerProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single()
+
+      const likerName = (likerProfile as { full_name: string } | null)?.full_name || 'Someone'
+
+      await (adminClient as any)
+        .from('notifications')
+        .insert({
+          profile_id: post.author_id,
+          type: 'like',
+          title: 'New Like',
+          content: `${likerName} liked your post`,
+          related_id: post_id,
+        })
+    }
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Like API error:', error)

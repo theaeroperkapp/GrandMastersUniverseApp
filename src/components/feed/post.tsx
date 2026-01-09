@@ -21,13 +21,14 @@ interface Author {
 interface PostProps {
   post: {
     id: string
-    content: string
+    content: string | null
     image_url: string | null
     is_announcement: boolean
     created_at: string
     author: Author
     comments: { count: number }[]
     likes: { count: number }[]
+    isLiked?: boolean
   }
   currentUser: {
     id: string
@@ -37,7 +38,7 @@ interface PostProps {
 }
 
 export function Post({ post, currentUser, onDelete }: PostProps) {
-  const [isLiked, setIsLiked] = useState(false)
+  const [isLiked, setIsLiked] = useState(post.isLiked || false)
   const [likeCount, setLikeCount] = useState(post.likes[0]?.count || 0)
   const [showMenu, setShowMenu] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -91,7 +92,7 @@ export function Post({ post, currentUser, onDelete }: PostProps) {
       try {
         await navigator.share({
           title: 'Check out this post',
-          text: post.content.slice(0, 100),
+          text: post.content?.slice(0, 100) || '',
           url: `${window.location.origin}/post/${post.id}`,
         })
       } catch {

@@ -1,0 +1,131 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { sanitizeString, isValidUUID, isValidLength } from '@/lib/validation'
+
+interface RouteParams {
+  params: Promise<{ id: string }>
+}
+
+// Get comments for a post
+export async function GET(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { id: postId } = await params
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    if (!isValidUUID(postId)) {
+      return NextResponse.json({ error: 'Invalid post ID' }, { status: 400 })
+    }
+
+    // Get comments with author info
+    const { data: comments, error } = await supabase
+      .from('comments')
+      .select(`
+        *,
+        author:profiles!comments_author_id_fkey(id, full_name, avatar_url, role)
+      `)
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      console.error('Error fetching comments:', error)
+      return NextResponse.json({ error: 'Failed to fetch comments' }, { status: 500 })
+    }
+
+    return NextResponse.json(comments || [])
+  } catch (error) {
+    console.error('Comments GET error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+// Create a comment
+export async function POST(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { id: postId } = await params
+    const supabase = await createClient()
+    const adminClient = createAdminClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    if (!isValidUUID(postId)) {
+      return NextResponse.json({ error: 'Invalid post ID' }, { status: 400 })
+    }
+
+    const body = await request.json()
+    const content = sanitizeString(body.content)
+
+    if (!content || !isValidLength(content, 1, 1000)) {
+      return NextResponse.json({ error: 'Comment must be between 1 and 1000 characters' }, { status: 400 })
+    }
+
+    // Verify post exists and get author for notification
+    const { data: postData } = await supabase
+      .from('posts')
+      .select('id, school_id, author_id')
+      .eq('id', postId)
+      .is('deleted_at', null)
+      .single()
+
+    const post = postData as { id: string; school_id: string; author_id: string } | null
+
+    if (!post) {
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 })
+    }
+
+    // Create comment
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: comment, error: commentError } = await (adminClient as any)
+      .from('comments')
+      .insert({
+        post_id: postId,
+        author_id: user.id,
+        content,
+      })
+      .select(`
+        *,
+        author:profiles!comments_author_id_fkey(id, full_name, avatar_url, role)
+      `)
+      .single()
+
+    if (commentError) {
+      console.error('Error creating comment:', commentError)
+      return NextResponse.json({ error: 'Failed to create comment' }, { status: 500 })
+    }
+
+    // Create notification for post author (if not commenting on own post)
+    if (post.author_id !== user.id) {
+      const { data: commenterProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single()
+
+      const commenterName = (commenterProfile as { full_name: string } | null)?.full_name || 'Someone'
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (adminClient as any)
+        .from('notifications')
+        .insert({
+          profile_id: post.author_id,
+          type: 'comment',
+          title: 'New Comment',
+          content: `${commenterName} commented on your post`,
+          related_id: postId,
+        })
+    }
+
+    return NextResponse.json(comment)
+  } catch (error) {
+    console.error('Comments POST error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

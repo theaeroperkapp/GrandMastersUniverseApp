@@ -71,8 +71,16 @@ export default function MessagesPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   // Real-time presence tracking
-  const { getUserStatus } = usePresenceContext()
+  const { getUserStatus, isConnected, presenceCount, onlineUsers } = usePresenceContext()
   const [schoolId, setSchoolId] = useState<string | null>(null)
+
+  // Debug: log presence status
+  useEffect(() => {
+    console.log('[Messages] Presence connected:', isConnected, 'Online users count:', presenceCount)
+    console.log('[Messages] Online user IDs:', Array.from(onlineUsers.keys()))
+    console.log('[Messages] Current user ID:', currentUserId)
+    console.log('[Messages] School ID:', schoolId)
+  }, [isConnected, presenceCount, onlineUsers, currentUserId, schoolId])
   const [searchTerm, setSearchTerm] = useState('')
 
   // Mobile view state - 'list' shows conversations, 'chat' shows messages
@@ -583,6 +591,28 @@ export default function MessagesPage() {
 
   return (
     <div className="h-[calc(100dvh-120px)] md:h-[calc(100vh-120px)] flex flex-col -m-4 md:-m-6">
+      {/* Debug Panel - Remove after testing */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="bg-yellow-100 dark:bg-yellow-900 border-b border-yellow-300 dark:border-yellow-700 p-2 text-xs font-mono">
+          <div className="flex flex-wrap gap-4">
+            <span>
+              <strong>Presence:</strong>{' '}
+              <span className={isConnected ? 'text-green-600' : 'text-red-600'}>
+                {isConnected ? 'Connected' : 'Disconnected'}
+              </span>
+            </span>
+            <span><strong>Online Users:</strong> {presenceCount}</span>
+            <span><strong>My ID:</strong> {currentUserId || 'loading...'}</span>
+            <span><strong>School:</strong> {schoolId || 'null'}</span>
+          </div>
+          {presenceCount > 0 && (
+            <div className="mt-1">
+              <strong>Online IDs:</strong> {Array.from(onlineUsers.keys()).join(', ')}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Header - responsive with back button on mobile */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shrink-0">
         <div className="flex items-center gap-3">
@@ -603,7 +633,13 @@ export default function MessagesPage() {
                 : 'Messages'}
             </h1>
             {mobileView === 'list' && (
-              <p className="text-gray-600 dark:text-gray-400 text-sm hidden sm:block">Chat with instructors and members</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm hidden sm:block">
+                Chat with instructors and members
+                {/* Debug: Presence status */}
+                <span className={`ml-2 text-xs ${isConnected ? 'text-green-500' : 'text-red-500'}`}>
+                  ({isConnected ? `Connected - ${presenceCount} online` : 'Disconnected'})
+                </span>
+              </p>
             )}
             {mobileView === 'chat' && selectedConversation?.other_participant?.role && (
               <Badge className={`${getRoleBadgeColor(selectedConversation.other_participant.role)} md:hidden`}>
@@ -675,7 +711,16 @@ export default function MessagesPage() {
                         <User className="h-6 w-6 text-gray-500 dark:text-gray-400" />
                       )}
                     </div>
-                    <OnlineIndicator status={getUserStatus(convo.other_participant?.id || '')} className="absolute -bottom-0.5 -right-0.5" />
+                    <OnlineIndicator
+                      status={getUserStatus(convo.other_participant?.id || '')}
+                      className="absolute -bottom-0.5 -right-0.5"
+                    />
+                    {/* Debug: Show user ID check */}
+                    {process.env.NODE_ENV === 'development' && (
+                      <span className="absolute -top-6 left-0 text-[8px] text-gray-400 whitespace-nowrap">
+                        {onlineUsers.has(convo.other_participant?.id || '') ? 'IN MAP' : 'NOT IN MAP'}
+                      </span>
+                    )}
                   </div>
 
                   {/* Content */}
@@ -777,7 +822,7 @@ export default function MessagesPage() {
                         key={message.id}
                         className={`flex ${isOwn ? 'justify-end' : 'justify-start'} animate-message`}
                       >
-                        <div className="relative group">
+                        <div className="relative group max-w-[85%] sm:max-w-[75%] md:max-w-[70%]">
                           <div
                             onTouchStart={(e) => handleLongPressStart(message.id, e)}
                             onTouchEnd={handleLongPressEnd}
@@ -788,8 +833,7 @@ export default function MessagesPage() {
                               setReactionPickerPosition({ x: e.clientX, y: e.clientY - 60 })
                             }}
                             className={`
-                              max-w-[85%] sm:max-w-[75%] md:max-w-[70%]
-                              px-4 py-2.5 shadow-sm rounded-2xl cursor-pointer
+                              inline-block px-3 py-2 shadow-sm rounded-2xl cursor-pointer
                               select-none transition-transform active:scale-[0.98]
                               ${isOwn
                                 ? 'bg-red-600 text-white'
@@ -797,20 +841,22 @@ export default function MessagesPage() {
                               }
                             `}
                           >
-                            <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">
-                              {message.content}
-                            </p>
-                            <div className={`flex items-center gap-1.5 mt-1.5 text-xs ${
-                              isOwn ? 'text-white/70 justify-end' : 'text-gray-400 dark:text-gray-500'
-                            }`}>
-                              <span>{formatTime(message.created_at)}</span>
-                              {isOwn && (
-                                message.is_read ? (
-                                  <CheckCheck className="h-3.5 w-3.5 text-blue-300" />
-                                ) : (
-                                  <Check className="h-3.5 w-3.5" />
-                                )
-                              )}
+                            <div className="flex items-end gap-2">
+                              <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">
+                                {message.content}
+                              </p>
+                              <div className={`flex items-center gap-1 text-[11px] shrink-0 pb-0.5 ${
+                                isOwn ? 'text-white/70' : 'text-gray-400 dark:text-gray-500'
+                              }`}>
+                                <span>{formatTime(message.created_at)}</span>
+                                {isOwn && (
+                                  message.is_read ? (
+                                    <CheckCheck className="h-3 w-3 text-blue-300" />
+                                  ) : (
+                                    <Check className="h-3 w-3" />
+                                  )
+                                )}
+                              </div>
                             </div>
                           </div>
 

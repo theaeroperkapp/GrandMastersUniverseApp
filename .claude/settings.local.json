@@ -34,7 +34,9 @@
       "Bash(ls:*)",
       "mcp__ide__getDiagnostics",
       "Bash(timeout:*)",
-      "Bash(ping:*)"
+      "Bash(ping:*)",
+      "Bash(node test-presence.js:*)",
+      "Bash(node test-two-users.js:*)"
     ]
   }
 }

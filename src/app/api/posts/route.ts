@@ -172,13 +172,33 @@ export async function GET(request: NextRequest) {
       query.eq('school_id', schoolId)
     }
 
-    const { data: posts, error } = await query
+    const { data: postsData, error } = await query
 
     if (error) {
       return NextResponse.json({ error: 'Failed to fetch posts' }, { status: 500 })
     }
 
-    return NextResponse.json(posts)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const posts = postsData as any[] | null
+
+    // Get user's likes to mark which posts they've liked
+    const postIds = posts?.map(p => p.id) || []
+    const { data: userLikesData } = await supabase
+      .from('likes')
+      .select('post_id')
+      .eq('profile_id', user.id)
+      .in('post_id', postIds)
+
+    const userLikes = userLikesData as { post_id: string }[] | null
+    const likedPostIds = new Set(userLikes?.map(l => l.post_id) || [])
+
+    // Add isLiked flag to each post
+    const postsWithLikeStatus = posts?.map(post => ({
+      ...post,
+      isLiked: likedPostIds.has(post.id),
+    })) || []
+
+    return NextResponse.json(postsWithLikeStatus)
   } catch (error) {
     console.error('Get posts error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
