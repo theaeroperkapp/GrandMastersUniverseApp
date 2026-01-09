@@ -61,7 +61,7 @@ export function FeedClient({
   return (
     <div className="space-y-6">
       {/* Post Form */}
-      <div className="bg-white rounded-lg border shadow-sm p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm p-4">
         <PostForm
           currentUser={currentUser}
           onPostCreated={handlePostCreated}
@@ -72,9 +72,9 @@ export function FeedClient({
 
       {/* Posts */}
       {posts.length === 0 ? (
-        <div className="bg-white rounded-lg border shadow-sm p-8 text-center">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No posts yet</h3>
-          <p className="text-gray-500">Be the first to share something with your school!</p>
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm p-8 text-center">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No posts yet</h3>
+          <p className="text-gray-500 dark:text-gray-400">Be the first to share something with your school!</p>
         </div>
       ) : (
         <div className="space-y-4">

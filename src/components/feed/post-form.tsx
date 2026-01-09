@@ -138,7 +138,7 @@ export function PostForm({ currentUser, onPostCreated, canPost, postsRemaining }
         </div>
       </div>
 
-      <div className="flex items-center justify-between mt-4 pt-4 border-t">
+      <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-2">
           <input
             ref={fileInputRef}
@@ -150,7 +150,7 @@ export function PostForm({ currentUser, onPostCreated, canPost, postsRemaining }
           />
           <label
             htmlFor="image-upload"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 cursor-pointer text-gray-600"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-gray-600 dark:text-gray-400"
           >
             <Image className="h-5 w-5" />
             <span className="text-sm">Photo</span>
@@ -161,7 +161,7 @@ export function PostForm({ currentUser, onPostCreated, canPost, postsRemaining }
             type="button"
             onClick={() => setShareToFacebook(!shareToFacebook)}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${
-              shareToFacebook ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100 text-gray-600'
+              shareToFacebook ? 'bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
             }`}
           >
             {shareToFacebook ? (
@@ -175,7 +175,7 @@ export function PostForm({ currentUser, onPostCreated, canPost, postsRemaining }
 
         <div className="flex items-center gap-3">
           {currentUser.role !== 'owner' && currentUser.role !== 'admin' && (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
               {postsRemaining} posts remaining this month
             </span>
           )}

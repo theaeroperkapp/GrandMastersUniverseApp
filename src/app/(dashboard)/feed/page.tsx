@@ -35,8 +35,8 @@ export default async function FeedPage() {
     console.log('Feed page - No school_id found, showing no school message')
     return (
       <div className="text-center py-12">
-        <h1 className="text-2xl font-bold mb-2">No School Assigned</h1>
-        <p className="text-gray-600">Please contact support to get assigned to a school.</p>
+        <h1 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">No School Assigned</h1>
+        <p className="text-gray-600 dark:text-gray-400">Please contact support to get assigned to a school.</p>
       </div>
     )
   }

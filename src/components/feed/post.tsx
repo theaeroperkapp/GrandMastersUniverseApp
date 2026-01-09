@@ -104,7 +104,7 @@ export function Post({ post, currentUser, onDelete }: PostProps) {
   }
 
   return (
-    <div className={`bg-white rounded-lg border shadow-sm ${post.is_announcement ? 'border-red-200 bg-red-50/50' : ''}`}>
+    <div className={`bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm ${post.is_announcement ? 'border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/50' : ''}`}>
       {/* Header */}
       <div className="p-4 flex items-start justify-between">
         <div className="flex gap-3">
@@ -119,7 +119,7 @@ export function Post({ post, currentUser, onDelete }: PostProps) {
             <div className="flex items-center gap-2">
               <Link
                 href={`/profile/${post.author.id}`}
-                className="font-medium hover:underline"
+                className="font-medium hover:underline text-gray-900 dark:text-white"
               >
                 {post.author.full_name}
               </Link>
@@ -130,7 +130,7 @@ export function Post({ post, currentUser, onDelete }: PostProps) {
                 </Badge>
               )}
             </div>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               {formatRelativeTime(post.created_at)}
             </p>
           </div>
@@ -140,9 +140,9 @@ export function Post({ post, currentUser, onDelete }: PostProps) {
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="p-2 rounded-full hover:bg-gray-100"
+              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
             >
-              <MoreHorizontal className="h-5 w-5 text-gray-500" />
+              <MoreHorizontal className="h-5 w-5 text-gray-500 dark:text-gray-400" />
             </button>
             {showMenu && (
               <>
@@ -150,11 +150,11 @@ export function Post({ post, currentUser, onDelete }: PostProps) {
                   className="fixed inset-0 z-40"
                   onClick={() => setShowMenu(false)}
                 />
-                <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border z-50 py-1">
+                <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 py-1">
                   <button
                     onClick={handleDelete}
                     disabled={isDeleting}
-                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-800"
                   >
                     <Trash2 className="h-4 w-4" />
                     {isDeleting ? 'Deleting...' : 'Delete'}
@@ -168,7 +168,7 @@ export function Post({ post, currentUser, onDelete }: PostProps) {
 
       {/* Content */}
       <div className="px-4 pb-3">
-        <p className="whitespace-pre-wrap">{post.content}</p>
+        <p className="whitespace-pre-wrap text-gray-900 dark:text-gray-100">{post.content}</p>
       </div>
 
       {/* Image */}
@@ -184,11 +184,11 @@ export function Post({ post, currentUser, onDelete }: PostProps) {
       )}
 
       {/* Actions */}
-      <div className="p-4 border-t flex items-center justify-between">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
             onClick={handleLike}
-            className={`flex items-center gap-1.5 text-sm ${isLiked ? 'text-red-600' : 'text-gray-600 hover:text-red-600'}`}
+            className={`flex items-center gap-1.5 text-sm ${isLiked ? 'text-red-600' : 'text-gray-600 dark:text-gray-400 hover:text-red-600'}`}
           >
             <Heart className={`h-5 w-5 ${isLiked ? 'fill-current' : ''}`} />
             {likeCount > 0 && <span>{likeCount}</span>}
@@ -196,7 +196,7 @@ export function Post({ post, currentUser, onDelete }: PostProps) {
 
           <Link
             href={`/post/${post.id}`}
-            className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900"
+            className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
           >
             <MessageCircle className="h-5 w-5" />
             {post.comments[0]?.count > 0 && <span>{post.comments[0].count}</span>}
@@ -205,7 +205,7 @@ export function Post({ post, currentUser, onDelete }: PostProps) {
 
         <button
           onClick={handleShare}
-          className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900"
+          className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
         >
           <Share2 className="h-5 w-5" />
         </button>
