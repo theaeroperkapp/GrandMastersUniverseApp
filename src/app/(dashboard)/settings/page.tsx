@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -34,6 +34,10 @@ export default function SettingsPage() {
   // Profile form state
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
+
+  // Store profile ID separately to avoid state loss issues
+  const profileIdRef = useRef<string | null>(null)
 
   // Notification settings
   const [notifications, setNotifications] = useState<NotificationSettings>({
@@ -53,51 +57,42 @@ export default function SettingsPage() {
   }, [])
 
   const fetchUserData = async () => {
-    const supabase = createClient()
+    try {
+      // Use API route to fetch settings data
+      const response = await fetch('/api/settings')
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+      if (!response.ok) {
+        throw new Error('Failed to fetch settings')
+      }
 
-    // Get user profile
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('id, full_name, email, phone, avatar_url')
-      .eq('id', user.id)
-      .single()
+      const data = await response.json()
 
-    const userProfile = profileData as UserProfile | null
+      if (data.profile) {
+        setProfile(data.profile)
+        profileIdRef.current = data.profile.id
+        setFullName(data.profile.full_name || '')
+        setPhone(data.profile.phone || '')
+        setEmail(data.profile.email || '')
+      }
 
-    if (userProfile) {
-      setProfile(userProfile)
-      setFullName(userProfile.full_name || '')
-      setPhone(userProfile.phone || '')
+      if (data.notifications) {
+        setNotifications(data.notifications)
+      }
+    } catch (error) {
+      console.error('Error fetching settings:', error)
+      toast.error('Failed to load settings')
+    } finally {
+      setLoading(false)
     }
-
-    // Get notification settings (if they exist)
-    const { data: settingsData } = await supabase
-      .from('user_settings')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-
-    if (settingsData) {
-      const settings = settingsData as NotificationSettings & { user_id: string }
-      setNotifications({
-        email_announcements: settings.email_announcements ?? true,
-        email_events: settings.email_events ?? true,
-        email_messages: settings.email_messages ?? true,
-        email_class_reminders: settings.email_class_reminders ?? true,
-      })
-    }
-
-    setLoading(false)
   }
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!profile) {
-      toast.error('Profile not loaded')
+    // Use ref as fallback if profile state is lost
+    const profileId = profile?.id || profileIdRef.current
+    if (!profileId) {
+      toast.error('Profile not loaded. Please refresh the page.')
       return
     }
 
@@ -121,7 +116,9 @@ export default function SettingsPage() {
       }
 
       toast.success('Profile updated successfully')
-      setProfile({ ...profile, full_name: fullName, phone: phone || null })
+      if (profile) {
+        setProfile({ ...profile, full_name: fullName, phone: phone || null })
+      }
     } catch (error) {
       console.error('Error updating profile:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to update profile')
@@ -131,7 +128,12 @@ export default function SettingsPage() {
   }
 
   const handleSaveNotifications = async () => {
-    if (!profile) return
+    // Use ref as fallback if profile state is lost
+    const profileId = profile?.id || profileIdRef.current
+    if (!profileId) {
+      toast.error('Profile not loaded. Please refresh the page.')
+      return
+    }
 
     setSavingNotifications(true)
 
@@ -233,7 +235,7 @@ export default function SettingsPage() {
                 <Input
                   id="email"
                   type="email"
-                  value={profile?.email || ''}
+                  value={email}
                   disabled
                   className="bg-gray-50"
                 />
