@@ -303,17 +303,17 @@ export default function FamiliesPage() {
   )
 
   if (loading) {
-    return <div className="p-8">Loading families...</div>
+    return <div className="p-4 md:p-8">Loading families...</div>
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
+    <div className="p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Families</h1>
+          <h1 className="text-xl md:text-2xl font-bold">Families</h1>
           <p className="text-gray-500 text-sm">Manage family groups at your school</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
+        <Button onClick={() => setShowCreateModal(true)} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Create Family
         </Button>
@@ -324,17 +324,17 @@ export default function FamiliesPage() {
           placeholder="Search families..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
+          className="w-full sm:max-w-sm"
         />
       </div>
 
       {filteredFamilies.length === 0 ? (
         <Card>
-          <CardContent className="p-8 text-center text-gray-500">
+          <CardContent className="p-6 md:p-8 text-center text-gray-500">
             <Users className="h-12 w-12 mx-auto text-gray-300 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No Families Yet</h3>
-            <p>Create a family to group parents and their children together.</p>
-            <Button className="mt-4" onClick={() => setShowCreateModal(true)}>
+            <p className="text-sm md:text-base">Create a family to group parents and their children together.</p>
+            <Button className="mt-4 w-full sm:w-auto" onClick={() => setShowCreateModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Create Family
             </Button>
@@ -349,10 +349,51 @@ export default function FamiliesPage() {
             return (
               <Card key={family.id} className="overflow-hidden">
                 <div
-                  className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="p-4 cursor-pointer hover:bg-gray-50 transition-colors touch-manipulation"
                   onClick={() => toggleExpanded(family.id)}
                 >
-                  <div className="flex items-center justify-between">
+                  {/* Mobile Layout */}
+                  <div className="md:hidden">
+                    <div className="flex items-start gap-3">
+                      <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                        <Users className="h-5 w-5 text-red-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-semibold truncate">{family.name}</h3>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <Badge variant="secondary" className="text-xs">
+                              {memberCount}
+                            </Badge>
+                            {isExpanded ? (
+                              <ChevronUp className="h-5 w-5 text-gray-400" />
+                            ) : (
+                              <ChevronDown className="h-5 w-5 text-gray-400" />
+                            )}
+                          </div>
+                        </div>
+                        {family.primary_holder && (
+                          <p className="text-sm text-gray-500 truncate">
+                            {family.primary_holder.full_name}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => openAddMembersModal(family, e)}
+                        className="flex-1"
+                      >
+                        <UserPlus className="h-4 w-4 mr-1" />
+                        Add Members
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Desktop Layout */}
+                  <div className="hidden md:flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
                         <Users className="h-6 w-6 text-red-600" />
@@ -395,14 +436,14 @@ export default function FamiliesPage() {
                 </div>
 
                 {isExpanded && (
-                  <div className="border-t bg-gray-50 p-4">
+                  <div className="border-t bg-gray-50 p-3 md:p-4">
                     <h4 className="text-sm font-medium text-gray-700 mb-3">Family Members</h4>
                     {family.members.length === 0 ? (
                       <p className="text-sm text-gray-500 italic">
-                        No members assigned yet. Click "Add Members" to add students to this family.
+                        No members assigned yet. Tap "Add Members" to add students to this family.
                       </p>
                     ) : (
-                      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                      <div className="space-y-2 md:space-y-0 md:grid md:gap-3 md:grid-cols-2 lg:grid-cols-3">
                         {family.members.map((member) => (
                           <div
                             key={member.id}
@@ -415,9 +456,9 @@ export default function FamiliesPage() {
                             />
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-sm truncate">{member.full_name}</p>
-                              <p className="text-xs text-gray-500 truncate">{member.email}</p>
+                              <p className="text-xs text-gray-500 truncate md:block hidden">{member.email}</p>
                             </div>
-                            <Badge variant="outline" className="capitalize text-xs">
+                            <Badge variant="outline" className="capitalize text-xs flex-shrink-0">
                               {member.role}
                             </Badge>
                           </div>
