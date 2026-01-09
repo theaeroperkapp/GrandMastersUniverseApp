@@ -43,6 +43,32 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Failed to like comment' }, { status: 500 })
     }
 
+    // Create notification for comment author (if not liking own comment)
+    const { data: comment } = await supabase
+      .from('comments')
+      .select('author_id')
+      .eq('id', commentId)
+      .single()
+
+    if (comment && comment.author_id !== user.id) {
+      const { data: likerProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single()
+
+      const likerName = (likerProfile as { full_name: string } | null)?.full_name || 'Someone'
+
+      await (adminClient as any)
+        .from('notifications')
+        .insert({
+          user_id: comment.author_id,
+          type: 'like',
+          title: 'Comment Liked',
+          message: `${likerName} liked your comment`,
+        })
+    }
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Comment like API error:', error)
