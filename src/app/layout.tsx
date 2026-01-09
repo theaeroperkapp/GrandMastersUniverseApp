@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { Toaster } from 'react-hot-toast'
+import { AuthHandler } from '@/components/auth-handler'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -40,6 +41,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} antialiased`}>
+        <AuthHandler />
         {children}
         <Toaster
           position="top-right"
