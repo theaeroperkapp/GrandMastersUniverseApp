@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET() {
   try {
@@ -12,12 +11,9 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Use admin client to bypass RLS
-    const adminClient = createAdminClient()
-
-    // Get user profile
+    // Use authenticated client (not admin) - should work with proper RLS
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: profileData, error: profileError } = await (adminClient as any)
+    const { data: profileData, error: profileError } = await (supabase as any)
       .from('profiles')
       .select('id, full_name, email, phone, avatar_url')
       .eq('id', user.id)
@@ -25,14 +21,29 @@ export async function GET() {
 
     if (profileError) {
       console.error('Error fetching profile:', profileError)
-      return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 })
+      // Return user info from auth as fallback
+      return NextResponse.json({
+        profile: {
+          id: user.id,
+          email: user.email || '',
+          full_name: user.user_metadata?.full_name || '',
+          phone: user.user_metadata?.phone || null,
+          avatar_url: null,
+        },
+        notifications: {
+          email_announcements: true,
+          email_events: true,
+          email_messages: true,
+          email_class_reminders: true,
+        },
+      })
     }
 
     // Get notification settings (may not exist - table or record)
     let settingsData = null
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (adminClient as any)
+      const { data } = await (supabase as any)
         .from('user_settings')
         .select('*')
         .eq('user_id', user.id)
