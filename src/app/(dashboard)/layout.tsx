@@ -5,6 +5,7 @@ import { Sidebar } from '@/components/layout/sidebar'
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { OfflineIndicator } from '@/components/ui/offline-indicator'
 import { ScrollToTop } from '@/components/ui/scroll-to-top'
+import { DashboardClientWrapper } from '@/components/layout/dashboard-client-wrapper'
 import type { UserRole } from '@/types/database'
 
 // Disable caching - always fetch fresh user data
@@ -83,37 +84,43 @@ export default async function DashboardLayout({
     .or(`participant_one.eq.${user.id},participant_two.eq.${user.id}`, { foreignTable: 'conversations' })
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Offline indicator - shows at top when offline */}
-      <OfflineIndicator />
+    <DashboardClientWrapper
+      userId={profileData.id}
+      schoolId={profileData.school_id}
+      userName={profileData.full_name}
+    >
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        {/* Offline indicator - shows at top when offline */}
+        <OfflineIndicator />
 
-      <Navbar
-        user={{
-          id: profileData.id,
-          full_name: profileData.full_name,
-          avatar_url: profileData.avatar_url,
-          role: profileData.role,
-          school_id: profileData.school_id,
-        }}
-        unreadNotifications={unreadNotifications || 0}
-        unreadMessages={unreadMessages || 0}
-      />
+        <Navbar
+          user={{
+            id: profileData.id,
+            full_name: profileData.full_name,
+            avatar_url: profileData.avatar_url,
+            role: profileData.role,
+            school_id: profileData.school_id,
+          }}
+          unreadNotifications={unreadNotifications || 0}
+          unreadMessages={unreadMessages || 0}
+        />
 
-      <div className="flex">
-        <Sidebar role={profileData.role} />
-        <main className="flex-1 p-4 md:p-6 pb-20 md:pb-6">
-          {children}
-        </main>
+        <div className="flex">
+          <Sidebar role={profileData.role} />
+          <main className="flex-1 p-4 md:p-6 pb-20 md:pb-6">
+            {children}
+          </main>
+        </div>
+
+        {/* Mobile bottom navigation */}
+        <BottomNav
+          unreadMessages={unreadMessages || 0}
+          unreadNotifications={unreadNotifications || 0}
+        />
+
+        {/* Scroll to top button */}
+        <ScrollToTop bottomOffset={80} />
       </div>
-
-      {/* Mobile bottom navigation */}
-      <BottomNav
-        unreadMessages={unreadMessages || 0}
-        unreadNotifications={unreadNotifications || 0}
-      />
-
-      {/* Scroll to top button */}
-      <ScrollToTop bottomOffset={80} />
-    </div>
+    </DashboardClientWrapper>
   )
 }

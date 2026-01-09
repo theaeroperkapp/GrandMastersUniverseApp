@@ -19,6 +19,7 @@ import {
 import { Modal } from '@/components/ui/modal'
 import { OnlineIndicator } from '@/components/ui/online-indicator'
 import { TypingIndicator } from '@/components/ui/typing-indicator'
+import { usePresenceContext } from '@/contexts/presence-context'
 import toast from 'react-hot-toast'
 
 interface Profile {
@@ -58,6 +59,9 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true)
   const [sendingMessage, setSendingMessage] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+
+  // Real-time presence tracking
+  const { getUserStatus } = usePresenceContext()
   const [schoolId, setSchoolId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -572,7 +576,7 @@ export default function MessagesPage() {
                         <User className="h-6 w-6 text-gray-500 dark:text-gray-400" />
                       )}
                     </div>
-                    <OnlineIndicator status="online" className="absolute -bottom-0.5 -right-0.5" />
+                    <OnlineIndicator status={getUserStatus(convo.other_participant?.id || '')} className="absolute -bottom-0.5 -right-0.5" />
                   </div>
 
                   {/* Content */}
@@ -625,7 +629,7 @@ export default function MessagesPage() {
                       <User className="h-5 w-5 text-gray-500 dark:text-gray-400" />
                     )}
                   </div>
-                  <OnlineIndicator status="online" size="sm" className="absolute -bottom-0.5 -right-0.5" />
+                  <OnlineIndicator status={getUserStatus(selectedConversation.other_participant?.id || '')} size="sm" className="absolute -bottom-0.5 -right-0.5" />
                 </div>
                 <div>
                   <p className="font-medium text-gray-900 dark:text-white">
@@ -635,7 +639,15 @@ export default function MessagesPage() {
                     <Badge className={getRoleBadgeColor(selectedConversation.other_participant?.role || '')}>
                       {selectedConversation.other_participant?.role}
                     </Badge>
-                    <span className="text-xs text-green-600 dark:text-green-400 font-medium">Online</span>
+                    {(() => {
+                      const status = getUserStatus(selectedConversation.other_participant?.id || '')
+                      if (status === 'online') {
+                        return <span className="text-xs text-green-600 dark:text-green-400 font-medium">Online</span>
+                      } else if (status === 'away') {
+                        return <span className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">Away</span>
+                      }
+                      return <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">Offline</span>
+                    })()}
                   </div>
                 </div>
               </div>

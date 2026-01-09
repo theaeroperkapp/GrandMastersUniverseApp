@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Modal } from '@/components/ui/modal'
 import { Plus, Edit, Trash2, UserPlus, Mail, Shield, Users } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { cn } from '@/lib/utils'
 
 interface StaffMember {
   id: string
@@ -327,24 +328,24 @@ export default function StaffPage() {
   )
 
   if (loading) {
-    return <div className="p-8">Loading staff...</div>
+    return <div className="p-4 md:p-8">Loading staff...</div>
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
+    <div className="p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Staff</h1>
-          <p className="text-gray-600">Manage your school's staff members</p>
+          <h1 className="text-xl md:text-2xl font-bold">Staff</h1>
+          <p className="text-gray-600 text-sm">Manage your school's staff members</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={openPromoteModal}>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={openPromoteModal} className="w-full sm:w-auto">
             <Users className="h-4 w-4 mr-2" />
             Promote Member
           </Button>
-          <Button onClick={openInviteModal}>
+          <Button onClick={openInviteModal} className="w-full sm:w-auto">
             <UserPlus className="h-4 w-4 mr-2" />
-            Invite New Staff
+            Invite Staff
           </Button>
         </div>
       </div>
@@ -354,34 +355,34 @@ export default function StaffPage() {
           placeholder="Search staff..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
+          className="w-full sm:max-w-sm"
         />
       </div>
 
       {filteredStaff.length === 0 ? (
         <Card>
-          <CardContent className="p-8 text-center">
+          <CardContent className="p-6 md:p-8 text-center">
             <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-500 mb-4">No staff members found. Invite staff members to help manage your school.</p>
-            <Button onClick={openInviteModal}>
+            <p className="text-gray-500 mb-4 text-sm md:text-base">No staff members found. Invite staff members to help manage your school.</p>
+            <Button onClick={openInviteModal} className="w-full sm:w-auto">
               <UserPlus className="h-4 w-4 mr-2" />
               Invite First Staff Member
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-3 md:space-y-0 md:grid md:gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredStaff.map((member) => (
             <Card key={member.id}>
               <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">{member.full_name || 'No Name'}</CardTitle>
+                <div className="flex justify-between items-start gap-2">
+                  <CardTitle className="text-base md:text-lg truncate">{member.full_name || 'No Name'}</CardTitle>
                   {member.id !== currentUserId && member.role !== 'owner' && (
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => openEditModal(member)}>
+                    <div className="flex gap-1 flex-shrink-0">
+                      <Button variant="ghost" size="sm" onClick={() => openEditModal(member)} className="h-9 w-9 p-0 touch-manipulation">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => removeStaff(member.id)}>
+                      <Button variant="ghost" size="sm" onClick={() => removeStaff(member.id)} className="h-9 w-9 p-0 touch-manipulation">
                         <Trash2 className="h-4 w-4 text-red-500" />
                       </Button>
                     </div>
@@ -389,13 +390,13 @@ export default function StaffPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-500 mb-3">{member.email}</p>
-                <div className="flex flex-wrap gap-2">
-                  <Badge className={getRoleBadgeColor(member.role)}>
+                <p className="text-sm text-gray-500 mb-3 truncate">{member.email}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  <Badge className={cn(getRoleBadgeColor(member.role), 'text-xs')}>
                     {member.role}
                   </Badge>
                   {member.sub_roles?.map((subRole) => (
-                    <Badge key={subRole} variant="outline">
+                    <Badge key={subRole} variant="outline" className="text-xs">
                       {subRole.replace(/_/g, ' ')}
                     </Badge>
                   ))}
@@ -409,33 +410,33 @@ export default function StaffPage() {
         </div>
       )}
 
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className="mt-6 md:mt-8">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base md:text-lg">
             <Shield className="h-5 w-5" />
             Staff Roles & Permissions
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="p-3 bg-purple-50 rounded-lg">
-              <h3 className="font-medium text-purple-800">Owner</h3>
-              <p className="text-sm text-purple-600">Full access to all school features including subscription management</p>
+              <h3 className="font-medium text-purple-800 text-sm">Owner</h3>
+              <p className="text-xs text-purple-600">Full access including subscription management</p>
             </div>
             <div className="p-3 bg-blue-50 rounded-lg">
-              <h3 className="font-medium text-blue-800">Admin</h3>
-              <p className="text-sm text-blue-600">Full access to school management except subscription settings</p>
+              <h3 className="font-medium text-blue-800 text-sm">Admin</h3>
+              <p className="text-xs text-blue-600">Full access except subscription settings</p>
             </div>
             <div className="p-3 bg-green-50 rounded-lg">
-              <h3 className="font-medium text-green-800">Instructor</h3>
-              <p className="text-sm text-green-600">Can manage classes, students, and belt progressions</p>
+              <h3 className="font-medium text-green-800 text-sm">Instructor</h3>
+              <p className="text-xs text-green-600">Manage classes, students, and belts</p>
             </div>
-            <div className="pt-4 border-t">
-              <h4 className="font-medium mb-2">Additional Permissions (Sub-roles)</h4>
-              <div className="grid gap-2 sm:grid-cols-3">
+            <div className="pt-3 border-t">
+              <h4 className="font-medium mb-2 text-sm">Additional Permissions</h4>
+              <div className="space-y-2 sm:space-y-0 sm:grid sm:gap-2 sm:grid-cols-3">
                 {SUB_ROLES.map((role) => (
                   <div key={role.value} className="p-2 bg-gray-50 rounded">
-                    <p className="font-medium text-sm">{role.label}</p>
+                    <p className="font-medium text-xs">{role.label}</p>
                     <p className="text-xs text-gray-500">{role.description}</p>
                   </div>
                 ))}
@@ -481,7 +482,7 @@ export default function StaffPage() {
               id="invite_role"
               value={inviteForm.role}
               onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full h-11 min-h-[44px] px-3 py-2 border rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500"
             >
               {STAFF_ROLES.map((role) => (
                 <option key={role.value} value={role.value}>{role.label}</option>
@@ -493,12 +494,12 @@ export default function StaffPage() {
             <Label>Additional Permissions</Label>
             <div className="space-y-2">
               {SUB_ROLES.map((role) => (
-                <label key={role.value} className="flex items-center gap-2 p-2 border rounded hover:bg-gray-50 cursor-pointer">
+                <label key={role.value} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer touch-manipulation min-h-[44px]">
                   <input
                     type="checkbox"
                     checked={inviteForm.sub_roles.includes(role.value)}
                     onChange={() => toggleSubRole(role.value)}
-                    className="rounded"
+                    className="rounded h-5 w-5"
                   />
                   <div>
                     <span className="font-medium text-sm">{role.label}</span>
@@ -534,7 +535,7 @@ export default function StaffPage() {
               id="edit_role"
               value={editForm.role}
               onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full h-11 min-h-[44px] px-3 py-2 border rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500"
             >
               {ALL_ROLES.map((role) => (
                 <option key={role.value} value={role.value}>{role.label}</option>
@@ -551,12 +552,12 @@ export default function StaffPage() {
             <Label>Additional Permissions</Label>
             <div className="space-y-2">
               {SUB_ROLES.map((role) => (
-                <label key={role.value} className="flex items-center gap-2 p-2 border rounded hover:bg-gray-50 cursor-pointer">
+                <label key={role.value} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer touch-manipulation min-h-[44px]">
                   <input
                     type="checkbox"
                     checked={editForm.sub_roles.includes(role.value)}
                     onChange={() => toggleSubRole(role.value, true)}
-                    className="rounded"
+                    className="rounded h-5 w-5"
                   />
                   <div>
                     <span className="font-medium text-sm">{role.label}</span>
@@ -596,13 +597,13 @@ export default function StaffPage() {
                 id="select_member"
                 value={selectedMember}
                 onChange={(e) => setSelectedMember(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full h-11 min-h-[44px] px-3 py-2 border rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500"
                 required
               >
                 <option value="">Choose a member...</option>
                 {members.map((member) => (
                   <option key={member.id} value={member.id}>
-                    {member.full_name} ({member.email}) - {member.role}
+                    {member.full_name} - {member.role}
                   </option>
                 ))}
               </select>
@@ -615,7 +616,7 @@ export default function StaffPage() {
               id="promote_role"
               value={promoteForm.role}
               onChange={(e) => setPromoteForm({ ...promoteForm, role: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full h-11 min-h-[44px] px-3 py-2 border rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500"
             >
               {STAFF_ROLES.map((role) => (
                 <option key={role.value} value={role.value}>{role.label}</option>
@@ -627,7 +628,7 @@ export default function StaffPage() {
             <Label>Additional Permissions</Label>
             <div className="space-y-2">
               {SUB_ROLES.map((role) => (
-                <label key={role.value} className="flex items-center gap-2 p-2 border rounded hover:bg-gray-50 cursor-pointer">
+                <label key={role.value} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer touch-manipulation min-h-[44px]">
                   <input
                     type="checkbox"
                     checked={promoteForm.sub_roles.includes(role.value)}
@@ -639,7 +640,7 @@ export default function StaffPage() {
                         setPromoteForm({ ...promoteForm, sub_roles: [...current, role.value] })
                       }
                     }}
-                    className="rounded"
+                    className="rounded h-5 w-5"
                   />
                   <div>
                     <span className="font-medium text-sm">{role.label}</span>
