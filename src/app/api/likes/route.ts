@@ -64,11 +64,10 @@ export async function POST(request: NextRequest) {
       await (adminClient as any)
         .from('notifications')
         .insert({
-          profile_id: post.author_id,
+          user_id: post.author_id,
           type: 'like',
           title: 'New Like',
-          content: `${likerName} liked your post`,
-          related_id: post_id,
+          message: `${likerName} liked your post`,
         })
     }
 

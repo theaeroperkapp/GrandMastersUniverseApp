@@ -25,11 +25,10 @@ export async function createPaymentNotification({
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (adminClient as any).from('notifications').insert({
-    profile_id: userId,
+    user_id: userId,
     type: success ? 'payment_success' : 'payment_failed',
     title,
-    content,
-    related_id: relatedId,
+    message: content,
     is_read: false,
   })
 
@@ -55,11 +54,10 @@ export async function createGenericNotification({
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (adminClient as any).from('notifications').insert({
-    profile_id: userId,
+    user_id: userId,
     type,
     title,
-    content,
-    related_id: relatedId,
+    message: content,
     is_read: false,
   })
 

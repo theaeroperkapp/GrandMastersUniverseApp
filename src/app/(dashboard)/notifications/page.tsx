@@ -22,6 +22,12 @@ import {
   AlertCircle,
   Settings,
   Sparkles,
+  Heart,
+  MessageCircle,
+  FileText,
+  Info,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -43,10 +49,16 @@ const typeIcons: Record<string, { icon: React.ElementType; color: string; bg: st
   promotion: { icon: Award, color: 'text-amber-600', bg: 'bg-amber-100', gradient: 'from-amber-400 to-orange-500' },
   event: { icon: Calendar, color: 'text-purple-600', bg: 'bg-purple-100', gradient: 'from-purple-400 to-purple-600' },
   payment: { icon: CreditCard, color: 'text-green-600', bg: 'bg-green-100', gradient: 'from-green-400 to-emerald-500' },
+  payment_success: { icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-100', gradient: 'from-green-400 to-emerald-500' },
+  payment_failed: { icon: XCircle, color: 'text-red-600', bg: 'bg-red-100', gradient: 'from-red-400 to-red-600' },
   message: { icon: MessageSquare, color: 'text-indigo-600', bg: 'bg-indigo-100', gradient: 'from-indigo-400 to-indigo-600' },
   announcement: { icon: Bell, color: 'text-red-600', bg: 'bg-red-100', gradient: 'from-red-400 to-red-600' },
   alert: { icon: AlertCircle, color: 'text-orange-600', bg: 'bg-orange-100', gradient: 'from-orange-400 to-orange-600' },
   system: { icon: Settings, color: 'text-gray-600', bg: 'bg-gray-100', gradient: 'from-gray-400 to-gray-600' },
+  like: { icon: Heart, color: 'text-pink-600', bg: 'bg-pink-100', gradient: 'from-pink-400 to-pink-600' },
+  comment: { icon: MessageCircle, color: 'text-teal-600', bg: 'bg-teal-100', gradient: 'from-teal-400 to-teal-600' },
+  contract: { icon: FileText, color: 'text-cyan-600', bg: 'bg-cyan-100', gradient: 'from-cyan-400 to-cyan-600' },
+  info: { icon: Info, color: 'text-sky-600', bg: 'bg-sky-100', gradient: 'from-sky-400 to-sky-600' },
 }
 
 function getRelativeTime(dateString: string): string {

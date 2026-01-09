@@ -115,11 +115,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       await (adminClient as any)
         .from('notifications')
         .insert({
-          profile_id: post.author_id,
+          user_id: post.author_id,
           type: 'comment',
           title: 'New Comment',
-          content: `${commenterName} commented on your post`,
-          related_id: postId,
+          message: `${commenterName} commented on your post`,
         })
     }
 

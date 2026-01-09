@@ -15,6 +15,12 @@ import {
   AlertCircle,
   Settings,
   X,
+  Heart,
+  MessageCircle,
+  FileText,
+  Info,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -22,7 +28,7 @@ interface Notification {
   id: string
   type: string
   title: string
-  content: string
+  message: string
   is_read: boolean
   created_at: string
   related_id: string | null
@@ -38,10 +44,16 @@ const typeIcons: Record<string, { icon: React.ElementType; color: string; bg: st
   promotion: { icon: Award, color: 'text-amber-600', bg: 'bg-amber-100' },
   event: { icon: Calendar, color: 'text-purple-600', bg: 'bg-purple-100' },
   payment: { icon: CreditCard, color: 'text-green-600', bg: 'bg-green-100' },
+  payment_success: { icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-100' },
+  payment_failed: { icon: XCircle, color: 'text-red-600', bg: 'bg-red-100' },
   message: { icon: MessageSquare, color: 'text-indigo-600', bg: 'bg-indigo-100' },
   announcement: { icon: Bell, color: 'text-red-600', bg: 'bg-red-100' },
   alert: { icon: AlertCircle, color: 'text-orange-600', bg: 'bg-orange-100' },
   system: { icon: Settings, color: 'text-gray-600', bg: 'bg-gray-100' },
+  like: { icon: Heart, color: 'text-pink-600', bg: 'bg-pink-100' },
+  comment: { icon: MessageCircle, color: 'text-teal-600', bg: 'bg-teal-100' },
+  contract: { icon: FileText, color: 'text-cyan-600', bg: 'bg-cyan-100' },
+  info: { icon: Info, color: 'text-sky-600', bg: 'bg-sky-100' },
 }
 
 function getRelativeTime(dateString: string): string {
@@ -301,7 +313,7 @@ export function NotificationDropdown({ userId, initialCount }: NotificationDropd
                           )}
                         </div>
                         <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
-                          {notification.content}
+                          {notification.message}
                         </p>
                         <p className="text-xs text-gray-400 mt-1">
                           {getRelativeTime(notification.created_at)}
