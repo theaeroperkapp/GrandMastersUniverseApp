@@ -228,7 +228,7 @@ export default function SettingsPage() {
   }
 
   if (loading) {
-    return <div className="p-8">Loading settings...</div>
+    return <div className="p-8 text-gray-900 dark:text-white">Loading settings...</div>
   }
 
   return (
@@ -236,8 +236,8 @@ export default function SettingsPage() {
       <div className="flex items-center gap-3 mb-6">
         <Settings className="h-8 w-8 text-red-500" />
         <div>
-          <h1 className="text-2xl font-bold">Settings</h1>
-          <p className="text-gray-600">Manage your account preferences</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+          <p className="text-gray-600 dark:text-gray-400">Manage your account preferences</p>
         </div>
       </div>
 
@@ -261,10 +261,10 @@ export default function SettingsPage() {
                   type="email"
                   value={email}
                   disabled
-                  className="bg-gray-50"
+                  className="bg-gray-50 dark:bg-gray-800"
                 />
               </div>
-              <p className="text-xs text-gray-500">Email cannot be changed</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Email cannot be changed</p>
             </div>
 
             <div className="space-y-2">
@@ -322,14 +322,14 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Announcements</p>
-                <p className="text-sm text-gray-500">Receive emails about school announcements</p>
+                <p className="font-medium text-gray-900 dark:text-white">Announcements</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Receive emails about school announcements</p>
               </div>
               <button
                 type="button"
                 onClick={() => toggleNotification('email_announcements')}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  notifications.email_announcements ? 'bg-red-600' : 'bg-gray-200'
+                  notifications.email_announcements ? 'bg-red-600' : 'bg-gray-200 dark:bg-gray-700'
                 }`}
               >
                 <span
@@ -342,14 +342,14 @@ export default function SettingsPage() {
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Events</p>
-                <p className="text-sm text-gray-500">Receive emails about upcoming events</p>
+                <p className="font-medium text-gray-900 dark:text-white">Events</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Receive emails about upcoming events</p>
               </div>
               <button
                 type="button"
                 onClick={() => toggleNotification('email_events')}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  notifications.email_events ? 'bg-red-600' : 'bg-gray-200'
+                  notifications.email_events ? 'bg-red-600' : 'bg-gray-200 dark:bg-gray-700'
                 }`}
               >
                 <span
@@ -362,14 +362,14 @@ export default function SettingsPage() {
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Messages</p>
-                <p className="text-sm text-gray-500">Receive emails when you get new messages</p>
+                <p className="font-medium text-gray-900 dark:text-white">Messages</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Receive emails when you get new messages</p>
               </div>
               <button
                 type="button"
                 onClick={() => toggleNotification('email_messages')}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  notifications.email_messages ? 'bg-red-600' : 'bg-gray-200'
+                  notifications.email_messages ? 'bg-red-600' : 'bg-gray-200 dark:bg-gray-700'
                 }`}
               >
                 <span
@@ -382,14 +382,14 @@ export default function SettingsPage() {
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Class Reminders</p>
-                <p className="text-sm text-gray-500">Receive reminder emails before classes</p>
+                <p className="font-medium text-gray-900 dark:text-white">Class Reminders</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Receive reminder emails before classes</p>
               </div>
               <button
                 type="button"
                 onClick={() => toggleNotification('email_class_reminders')}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  notifications.email_class_reminders ? 'bg-red-600' : 'bg-gray-200'
+                  notifications.email_class_reminders ? 'bg-red-600' : 'bg-gray-200 dark:bg-gray-700'
                 }`}
               >
                 <span

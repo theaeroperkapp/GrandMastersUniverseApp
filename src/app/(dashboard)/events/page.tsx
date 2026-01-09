@@ -50,12 +50,12 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
 }
 
 const EVENT_TYPE_COLORS: Record<string, string> = {
-  tournament: 'bg-red-100 text-red-800',
-  seminar: 'bg-blue-100 text-blue-800',
-  belt_test: 'bg-yellow-100 text-yellow-800',
-  workshop: 'bg-purple-100 text-purple-800',
-  social: 'bg-green-100 text-green-800',
-  other: 'bg-gray-100 text-gray-800',
+  tournament: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200',
+  seminar: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200',
+  belt_test: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200',
+  workshop: 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200',
+  social: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
+  other: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200',
 }
 
 export default function EventsPage() {
@@ -286,9 +286,9 @@ export default function EventsPage() {
   if (!userProfile?.school_id) {
     return (
       <div className="p-8">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h2 className="font-semibold text-yellow-800">No School Associated</h2>
-          <p className="text-yellow-700">Your account is not associated with a school. Please contact your school administrator.</p>
+        <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+          <h2 className="font-semibold text-yellow-800 dark:text-yellow-200">No School Associated</h2>
+          <p className="text-yellow-700 dark:text-yellow-300">Your account is not associated with a school. Please contact your school administrator.</p>
         </div>
       </div>
     )
@@ -297,8 +297,8 @@ export default function EventsPage() {
   return (
     <div className="p-4 md:p-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Events</h1>
-        <p className="text-gray-600">View upcoming events and register</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Events</h1>
+        <p className="text-gray-600 dark:text-gray-400">View upcoming events and register</p>
       </div>
 
       {/* Upcoming Events Summary */}
@@ -323,8 +323,8 @@ export default function EventsPage() {
                     </Badge>
                   )}
                 </div>
-                <h3 className="font-semibold mb-1">{event.title}</h3>
-                <p className="text-sm text-gray-500 flex items-center gap-1">
+                <h3 className="font-semibold mb-1 text-gray-900 dark:text-white">{event.title}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
                   <CalendarIcon className="h-3 w-3" />
                   {formatDate(event.start_date)}
                 </p>
@@ -381,16 +381,16 @@ export default function EventsPage() {
 
             {/* Description */}
             {selectedEvent.description && (
-              <p className="text-gray-700">{selectedEvent.description}</p>
+              <p className="text-gray-700 dark:text-gray-300">{selectedEvent.description}</p>
             )}
 
             {/* Event Details */}
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                 <CalendarIcon className="h-4 w-4 text-gray-400" />
                 <span>{formatDate(selectedEvent.start_date)}</span>
               </div>
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                 <Clock className="h-4 w-4 text-gray-400" />
                 <span>
                   {formatTime(selectedEvent.start_date)}
@@ -398,13 +398,13 @@ export default function EventsPage() {
                 </span>
               </div>
               {selectedEvent.location && (
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                   <MapPin className="h-4 w-4 text-gray-400" />
                   <span>{selectedEvent.location}</span>
                 </div>
               )}
               {selectedEvent.max_capacity && (
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                   <Users className="h-4 w-4 text-gray-400" />
                   <span>
                     {selectedEvent.registrations?.[0]?.count || 0} / {selectedEvent.max_capacity} spots filled
@@ -417,8 +417,8 @@ export default function EventsPage() {
             {selectedEvent.registration_deadline && (
               <div className={`text-sm p-3 rounded-lg ${
                 isDeadlinePassed(selectedEvent.registration_deadline)
-                  ? 'bg-red-50 text-red-700'
-                  : 'bg-yellow-50 text-yellow-700'
+                  ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                  : 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
               }`}>
                 Registration deadline: {formatDate(selectedEvent.registration_deadline)}
                 {isDeadlinePassed(selectedEvent.registration_deadline) && ' (Passed)'}
@@ -427,7 +427,7 @@ export default function EventsPage() {
 
             {/* Capacity Warning */}
             {isFull(selectedEvent) && (
-              <div className="text-sm p-3 rounded-lg bg-red-50 text-red-700">
+              <div className="text-sm p-3 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300">
                 This event is at full capacity.
               </div>
             )}
@@ -462,7 +462,7 @@ export default function EventsPage() {
             </div>
 
             {!studentProfileId && (
-              <p className="text-sm text-amber-600">
+              <p className="text-sm text-amber-600 dark:text-amber-400">
                 You need a student profile to register for events. Please contact your school administrator.
               </p>
             )}

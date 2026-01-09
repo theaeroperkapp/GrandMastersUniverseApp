@@ -175,11 +175,11 @@ export default function NotificationsPage() {
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="glass rounded-xl p-4 animate-pulse">
               <div className="flex gap-4">
-                <div className="h-12 w-12 rounded-xl bg-gray-200" />
+                <div className="h-12 w-12 rounded-xl bg-gray-200 dark:bg-gray-700" />
                 <div className="flex-1">
-                  <div className="h-5 w-48 bg-gray-200 rounded mb-2" />
-                  <div className="h-4 w-full bg-gray-200 rounded mb-2" />
-                  <div className="h-3 w-32 bg-gray-200 rounded" />
+                  <div className="h-5 w-48 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+                  <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+                  <div className="h-3 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
                 </div>
               </div>
             </div>
@@ -199,11 +199,11 @@ export default function NotificationsPage() {
               <Bell className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h1>
               {totalCount > 0 && (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   {unreadCount > 0 ? (
-                    <span className="text-red-600 font-medium">{unreadCount} unread</span>
+                    <span className="text-red-600 dark:text-red-400 font-medium">{unreadCount} unread</span>
                   ) : (
                     'All caught up!'
                   )}
@@ -228,13 +228,13 @@ export default function NotificationsPage() {
         <Card className="glass border-0 overflow-hidden">
           <CardContent className="p-12 text-center">
             <div className="relative">
-              <div className="h-20 w-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+              <div className="h-20 w-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center">
                 <Bell className="h-10 w-10 text-gray-400" />
               </div>
               <Sparkles className="absolute top-0 right-1/3 h-5 w-5 text-amber-400 animate-pulse" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">All caught up!</h3>
-            <p className="text-gray-500">No notifications to show right now</p>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">All caught up!</h3>
+            <p className="text-gray-500 dark:text-gray-400">No notifications to show right now</p>
           </CardContent>
         </Card>
       ) : (
@@ -251,7 +251,7 @@ export default function NotificationsPage() {
                   className={cn(
                     'glass rounded-xl overflow-hidden transition-all duration-300 animate-slide-up',
                     notification.link && 'cursor-pointer hover:shadow-lg hover:scale-[1.01]',
-                    !notification.is_read && 'ring-2 ring-red-100 bg-red-50/30'
+                    !notification.is_read && 'ring-2 ring-red-100 dark:ring-red-900 bg-red-50/30 dark:bg-red-900/20'
                   )}
                   onClick={() => {
                     if (notification.link) {
@@ -280,15 +280,15 @@ export default function NotificationsPage() {
                               )}
                               <h3 className={cn(
                                 'font-semibold truncate',
-                                !notification.is_read ? 'text-gray-900' : 'text-gray-700'
+                                !notification.is_read ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'
                               )}>
                                 {notification.title}
                               </h3>
                             </div>
-                            <p className="text-gray-600 mt-1 line-clamp-2 text-sm">
+                            <p className="text-gray-600 dark:text-gray-400 mt-1 line-clamp-2 text-sm">
                               {notification.message || notification.content}
                             </p>
-                            <p className="text-xs text-gray-400 mt-2 font-medium">
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 font-medium">
                               {getRelativeTime(notification.created_at)}
                             </p>
                           </div>

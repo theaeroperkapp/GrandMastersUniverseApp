@@ -122,16 +122,16 @@ export default function ProfilePage() {
   }
 
   if (loading) {
-    return <div className="p-8">Loading profile...</div>
+    return <div className="p-8 text-gray-900 dark:text-white">Loading profile...</div>
   }
 
   if (!profile) {
-    return <div className="p-8">Profile not found</div>
+    return <div className="p-8 text-gray-900 dark:text-white">Profile not found</div>
   }
 
   return (
     <div className="p-8 max-w-2xl">
-      <h1 className="text-2xl font-bold mb-6">My Profile</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">My Profile</h1>
 
       <Card>
         <CardHeader>
@@ -143,7 +143,7 @@ export default function ProfilePage() {
             <div className="relative">
               <div
                 onClick={handleAvatarClick}
-                className="w-32 h-32 rounded-full overflow-hidden bg-gray-200 cursor-pointer hover:opacity-80 transition-opacity flex items-center justify-center border-4 border-gray-100 shadow-lg"
+                className="w-32 h-32 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer hover:opacity-80 transition-opacity flex items-center justify-center border-4 border-gray-100 dark:border-gray-800 shadow-lg"
               >
                 {uploadingAvatar ? (
                   <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
@@ -174,7 +174,7 @@ export default function ProfilePage() {
               onChange={handleFileChange}
               className="hidden"
             />
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
               Click to upload a new photo
             </p>
           </div>
@@ -185,9 +185,9 @@ export default function ProfilePage() {
               id="email"
               value={profile.email}
               disabled
-              className="bg-gray-50"
+              className="bg-gray-50 dark:bg-gray-800"
             />
-            <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Email cannot be changed</p>
           </div>
 
           <div>
@@ -204,7 +204,7 @@ export default function ProfilePage() {
             <Input
               value={profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
               disabled
-              className="bg-gray-50"
+              className="bg-gray-50 dark:bg-gray-800"
             />
           </div>
 
@@ -219,7 +219,7 @@ export default function ProfilePage() {
           <CardTitle>Change Password</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             To change your password, use the password reset feature.
           </p>
           <a href="/reset-password">
