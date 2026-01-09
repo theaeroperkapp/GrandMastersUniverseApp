@@ -22,12 +22,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid post ID' }, { status: 400 })
     }
 
-    // Get comments with author info
+    // Get comments with author info and like counts
     const { data: comments, error } = await supabase
       .from('comments')
       .select(`
         *,
-        author:profiles!comments_author_id_fkey(id, full_name, avatar_url, role)
+        author:profiles!comments_author_id_fkey(id, full_name, avatar_url, role),
+        comment_likes(count)
       `)
       .eq('post_id', postId)
       .order('created_at', { ascending: true })
@@ -37,7 +38,29 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Failed to fetch comments' }, { status: 500 })
     }
 
-    return NextResponse.json(comments || [])
+    // Get user's likes for these comments
+    const commentIds = comments?.map((c: any) => c.id) || []
+    let userLikes: string[] = []
+
+    if (commentIds.length > 0) {
+      const { data: likes } = await supabase
+        .from('comment_likes')
+        .select('comment_id')
+        .eq('profile_id', user.id)
+        .in('comment_id', commentIds)
+
+      userLikes = (likes as { comment_id: string }[] | null)?.map(l => l.comment_id) || []
+    }
+
+    // Add isLiked and likes_count to each comment
+    const commentsWithLikes = comments?.map((comment: any) => ({
+      ...comment,
+      likes_count: comment.comment_likes?.[0]?.count || 0,
+      isLiked: userLikes.includes(comment.id),
+      comment_likes: undefined, // Remove the raw data
+    })) || []
+
+    return NextResponse.json(commentsWithLikes)
   } catch (error) {
     console.error('Comments GET error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
