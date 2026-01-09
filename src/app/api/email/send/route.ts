@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail } from '@/lib/email'
 import { APP_NAME } from '@/lib/constants'
 
 interface Recipient {
+  id?: string
   email: string
   name: string
 }
@@ -65,6 +67,13 @@ export async function POST(request: NextRequest) {
     const schoolName = schoolData?.name || 'Your School'
     const results: { email: string; success: boolean; error?: string }[] = []
 
+    // Check if email is configured
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+      return NextResponse.json({
+        error: 'Email is not configured. Please set EMAIL_USER and EMAIL_PASSWORD in environment variables.'
+      }, { status: 500 })
+    }
+
     // Send emails to each recipient
     for (const recipient of recipients) {
       // Replace placeholders in body
@@ -89,6 +98,33 @@ export async function POST(request: NextRequest) {
 
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
+
+    // If all emails failed, return error
+    if (successCount === 0 && failCount > 0) {
+      return NextResponse.json({
+        error: 'Failed to send emails',
+        sent: 0,
+        failed: failCount,
+        results,
+      }, { status: 500 })
+    }
+
+    // Create in-app notifications for recipients who have user IDs
+    const adminClient = createAdminClient()
+    const recipientsWithIds = recipients.filter(r => r.id)
+
+    if (recipientsWithIds.length > 0) {
+      const notifications = recipientsWithIds.map(recipient => ({
+        user_id: recipient.id,
+        type: 'announcement',
+        title: subject,
+        message: `You received an email from ${schoolName}. Check your inbox.`,
+      }))
+
+      await (adminClient as any)
+        .from('notifications')
+        .insert(notifications)
+    }
 
     return NextResponse.json({
       success: true,

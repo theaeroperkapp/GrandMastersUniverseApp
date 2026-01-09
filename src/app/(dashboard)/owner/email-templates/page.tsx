@@ -281,7 +281,7 @@ export default function EmailTemplatesPage() {
     try {
       const selectedEmails = recipients
         .filter(r => selectedRecipients.includes(r.id))
-        .map(r => ({ email: r.email, name: r.full_name }))
+        .map(r => ({ id: r.id, email: r.email, name: r.full_name }))
 
       const response = await fetch('/api/email/send', {
         method: 'POST',
