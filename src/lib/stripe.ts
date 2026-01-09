@@ -4,8 +4,9 @@ import Stripe from 'stripe'
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || 'sk_placeholder_for_build'
 
 export const stripe = new Stripe(stripeSecretKey, {
-  apiVersion: '2024-12-18.acacia' as any,
+  apiVersion: '2025-01-27.acacia' as Stripe.LatestApiVersion,
   typescript: true,
+  maxNetworkRetries: 3,
 })
 
 export async function createCustomer(email: string, name: string, metadata?: Record<string, string>) {
