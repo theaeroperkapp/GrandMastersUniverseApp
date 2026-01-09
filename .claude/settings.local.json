@@ -36,7 +36,8 @@
       "Bash(timeout:*)",
       "Bash(ping:*)",
       "Bash(node test-presence.js:*)",
-      "Bash(node test-two-users.js:*)"
+      "Bash(node test-two-users.js:*)",
+      "WebFetch(domain:supabase.com)"
     ]
   }
 }

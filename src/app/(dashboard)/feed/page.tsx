@@ -56,6 +56,22 @@ export default async function FeedPage() {
     .order('created_at', { ascending: false })
     .limit(20)
 
+  // Get user's likes to mark which posts they've liked
+  const postIds = posts?.map((p: any) => p.id) || []
+  const { data: userLikes } = await supabase
+    .from('likes')
+    .select('post_id')
+    .eq('profile_id', user.id)
+    .in('post_id', postIds)
+
+  const likedPostIds = new Set((userLikes as { post_id: string }[] | null)?.map(l => l.post_id) || [])
+
+  // Add isLiked flag to each post
+  const postsWithLikeStatus = posts?.map((post: any) => ({
+    ...post,
+    isLiked: likedPostIds.has(post.id),
+  })) || []
+
   // Get user's post count for this month
   const yearMonth = new Date().toISOString().slice(0, 7)
   const { data: postCount } = await supabase
@@ -79,7 +95,7 @@ export default async function FeedPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <FeedClient
-        initialPosts={posts as any[] || []}
+        initialPosts={postsWithLikeStatus}
         currentUser={{
           id: profileData.id,
           full_name: profileData.full_name,
