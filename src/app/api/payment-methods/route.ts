@@ -203,18 +203,29 @@ export async function POST(request: NextRequest) {
 
         // Create customer if not exists
         if (!customerId) {
-          const newCustomer = await createCustomer(
-            profile.email || user.email || '',
-            profile.full_name || 'Individual',
-            { profile_id: profileData.id, type: 'individual' }
-          )
-          customerId = newCustomer.id
+          try {
+            console.log('Creating Stripe customer for individual profile:', profileData.id)
+            const newCustomer = await createCustomer(
+              profile.email || user.email || '',
+              profile.full_name || 'Individual',
+              { profile_id: profileData.id, type: 'individual' }
+            )
+            customerId = newCustomer.id
+            console.log('Created Stripe customer:', customerId)
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (adminClient as any)
-            .from('profiles')
-            .update({ stripe_customer_id: customerId })
-            .eq('id', profileData.id)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (adminClient as any)
+              .from('profiles')
+              .update({ stripe_customer_id: customerId })
+              .eq('id', profileData.id)
+          } catch (customerError) {
+            console.error('Failed to create Stripe customer:', customerError)
+            const errMsg = customerError instanceof Error ? customerError.message : 'Unknown error'
+            return NextResponse.json(
+              { error: `Failed to create billing account: ${errMsg}` },
+              { status: 500 }
+            )
+          }
         }
       }
     }
