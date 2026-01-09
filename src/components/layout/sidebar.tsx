@@ -110,12 +110,12 @@ export function Sidebar({ role }: SidebarProps) {
       {/* Mobile Sidebar */}
       <aside
         className={cn(
-          'lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white border-r transform transition-transform duration-200 ease-in-out',
+          'lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 transform transition-transform duration-200 ease-in-out',
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <div className="p-4 border-b">
-          <h2 className="font-semibold text-lg">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+          <h2 className="font-semibold text-lg text-gray-900 dark:text-white">
             {pathname.startsWith('/admin') ? 'Admin Menu' : 'Owner Menu'}
           </h2>
         </div>
@@ -128,8 +128,8 @@ export function Sidebar({ role }: SidebarProps) {
               className={cn(
                 'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                 pathname === link.href
-                  ? 'bg-red-50 text-red-600'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-red-50 dark:bg-red-950 text-red-600'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
               )}
             >
               {link.icon}
@@ -140,7 +140,7 @@ export function Sidebar({ role }: SidebarProps) {
       </aside>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:block w-64 border-r bg-gray-50 min-h-[calc(100vh-4rem)]">
+      <aside className="hidden lg:block w-64 border-r border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 min-h-[calc(100vh-4rem)]">
         <nav className="p-4 space-y-1">
           {links.map((link) => (
             <Link
@@ -149,8 +149,8 @@ export function Sidebar({ role }: SidebarProps) {
               className={cn(
                 'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                 pathname === link.href
-                  ? 'bg-red-50 text-red-600'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-red-50 dark:bg-red-950 text-red-600'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
               )}
             >
               {link.icon}

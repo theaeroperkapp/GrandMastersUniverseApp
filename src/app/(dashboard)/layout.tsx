@@ -47,10 +47,10 @@ export default async function DashboardLayout({
   // Check if user is approved
   if (!profileData.is_approved && profileData.role !== 'admin') {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-white dark:bg-gray-950">
         <div className="text-center max-w-md">
-          <h1 className="text-2xl font-bold mb-2">Pending Approval</h1>
-          <p className="text-gray-600 mb-4">
+          <h1 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">Pending Approval</h1>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
             Your account is waiting for approval from the school administrator.
             You'll receive an email once your account is approved.
           </p>
@@ -83,7 +83,7 @@ export default async function DashboardLayout({
     .or(`participant_one.eq.${user.id},participant_two.eq.${user.id}`, { foreignTable: 'conversations' })
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Offline indicator - shows at top when offline */}
       <OfflineIndicator />
 

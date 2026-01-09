@@ -43,7 +43,7 @@ export function BottomNav({ unreadMessages = 0, unreadNotifications = 0 }: Botto
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 md:hidden safe-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 md:hidden safe-bottom">
       <div className="flex items-center justify-around h-16">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
@@ -57,7 +57,7 @@ export function BottomNav({ unreadMessages = 0, unreadNotifications = 0 }: Botto
                 'relative flex flex-col items-center justify-center w-full h-full gap-0.5 text-xs transition-colors touch-manipulation',
                 isActive
                   ? 'text-red-600'
-                  : 'text-gray-500 active:text-gray-900'
+                  : 'text-gray-500 dark:text-gray-400 active:text-gray-900 dark:active:text-gray-100'
               )}
             >
               <div className="relative">

@@ -43,21 +43,21 @@ export default function WaitlistPage() {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <header className="border-b bg-white">
+      <div className="min-h-screen flex flex-col bg-white dark:bg-gray-950">
+        <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
           <div className="container mx-auto px-4 py-4">
             <Link href="/" className="flex items-center gap-2">
               <Swords className="h-8 w-8 text-red-600" />
-              <span className="text-xl font-bold">GrandMastersUniverse</span>
+              <span className="text-xl font-bold text-gray-900 dark:text-white">GrandMastersUniverse</span>
             </Link>
           </div>
         </header>
-        <main className="flex-1 flex items-center justify-center p-4">
+        <main className="flex-1 flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
           <Card className="w-full max-w-md text-center">
             <CardContent className="pt-8 pb-8">
               <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold mb-2">You're on the list!</h2>
-              <p className="text-gray-600 mb-6">
+              <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">You're on the list!</h2>
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
                 Thanks for your interest in GrandMastersUniverse. We'll be in touch soon to get your school set up.
               </p>
               <Link href="/">
@@ -71,16 +71,16 @@ export default function WaitlistPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b bg-white">
+    <div className="min-h-screen flex flex-col bg-white dark:bg-gray-950">
+      <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
         <div className="container mx-auto px-4 py-4">
           <Link href="/" className="flex items-center gap-2">
             <Swords className="h-8 w-8 text-red-600" />
-            <span className="text-xl font-bold">GrandMastersUniverse</span>
+            <span className="text-xl font-bold text-gray-900 dark:text-white">GrandMastersUniverse</span>
           </Link>
         </div>
       </header>
-      <main className="flex-1 flex items-center justify-center p-4 bg-gray-50">
+      <main className="flex-1 flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Join the Waitlist</CardTitle>
