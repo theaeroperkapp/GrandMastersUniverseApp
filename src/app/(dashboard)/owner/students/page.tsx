@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
 import { Modal } from '@/components/ui/modal'
-import { User, QrCode, Key, Download, Printer, Award, Users, Plus } from 'lucide-react'
+import { User, QrCode, Key, Download, Printer, Award, Users, Plus, CreditCard } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface BeltRank {
@@ -23,6 +23,19 @@ interface Family {
   id: string
   name: string
   primary_holder_id: string
+  membership?: {
+    id: string
+    membership_id: string
+    status: string
+    membership: { id: string; name: string } | null
+  } | null
+}
+
+interface Membership {
+  id: string
+  name: string
+  price: number
+  billing_period: string
 }
 
 interface Member {
@@ -45,12 +58,19 @@ interface Member {
     } | null
     enrollment_date: string | null
   } | null
+  profile_membership?: {
+    id: string
+    membership_id: string
+    status: string
+    membership: { id: string; name: string } | null
+  } | null
 }
 
 export default function StudentsPage() {
   const [members, setMembers] = useState<Member[]>([])
   const [belts, setBelts] = useState<BeltRank[]>([])
   const [families, setFamilies] = useState<Family[]>([])
+  const [memberships, setMemberships] = useState<Membership[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
@@ -59,6 +79,7 @@ export default function StudentsPage() {
   const [generatingPin, setGeneratingPin] = useState(false)
   const [updatingBelt, setUpdatingBelt] = useState(false)
   const [updatingFamily, setUpdatingFamily] = useState(false)
+  const [updatingSubscription, setUpdatingSubscription] = useState(false)
   const [schoolId, setSchoolId] = useState<string | null>(null)
   const qrRef = useRef<HTMLDivElement>(null)
 
@@ -102,6 +123,7 @@ export default function StudentsPage() {
       fetchMembers(supabase, userProfile.school_id),
       fetchBelts(supabase, userProfile.school_id),
       fetchFamilies(supabase, userProfile.school_id),
+      fetchMemberships(),
     ])
 
     setLoading(false)
@@ -131,10 +153,26 @@ export default function StudentsPage() {
       type StudentProfileRow = { id: string; profile_id: string; enrollment_date: string | null; pin_code: string | null; belt_rank_id: string | null; belt_rank: { id: string; name: string; color: string } | null }
       const typedStudentProfilesData = (studentProfilesData || []) as StudentProfileRow[]
 
+      // Get profile_memberships data for these members (table might not exist yet)
+      let typedProfileMembershipsData: { id: string; profile_id: string; membership_id: string; status: string; membership: { id: string; name: string } | null }[] = []
+      try {
+        const { data: profileMembershipsData } = await supabase
+          .from('profile_memberships')
+          .select('id, profile_id, membership_id, status, membership:memberships(id, name)')
+          .in('profile_id', memberIds)
+
+        type ProfileMembershipRow = { id: string; profile_id: string; membership_id: string; status: string; membership: { id: string; name: string } | null }
+        typedProfileMembershipsData = (profileMembershipsData || []) as ProfileMembershipRow[]
+      } catch {
+        // Table might not exist yet, ignore error
+        console.log('profile_memberships table not found, skipping')
+      }
+
       // Merge the data
       const membersWithDetails = typedProfilesData.map(profile => ({
         ...profile,
-        student_profile: typedStudentProfilesData.find(sp => sp.profile_id === profile.id) || null
+        student_profile: typedStudentProfilesData.find(sp => sp.profile_id === profile.id) || null,
+        profile_membership: typedProfileMembershipsData.find(pm => pm.profile_id === profile.id) || null
       }))
 
       setMembers(membersWithDetails as Member[])
@@ -157,12 +195,37 @@ export default function StudentsPage() {
   const fetchFamilies = async (supabase: ReturnType<typeof createClient>, schoolId: string) => {
     const { data: familiesData } = await supabase
       .from('families')
-      .select('id, name, primary_holder_id')
+      .select('id, name, primary_holder_id, membership:family_memberships(id, membership_id, status, membership:memberships(id, name))')
       .eq('school_id', schoolId)
       .order('name')
 
     if (familiesData) {
-      setFamilies(familiesData)
+      // family_memberships returns an array, take the first one
+      type FamilyRow = {
+        id: string
+        name: string
+        primary_holder_id: string
+        membership: Array<{ id: string; membership_id: string; status: string; membership: { id: string; name: string } | null }> | null
+      }
+      const typedFamilies = (familiesData as FamilyRow[]).map(f => ({
+        ...f,
+        membership: f.membership?.[0] || null
+      }))
+      setFamilies(typedFamilies)
+    }
+  }
+
+  const fetchMemberships = async () => {
+    try {
+      const response = await fetch('/api/memberships')
+      const data = await response.json()
+      if (Array.isArray(data)) {
+        // Filter to only active memberships
+        const activeMemberships = data.filter((m: Membership & { is_active?: boolean }) => m.is_active !== false)
+        setMemberships(activeMemberships)
+      }
+    } catch (error) {
+      console.error('Error fetching memberships:', error)
     }
   }
 
@@ -338,6 +401,60 @@ export default function StudentsPage() {
       toast.error(error instanceof Error ? error.message : 'Failed to update family')
     } finally {
       setUpdatingFamily(false)
+    }
+  }
+
+  const updateSubscription = async (membershipId: string | null) => {
+    if (!selectedMember) return
+
+    setUpdatingSubscription(true)
+    try {
+      const response = await fetch(`/api/students/${selectedMember.id}/subscription`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ membership_id: membershipId }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to update subscription')
+      }
+
+      const data = await response.json()
+      const selectedMembership = memberships.find(m => m.id === membershipId)
+
+      // Update the member in the list
+      setMembers(prev => prev.map(m => {
+        if (m.id === selectedMember.id) {
+          return {
+            ...m,
+            profile_membership: membershipId ? {
+              id: data.id,
+              membership_id: membershipId,
+              status: 'active',
+              membership: selectedMembership ? { id: selectedMembership.id, name: selectedMembership.name } : null
+            } : null
+          }
+        }
+        return m
+      }))
+
+      // Update selected member
+      setSelectedMember(prev => prev ? {
+        ...prev,
+        profile_membership: membershipId ? {
+          id: data.id,
+          membership_id: membershipId,
+          status: 'active',
+          membership: selectedMembership ? { id: selectedMembership.id, name: selectedMembership.name } : null
+        } : null
+      } : null)
+
+      toast.success(membershipId ? 'Subscription assigned' : 'Subscription removed')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update subscription')
+    } finally {
+      setUpdatingSubscription(false)
     }
   }
 
@@ -641,6 +758,59 @@ export default function StudentsPage() {
               </div>
             )}
 
+            {/* Subscription Assignment */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Subscription
+              </Label>
+              {/* Show family subscription info if member is in a family */}
+              {selectedMember.family_id && families.find(f => f.id === selectedMember.family_id)?.membership ? (
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                        Via Family: {families.find(f => f.id === selectedMember.family_id)?.name}
+                      </p>
+                      <p className="text-xs text-green-600 dark:text-green-400">
+                        {families.find(f => f.id === selectedMember.family_id)?.membership?.membership?.name} ({families.find(f => f.id === selectedMember.family_id)?.membership?.status})
+                      </p>
+                    </div>
+                    <Badge className="bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200">
+                      Active
+                    </Badge>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Individual subscription assignment */}
+                  <select
+                    value={selectedMember.profile_membership?.membership_id || ''}
+                    onChange={(e) => updateSubscription(e.target.value || null)}
+                    disabled={updatingSubscription}
+                    className="w-full h-11 min-h-[44px] px-3 py-2 border dark:border-gray-700 rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  >
+                    <option value="">No subscription assigned</option>
+                    {memberships.map((membership) => (
+                      <option key={membership.id} value={membership.id}>
+                        {membership.name} (${(membership.price / 100).toFixed(2)}/{membership.billing_period})
+                      </option>
+                    ))}
+                  </select>
+                  {memberships.length === 0 && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      No memberships configured. Create memberships in Settings.
+                    </p>
+                  )}
+                  {!selectedMember.family_id && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      This member is not in a family. Assign a subscription directly.
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+
             {/* QR Code */}
             <div className="flex flex-col items-center">
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">QR Code for Check-in</p>
@@ -719,16 +889,17 @@ export default function StudentsPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email (optional)</Label>
+            <Label htmlFor="email">Email *</Label>
             <Input
               id="email"
               type="email"
               value={newStudent.email}
               onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
               placeholder="Enter email address"
+              required
             />
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Leave blank for minors without email
+              A welcome email will be sent to this address
             </p>
           </div>
 

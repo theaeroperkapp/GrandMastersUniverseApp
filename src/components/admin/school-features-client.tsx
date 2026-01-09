@@ -76,6 +76,8 @@ interface School {
   subscription_plan: string | null
   trial_ends_at: string | null
   student_count?: number
+  billing_day?: number | null
+  created_at?: string
 }
 
 interface SchoolFeaturesClientProps {
@@ -128,12 +130,64 @@ export function SchoolFeaturesClient({
   const [paymentNote, setPaymentNote] = useState('')
   const [paymentAmount, setPaymentAmount] = useState('99')
 
+  // Default billing day: use school's billing_day, or day from created_at, or 1
+  const getDefaultBillingDay = () => {
+    if (school.billing_day) return school.billing_day.toString()
+    if (school.created_at) {
+      const day = new Date(school.created_at).getDate()
+      return (day > 28 ? 28 : day).toString()
+    }
+    return '1'
+  }
+  const [billingDay, setBillingDay] = useState<string>(getDefaultBillingDay())
+
   const subscriptionMap = new Map(
     currentSubscriptions.map((sub) => [sub.feature_code, sub])
   )
 
   const currentTier = school.subscription_plan || 'trial'
   const tierInfo = SUBSCRIPTION_TIERS[currentTier as keyof typeof SUBSCRIPTION_TIERS] || SUBSCRIPTION_TIERS.trial
+
+  // Calculate payment status for admin view
+  const getPaymentStatus = () => {
+    const now = new Date()
+    const currentMonth = now.getMonth()
+    const currentYear = now.getFullYear()
+    const currentDay = now.getDate()
+    const billingDay = school.billing_day
+
+    // Find the most recent payment
+    const lastPayment = paymentHistory.length > 0 ? paymentHistory[0] : null
+    const lastPaymentDate = lastPayment ? new Date(lastPayment.paid_at) : null
+
+    // Check if payment was made this month (on or after billing day)
+    const paidThisMonth = lastPaymentDate &&
+      lastPaymentDate.getMonth() === currentMonth &&
+      lastPaymentDate.getFullYear() === currentYear
+
+    // Check if billing day has passed this month
+    const billingDayPassed = billingDay ? currentDay > billingDay : false
+
+    // Calculate days overdue
+    const daysOverdue = billingDay && billingDayPassed ? currentDay - billingDay : 0
+
+    // Is payment overdue? Only for standard plans with billing day set
+    const isOverdue = school.subscription_plan === 'standard' &&
+      billingDay &&
+      billingDayPassed &&
+      !paidThisMonth
+
+    return {
+      lastPayment,
+      lastPaymentDate,
+      paidThisMonth,
+      billingDayPassed,
+      daysOverdue,
+      isOverdue,
+    }
+  }
+
+  const paymentStatus = getPaymentStatus()
 
   const getFeatureIcon = (featureCode: string) => {
     switch (featureCode) {
@@ -207,6 +261,7 @@ export function SchoolFeaturesClient({
           schoolId: school.id,
           subscriptionPlan: selectedTier,
           trialEndDate: selectedTier === 'trial' && trialEndDate ? trialEndDate : null,
+          billingDay: billingDay ? parseInt(billingDay, 10) : null,
         }),
       })
 
@@ -330,7 +385,48 @@ export function SchoolFeaturesClient({
                     <span>{school.student_count} students</span>
                   </div>
                 )}
+
+                {school.subscription_plan !== 'founding_partner' && school.subscription_plan !== 'trial' && (
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="w-4 h-4 text-gray-500" />
+                    <span>Bills on day {school.billing_day || getDefaultBillingDay()}</span>
+                  </div>
+                )}
+
+                {/* Last payment info */}
+                {paymentStatus.lastPayment && (
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-gray-500" />
+                    <span>
+                      Last payment: {safeFormatDate(paymentStatus.lastPayment.paid_at, 'MMM d, yyyy')}
+                    </span>
+                  </div>
+                )}
               </div>
+
+              {/* Payment status indicator */}
+              {school.subscription_plan === 'standard' && (
+                <div className="mt-3 pt-3 border-t border-red-200">
+                  {paymentStatus.isOverdue ? (
+                    <div className="flex items-center gap-2 text-red-600">
+                      <AlertCircle className="w-4 h-4" />
+                      <span className="font-medium">
+                        Payment overdue by {paymentStatus.daysOverdue} day{paymentStatus.daysOverdue !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  ) : paymentStatus.paidThisMonth ? (
+                    <div className="flex items-center gap-2 text-green-600">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span className="font-medium">Paid this month</span>
+                    </div>
+                  ) : !paymentStatus.billingDayPassed && school.billing_day ? (
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Clock className="w-4 h-4" />
+                      <span>Payment due on the {school.billing_day}{school.billing_day === 1 ? 'st' : school.billing_day === 2 ? 'nd' : school.billing_day === 3 ? 'rd' : 'th'}</span>
+                    </div>
+                  ) : null}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-2">
@@ -344,6 +440,26 @@ export function SchoolFeaturesClient({
           </div>
         </CardContent>
       </Card>
+
+      {/* Payment Overdue Warning */}
+      {paymentStatus.isOverdue && (
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-red-600 font-medium">Payment Overdue</p>
+                <p className="text-red-600 text-sm">
+                  This school&apos;s monthly payment was due on day {school.billing_day} ({paymentStatus.daysOverdue} day{paymentStatus.daysOverdue !== 1 ? 's' : ''} ago).
+                  {paymentStatus.lastPayment
+                    ? ` Last payment was on ${safeFormatDate(paymentStatus.lastPayment.paid_at, 'MMM d, yyyy')}.`
+                    : ' No payments recorded yet.'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Error Alert */}
       {error && (
@@ -533,6 +649,27 @@ export function SchoolFeaturesClient({
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Default: 30 days from today
+                </p>
+              </div>
+            )}
+
+            {selectedTier === 'standard' && (
+              <div className="mb-6">
+                <Label>Billing Day of Month</Label>
+                <select
+                  value={billingDay}
+                  onChange={(e) => setBillingDay(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
+                    <option key={day} value={day}>
+                      {day}
+                      {day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Day of month when subscription payment is due. Defaults to school join date.
                 </p>
               </div>
             )}

@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
-    const { schoolId, subscriptionPlan, trialEndDate } = await request.json()
+    const { schoolId, subscriptionPlan, trialEndDate, billingDay } = await request.json()
 
     if (!schoolId || !subscriptionPlan) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -32,6 +32,14 @@ export async function POST(request: NextRequest) {
     const validPlans = ['founding_partner', 'standard', 'trial']
     if (!validPlans.includes(subscriptionPlan)) {
       return NextResponse.json({ error: 'Invalid subscription plan' }, { status: 400 })
+    }
+
+    // Validate billing day if provided
+    if (billingDay !== undefined && billingDay !== null) {
+      const day = parseInt(billingDay, 10)
+      if (isNaN(day) || day < 1 || day > 28) {
+        return NextResponse.json({ error: 'Billing day must be between 1 and 28' }, { status: 400 })
+      }
     }
 
     const adminClient = createAdminClient()
@@ -60,16 +68,24 @@ export async function POST(request: NextRequest) {
         break
     }
 
+    // Build update object
+    const updateData: Record<string, unknown> = {
+      subscription_plan: subscriptionPlan,
+      subscription_status: subscriptionStatus,
+      trial_ends_at: trialEndsAt,
+      updated_at: new Date().toISOString(),
+    }
+
+    // Include billing_day if provided
+    if (billingDay !== undefined && billingDay !== null) {
+      updateData.billing_day = parseInt(billingDay, 10)
+    }
+
     // Update school subscription
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (adminClient as any)
       .from('schools')
-      .update({
-        subscription_plan: subscriptionPlan,
-        subscription_status: subscriptionStatus,
-        trial_ends_at: trialEndsAt,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', schoolId)
 
     if (error) {

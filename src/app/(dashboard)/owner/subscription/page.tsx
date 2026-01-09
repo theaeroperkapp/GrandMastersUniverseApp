@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { SubscriptionClient } from '@/components/owner/subscription-client'
 
@@ -13,8 +14,11 @@ interface SchoolData {
   stripe_customer_id: string | null
   stripe_account_id: string | null
   subscription_status: string
+  subscription_plan: string | null
   trial_ends_at: string | null
   subscription_ends_at: string | null
+  billing_day: number | null
+  last_payment_at?: string | null
 }
 
 export default async function SubscriptionPage() {
@@ -42,14 +46,31 @@ export default async function SubscriptionPage() {
   // Get school subscription info
   const { data: school } = await supabase
     .from('schools')
-    .select('id, name, stripe_customer_id, stripe_account_id, subscription_status, trial_ends_at, subscription_ends_at')
+    .select('id, name, stripe_customer_id, stripe_account_id, subscription_status, subscription_plan, trial_ends_at, subscription_ends_at, billing_day')
     .eq('id', profileData.school_id)
     .single()
 
-  const schoolData = school as SchoolData | null
+  const schoolRecord = school as SchoolData | null
 
-  if (!schoolData) {
+  if (!schoolRecord) {
     redirect('/feed')
+  }
+
+  // Get the latest payment for this school (use admin client to bypass RLS)
+  const adminClient = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: latestPayment } = await (adminClient as any)
+    .from('platform_payments')
+    .select('paid_at')
+    .eq('school_id', profileData.school_id)
+    .eq('status', 'succeeded')
+    .order('paid_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  const schoolData: SchoolData = {
+    ...schoolRecord,
+    last_payment_at: (latestPayment as { paid_at: string } | null)?.paid_at || null,
   }
 
   return (

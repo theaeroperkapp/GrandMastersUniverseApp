@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -64,6 +65,7 @@ interface PaymentModalState {
 }
 
 export default function PaymentsPage() {
+  const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [eventPayments, setEventPayments] = useState<EventPayment[]>([])
   const [customCharges, setCustomCharges] = useState<CustomCharge[]>([])
@@ -78,11 +80,7 @@ export default function PaymentsPage() {
     paymentId: '',
   })
 
-  useEffect(() => {
-    fetchData()
-  }, [])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     const supabase = createClient()
     const { data: authData } = await supabase.auth.getUser()
 
@@ -90,24 +88,32 @@ export default function PaymentsPage() {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('family_id, school_id')
+      .select('id, family_id, school_id')
       .eq('id', authData.user.id)
       .single()
 
-    const profileData = profile as { family_id: string | null; school_id: string | null } | null
-    if (!profileData?.family_id) {
+    const profileData = profile as { id: string; family_id: string | null; school_id: string | null } | null
+    if (!profileData) {
       setLoading(false)
       return
     }
 
+    const userId = profileData.id
     setFamilyId(profileData.family_id)
 
     // Fetch event registrations with payment info
-    const { data: eventRegs } = await supabase
+    let eventRegsQuery = supabase
       .from('event_registrations')
       .select('id, payment_status, registered_at, event:events(title, fee)')
-      .eq('family_id', profileData.family_id)
       .order('registered_at', { ascending: false })
+
+    if (profileData.family_id) {
+      eventRegsQuery = eventRegsQuery.eq('family_id', profileData.family_id)
+    } else {
+      eventRegsQuery = eventRegsQuery.eq('profile_id', userId)
+    }
+
+    const { data: eventRegs } = await eventRegsQuery
 
     type EventRegRow = {
       id: string
@@ -129,12 +135,22 @@ export default function PaymentsPage() {
       )
     }
 
-    // Fetch custom charges
-    const { data: charges } = await supabase
+    // Fetch custom charges (both family charges and individual charges)
+    // Build query based on whether user has a family
+    let chargesQuery = supabase
       .from('custom_charges')
       .select('id, description, amount, status, due_date, created_at')
-      .eq('family_id', profileData.family_id)
       .order('created_at', { ascending: false })
+
+    if (profileData.family_id) {
+      // Fetch charges for family OR this specific profile
+      chargesQuery = chargesQuery.or(`family_id.eq.${profileData.family_id},profile_id.eq.${userId}`)
+    } else {
+      // Only fetch charges for this specific profile
+      chargesQuery = chargesQuery.eq('profile_id', userId)
+    }
+
+    const { data: charges } = await chargesQuery
 
     type ChargeRow = {
       id: string
@@ -151,7 +167,7 @@ export default function PaymentsPage() {
     }
 
     // Fetch belt test payments
-    const { data: beltPayments } = await supabase
+    let beltPaymentsQuery = supabase
       .from('belt_test_payments')
       .select(`
         id, amount, status, created_at,
@@ -161,8 +177,15 @@ export default function PaymentsPage() {
           to_belt:belt_ranks!belt_test_fees_to_belt_id_fkey(name)
         )
       `)
-      .eq('family_id', profileData.family_id)
       .order('created_at', { ascending: false })
+
+    if (profileData.family_id) {
+      beltPaymentsQuery = beltPaymentsQuery.eq('family_id', profileData.family_id)
+    } else {
+      beltPaymentsQuery = beltPaymentsQuery.eq('profile_id', userId)
+    }
+
+    const { data: beltPayments } = await beltPaymentsQuery
 
     type BeltPaymentRow = {
       id: string
@@ -197,12 +220,16 @@ export default function PaymentsPage() {
       )
     }
 
-    // Fetch membership info
-    const { data: membershipData } = await supabase
-      .from('family_memberships')
-      .select('id, status, current_period_start, current_period_end, membership:memberships(name)')
-      .eq('family_id', profileData.family_id)
-      .single()
+    // Fetch membership info (only if user has a family)
+    let membershipData = null
+    if (profileData.family_id) {
+      const { data: memData } = await supabase
+        .from('family_memberships')
+        .select('id, status, current_period_start, current_period_end, membership:memberships(name)')
+        .eq('family_id', profileData.family_id)
+        .single()
+      membershipData = memData
+    }
 
     type MembershipRow = {
       id: string
@@ -224,7 +251,11 @@ export default function PaymentsPage() {
     }
 
     setLoading(false)
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -290,9 +321,10 @@ export default function PaymentsPage() {
     })
   }
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = async () => {
     setPaymentModal(prev => ({ ...prev, isOpen: false }))
-    fetchData() // Refresh data
+    await fetchData() // Refresh data
+    router.refresh() // Force Next.js to refresh the page
   }
 
   const totalPending = [
@@ -321,19 +353,7 @@ export default function PaymentsPage() {
     )
   }
 
-  if (!familyId) {
-    return (
-      <div className="p-8 max-w-4xl mx-auto">
-        <Card>
-          <CardContent className="p-12 text-center">
-            <CreditCard className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-600 mb-2">No Payment History</h3>
-            <p className="text-gray-500">You need to be part of a family to view payment history.</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
+  // Removed the familyId check - users can still have individual charges without a family
 
   return (
     <div className="p-8 max-w-4xl mx-auto">

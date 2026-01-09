@@ -26,6 +26,7 @@ interface BeltRank {
   name: string
   color: string
   display_order: number
+  parent_belt_id?: string | null
 }
 
 interface ClassSchedule {
@@ -69,9 +70,20 @@ interface AttendanceRecord {
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
+interface UpcomingClass {
+  classSchedule: ClassSchedule
+  nextDate: Date
+  daysUntil: number
+  hoursUntil: number
+  minutesUntil: number
+  isToday: boolean
+  isTomorrow: boolean
+}
+
 export default function MyClassesPage() {
   const [myClasses, setMyClasses] = useState<ClassSchedule[]>([])
   const [upcomingSessions, setUpcomingSessions] = useState<ClassSession[]>([])
+  const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>([])
   const [recentAttendance, setRecentAttendance] = useState<AttendanceRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [studentProfileId, setStudentProfileId] = useState<string | null>(null)
@@ -81,20 +93,85 @@ export default function MyClassesPage() {
     fetchMyClasses()
   }, [])
 
+  // Calculate the next occurrence of a class based on day_of_week and time
+  const calculateUpcomingClasses = (classes: ClassSchedule[]) => {
+    const now = new Date()
+    const upcoming: UpcomingClass[] = []
+
+    classes.forEach((cls) => {
+      const today = now.getDay()
+      const classDay = cls.day_of_week
+
+      // Parse class start time
+      const [hours, minutes] = cls.start_time.split(':').map(Number)
+
+      // Calculate days until next occurrence
+      let daysUntil = classDay - today
+      if (daysUntil < 0) {
+        daysUntil += 7 // Next week
+      }
+
+      // Create the next class date
+      const nextDate = new Date(now)
+      nextDate.setDate(now.getDate() + daysUntil)
+      nextDate.setHours(hours, minutes, 0, 0)
+
+      // If class is today but already passed, move to next week
+      if (daysUntil === 0 && nextDate < now) {
+        daysUntil = 7
+        nextDate.setDate(nextDate.getDate() + 7)
+      }
+
+      // Calculate time difference
+      const diffMs = nextDate.getTime() - now.getTime()
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+      const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+
+      upcoming.push({
+        classSchedule: cls,
+        nextDate,
+        daysUntil,
+        hoursUntil: diffHours,
+        minutesUntil: diffMinutes,
+        isToday: daysUntil === 0,
+        isTomorrow: daysUntil === 1,
+      })
+    })
+
+    // Sort by next occurrence
+    upcoming.sort((a, b) => a.nextDate.getTime() - b.nextDate.getTime())
+
+    return upcoming
+  }
+
+  // Format relative time for display
+  const getRelativeTimeText = (upcoming: UpcomingClass) => {
+    if (upcoming.isToday) {
+      if (upcoming.hoursUntil < 1) {
+        return `Today in ${upcoming.minutesUntil} min`
+      }
+      return `Today in ${upcoming.hoursUntil} hr${upcoming.hoursUntil !== 1 ? 's' : ''}`
+    }
+    if (upcoming.isTomorrow) {
+      return 'Tomorrow'
+    }
+    return `In ${upcoming.daysUntil} day${upcoming.daysUntil !== 1 ? 's' : ''}`
+  }
+
   const fetchMyClasses = async () => {
     const supabase = createClient()
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    // Get user's student profile with their current belt
+    // Get user's student profile with their current belt (including parent_belt_id for grouping)
     const { data: studentProfileData } = await supabase
       .from('student_profiles')
       .select(`
         id,
         school_id,
         belt_rank_id,
-        belt_rank:belt_ranks(id, name, color, display_order)
+        belt_rank:belt_ranks(id, name, color, display_order, parent_belt_id)
       `)
       .eq('profile_id', user.id)
       .single()
@@ -115,8 +192,14 @@ export default function MyClassesPage() {
     setStudentProfileId(studentProfile.id)
     setCurrentBelt(studentProfile.belt_rank)
 
-    // If student has a belt, fetch classes for their belt level
+    // If student has a belt, fetch classes for their belt level (including parent belt classes)
     if (studentProfile.belt_rank_id) {
+      // Build list of belt IDs to match: student's belt + parent belt (if any)
+      const beltIdsToMatch = [studentProfile.belt_rank_id]
+      if (studentProfile.belt_rank?.parent_belt_id) {
+        beltIdsToMatch.push(studentProfile.belt_rank.parent_belt_id)
+      }
+
       const { data: classesData } = await supabase
         .from('class_schedules')
         .select(`
@@ -132,13 +215,17 @@ export default function MyClassesPage() {
           belt_requirement:belt_ranks!class_schedules_belt_requirement_id_fkey(id, name, color, display_order)
         `)
         .eq('school_id', studentProfile.school_id)
-        .eq('belt_requirement_id', studentProfile.belt_rank_id)
+        .in('belt_requirement_id', beltIdsToMatch)
         .eq('is_active', true)
         .order('day_of_week')
         .order('start_time')
 
       if (classesData) {
-        setMyClasses(classesData as unknown as ClassSchedule[])
+        const classesTyped = classesData as unknown as ClassSchedule[]
+        setMyClasses(classesTyped)
+
+        // Calculate upcoming classes from schedules
+        setUpcomingClasses(calculateUpcomingClasses(classesTyped))
 
         // Get class IDs for upcoming sessions
         const classIds = classesData.map((c: { id: string }) => c.id)
@@ -368,44 +455,53 @@ export default function MyClassesPage() {
         )}
       </section>
 
-      {/* Upcoming Sessions */}
+      {/* Upcoming Classes */}
       <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Upcoming Sessions</h2>
+        <h2 className="text-xl font-semibold mb-4">Upcoming Classes</h2>
 
-        {upcomingSessions.length === 0 ? (
+        {upcomingClasses.length === 0 ? (
           <Card>
             <CardContent className="p-6 text-center text-gray-500">
               <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No upcoming sessions scheduled</p>
+              <p>No upcoming classes scheduled</p>
             </CardContent>
           </Card>
         ) : (
           <div className="grid gap-3">
-            {upcomingSessions.map((session) => (
-              <Card key={session.id}>
+            {upcomingClasses.slice(0, 5).map((upcoming) => (
+              <Card key={upcoming.classSchedule.id} className={upcoming.isToday ? 'border-red-300 bg-red-50/50' : ''}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="text-center bg-red-50 rounded-lg px-3 py-2 min-w-[70px]">
                         <p className="text-xs text-red-600 font-medium">
-                          {new Date(session.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                          {upcoming.nextDate.toLocaleDateString('en-US', { weekday: 'short' })}
                         </p>
                         <p className="text-lg font-bold text-red-700">
-                          {new Date(session.date).getDate()}
+                          {upcoming.nextDate.getDate()}
                         </p>
                         <p className="text-xs text-red-600">
-                          {new Date(session.date).toLocaleDateString('en-US', { month: 'short' })}
+                          {upcoming.nextDate.toLocaleDateString('en-US', { month: 'short' })}
                         </p>
                       </div>
                       <div>
-                        <p className="font-medium">{session.class_schedule?.name}</p>
+                        <p className="font-medium">{upcoming.classSchedule.name}</p>
                         <p className="text-sm text-gray-500">
-                          {session.class_schedule && formatTime(session.class_schedule.start_time)} - {session.class_schedule && formatTime(session.class_schedule.end_time)}
+                          {formatTime(upcoming.classSchedule.start_time)} - {formatTime(upcoming.classSchedule.end_time)}
                         </p>
+                        {upcoming.classSchedule.instructor && (
+                          <p className="text-xs text-gray-400">{upcoming.classSchedule.instructor.full_name}</p>
+                        )}
                       </div>
                     </div>
-                    <Badge className="bg-blue-100 text-blue-800">
-                      {session.status}
+                    <Badge className={
+                      upcoming.isToday
+                        ? 'bg-red-100 text-red-800 font-semibold'
+                        : upcoming.isTomorrow
+                          ? 'bg-orange-100 text-orange-800'
+                          : 'bg-blue-100 text-blue-800'
+                    }>
+                      {getRelativeTimeText(upcoming)}
                     </Badge>
                   </div>
                 </CardContent>

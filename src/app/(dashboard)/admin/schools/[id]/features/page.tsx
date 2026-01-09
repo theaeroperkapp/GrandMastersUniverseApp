@@ -50,6 +50,8 @@ export default async function SchoolFeaturesPage({ params }: PageProps) {
     subscription_status: string | null
     subscription_plan: string | null
     trial_ends_at: string | null
+    billing_day: number | null
+    created_at: string | null
   }
 
   const adminClient = createAdminClient()
@@ -70,6 +72,8 @@ export default async function SchoolFeaturesPage({ params }: PageProps) {
     subscription_plan: schoolRecord.subscription_plan || null,
     trial_ends_at: schoolRecord.trial_ends_at || null,
     student_count: studentCount || 0,
+    billing_day: schoolRecord.billing_day ?? undefined,
+    created_at: schoolRecord.created_at ?? undefined,
   }
 
   // Fetch available features (table may not exist yet if migration not run)

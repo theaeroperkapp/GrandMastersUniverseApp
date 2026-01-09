@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { constructWebhookEvent } from '@/lib/stripe'
-import { createPaymentNotification } from '@/lib/notifications'
+import { createPaymentNotification, createPaymentFailedNotification } from '@/lib/notifications'
 import Stripe from 'stripe'
 
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || ''
@@ -152,15 +152,35 @@ export async function POST(request: NextRequest) {
         if (subscriptionId) {
           const { data: schools } = await (adminClient as any)
             .from('schools')
-            .select('id')
+            .select('id, name')
             .eq('stripe_subscription_id', subscriptionId)
             .limit(1)
 
           if (schools && schools.length > 0) {
+            const school = schools[0]
+
+            // Update school status to past_due
             await (adminClient as any)
               .from('schools')
               .update({ subscription_status: 'past_due' })
-              .eq('id', schools[0].id)
+              .eq('id', school.id)
+
+            // Find the school owner and notify them
+            const { data: owners } = await (adminClient as any)
+              .from('profiles')
+              .select('id')
+              .eq('school_id', school.id)
+              .eq('role', 'owner')
+
+            if (owners && owners.length > 0) {
+              for (const owner of owners) {
+                await createPaymentFailedNotification({
+                  userId: owner.id,
+                  schoolName: school.name,
+                  amount: invoice.amount_due || 9900,
+                })
+              }
+            }
           }
         }
         break

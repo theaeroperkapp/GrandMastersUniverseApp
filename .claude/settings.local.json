@@ -37,7 +37,9 @@
       "Bash(ping:*)",
       "Bash(node test-presence.js:*)",
       "Bash(node test-two-users.js:*)",
-      "WebFetch(domain:supabase.com)"
+      "WebFetch(domain:supabase.com)",
+      "Bash(stripe products list:*)",
+      "Bash(stripe prices list:*)"
     ]
   }
 }

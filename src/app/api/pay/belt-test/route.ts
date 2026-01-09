@@ -3,10 +3,11 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
   createCustomer,
-  createPaymentIntent,
-  createAndConfirmPayment,
+  createConnectPaymentIntent,
+  createAndConfirmConnectPayment,
 } from '@/lib/stripe'
 import { createPaymentNotification } from '@/lib/notifications'
+import { calculatePlatformFee } from '@/lib/platform-fee'
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,11 +34,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No family account found' }, { status: 400 })
     }
 
-    // Get the belt test payment
+    // Get the belt test payment with school info
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: beltTestPayment } = await (adminClient as any)
       .from('belt_test_payments')
-      .select('*, belt_test_fee:belt_test_fees(description, from_belt:belt_ranks!belt_test_fees_from_belt_id_fkey(name), to_belt:belt_ranks!belt_test_fees_to_belt_id_fkey(name))')
+      .select(`
+        *,
+        belt_test_fee:belt_test_fees(
+          description,
+          from_belt:belt_ranks!belt_test_fees_from_belt_id_fkey(name),
+          to_belt:belt_ranks!belt_test_fees_to_belt_id_fkey(name)
+        ),
+        school:schools(id, stripe_account_id, subscription_plan)
+      `)
       .eq('id', payment_id)
       .eq('family_id', profile.family_id)
       .eq('status', 'pending')
@@ -56,6 +65,7 @@ export async function POST(request: NextRequest) {
         from_belt: { name: string } | null
         to_belt: { name: string } | null
       } | null
+      school: { id: string; stripe_account_id: string | null; subscription_plan: string | null } | null
     }
 
     const typedPayment = beltTestPayment as BeltTestPaymentType | null
@@ -63,6 +73,22 @@ export async function POST(request: NextRequest) {
     if (!typedPayment) {
       return NextResponse.json({ error: 'Belt test payment not found or already paid' }, { status: 404 })
     }
+
+    // Check if school has Connect account set up
+    if (!typedPayment.school?.stripe_account_id) {
+      return NextResponse.json(
+        { error: 'School has not set up payment processing. Please contact the school.' },
+        { status: 400 }
+      )
+    }
+
+    const connectedAccountId = typedPayment.school.stripe_account_id
+
+    // Calculate platform fee
+    const { platformFee } = calculatePlatformFee(
+      typedPayment.amount,
+      typedPayment.school.subscription_plan
+    )
 
     // Build description
     let description = 'Belt Test Fee'
@@ -105,14 +131,18 @@ export async function POST(request: NextRequest) {
       belt_test_payment_id: typedPayment.id,
       family_id: family.id,
       user_id: user.id,
+      school_id: typedPayment.school_id,
+      platform_fee: platformFee.toString(),
     }
 
     if (payment_method_id) {
-      // Pay with saved card - confirm immediately
+      // Pay with saved card - confirm immediately with Connect
       try {
-        const paymentIntent = await createAndConfirmPayment(
+        const paymentIntent = await createAndConfirmConnectPayment(
           typedPayment.amount,
           'usd',
+          connectedAccountId,
+          platformFee,
           customerId,
           payment_method_id,
           metadata
@@ -172,10 +202,12 @@ export async function POST(request: NextRequest) {
         )
       }
     } else {
-      // Create payment intent for new card
-      const paymentIntent = await createPaymentIntent(
+      // Create payment intent for new card with Connect
+      const paymentIntent = await createConnectPaymentIntent(
         typedPayment.amount,
         'usd',
+        connectedAccountId,
+        platformFee,
         customerId,
         {
           ...metadata,

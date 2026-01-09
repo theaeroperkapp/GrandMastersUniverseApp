@@ -43,6 +43,23 @@ export default async function BeltsPage() {
     .eq('school_id', profileData.school_id)
     .order('display_order')
 
+  // Get classes for this school
+  const { data: classes } = await adminClient
+    .from('class_schedules')
+    .select('id, name, description, day_of_week, start_time, end_time, max_capacity, belt_requirement_id, is_active, instructor:profiles(id, full_name)')
+    .eq('school_id', profileData.school_id)
+    .eq('is_active', true)
+    .order('day_of_week')
+    .order('start_time')
+
+  // Get instructors for class creation
+  const { data: instructors } = await adminClient
+    .from('profiles')
+    .select('id, full_name')
+    .eq('school_id', profileData.school_id)
+    .in('role', ['owner', 'admin', 'instructor'])
+    .order('full_name')
+
   return (
     <div className="p-4 md:p-8 space-y-6">
       <div>
@@ -55,6 +72,8 @@ export default async function BeltsPage() {
         customBelts={schoolBelts || []}
         schoolId={profileData.school_id}
         disabledBelts={[]}
+        classes={classes || []}
+        instructors={instructors || []}
       />
     </div>
   )

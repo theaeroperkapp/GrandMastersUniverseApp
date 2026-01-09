@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Modal } from '@/components/ui/modal'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Plus, Edit, Trash2, DollarSign } from 'lucide-react'
+import { Plus, Edit, Trash2, DollarSign, Users, GraduationCap, UserCheck, Award, ChevronDown, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { BeltTestFees } from '@/components/owner/belt-test-fees'
 
@@ -28,15 +28,50 @@ interface CustomCharge {
   amount: number
   status: string
   due_date: string | null
-  family_id: string
-  family: {
+  family_id: string | null
+  profile_id: string | null
+  family?: {
     name: string
-  }
+  } | null
+  profile?: {
+    full_name: string
+  } | null
 }
 
 interface Family {
   id: string
   name: string
+}
+
+interface Profile {
+  id: string
+  full_name: string
+  is_student: boolean
+  account_type: string
+  family_id: string | null
+  role: string
+  student_profile?: {
+    belt_rank_id: string | null
+  } | null
+  family_member?: {
+    is_student: boolean
+  } | null
+}
+
+interface BeltRank {
+  id: string
+  name: string
+  color: string
+  display_order: number
+}
+
+type RecipientFilter = 'all' | 'students' | 'parents' | 'belts'
+
+interface Recipient {
+  id: string
+  name: string
+  type: 'family' | 'profile'
+  beltId?: string | null
 }
 
 const BILLING_PERIODS = [
@@ -49,6 +84,8 @@ export default function BillingPage() {
   const [memberships, setMemberships] = useState<Membership[]>([])
   const [charges, setCharges] = useState<CustomCharge[]>([])
   const [families, setFamilies] = useState<Family[]>([])
+  const [profiles, setProfiles] = useState<Profile[]>([])
+  const [beltRanks, setBeltRanks] = useState<BeltRank[]>([])
   const [loading, setLoading] = useState(true)
   const [schoolId, setSchoolId] = useState<string | null>(null)
 
@@ -65,10 +102,13 @@ export default function BillingPage() {
 
   // Custom charge modal state
   const [isChargeModalOpen, setIsChargeModalOpen] = useState(false)
+  const [recipientFilter, setRecipientFilter] = useState<RecipientFilter>('all')
+  const [selectedBeltFilter, setSelectedBeltFilter] = useState<string>('')
+  const [selectedRecipients, setSelectedRecipients] = useState<Recipient[]>([])
+  const [showBeltDropdown, setShowBeltDropdown] = useState(false)
   const [chargeForm, setChargeForm] = useState({
     description: '',
     amount: '',
-    family_id: '',
     due_date: '',
   })
 
@@ -98,31 +138,42 @@ export default function BillingPage() {
 
     setSchoolId(userProfile.school_id)
 
-    const [membershipsRes, chargesRes, familiesRes] = await Promise.all([
-      supabase
-        .from('memberships')
-        .select('*')
-        .eq('school_id', userProfile.school_id)
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('custom_charges')
-        .select(`
-          *,
-          family:families(name)
-        `)
-        .eq('school_id', userProfile.school_id)
-        .order('created_at', { ascending: false })
-        .limit(20),
+    // Fetch memberships, charges, families, profiles, and belt ranks
+    const [membershipsRes, chargesRes, familiesRes, profilesRes, beltsRes] = await Promise.all([
+      fetch('/api/memberships').then(res => res.json()),
+      fetch('/api/custom-charges').then(res => res.json()),
       supabase
         .from('families')
         .select('id, name')
         .eq('school_id', userProfile.school_id)
         .order('name'),
+      supabase
+        .from('profiles')
+        .select('id, full_name, is_student, account_type, family_id, role, student_profiles(belt_rank_id), family_members(is_student)')
+        .eq('school_id', userProfile.school_id)
+        .eq('is_approved', true)
+        .neq('role', 'owner')
+        .order('full_name'),
+      supabase
+        .from('belt_ranks')
+        .select('id, name, color, display_order')
+        .eq('school_id', userProfile.school_id)
+        .order('display_order'),
     ])
 
-    if (membershipsRes.data) setMemberships(membershipsRes.data)
-    if (chargesRes.data) setCharges(chargesRes.data as unknown as CustomCharge[])
+    if (Array.isArray(membershipsRes)) setMemberships(membershipsRes)
+    if (Array.isArray(chargesRes)) setCharges(chargesRes as CustomCharge[])
     if (familiesRes.data) setFamilies(familiesRes.data)
+    if (profilesRes.data) {
+      // Transform the data to match our interface
+      const transformedProfiles = profilesRes.data.map((p: Record<string, unknown>) => ({
+        ...p,
+        student_profile: Array.isArray(p.student_profiles) ? p.student_profiles[0] : p.student_profiles,
+        family_member: Array.isArray(p.family_members) ? p.family_members[0] : p.family_members,
+      })) as Profile[]
+      setProfiles(transformedProfiles)
+    }
+    if (beltsRes.data) setBeltRanks(beltsRes.data)
     setLoading(false)
   }
 
@@ -155,39 +206,45 @@ export default function BillingPage() {
     if (!schoolId) return
 
     setIsSubmitting(true)
-    const supabase = createClient()
 
     try {
       const priceInCents = Math.round(parseFloat(membershipForm.price) * 100)
 
       if (editingMembership) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase.from('memberships') as any)
-          .update({
+        const response = await fetch(`/api/memberships/${editingMembership.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             name: membershipForm.name,
             description: membershipForm.description || null,
             price: priceInCents,
             billing_period: membershipForm.billing_period,
             family_discount_percent: parseFloat(membershipForm.family_discount_percent) || 0,
-          })
-          .eq('id', editingMembership.id)
+          }),
+        })
 
-        if (error) throw error
+        if (!response.ok) {
+          const data = await response.json()
+          throw new Error(data.error || 'Failed to update membership')
+        }
         toast.success('Membership updated successfully')
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase.from('memberships') as any)
-          .insert({
-            school_id: schoolId,
+        const response = await fetch('/api/memberships', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             name: membershipForm.name,
             description: membershipForm.description || null,
             price: priceInCents,
             billing_period: membershipForm.billing_period,
             family_discount_percent: parseFloat(membershipForm.family_discount_percent) || 0,
-            is_active: true,
-          })
+          }),
+        })
 
-        if (error) throw error
+        if (!response.ok) {
+          const data = await response.json()
+          throw new Error(data.error || 'Failed to create membership')
+        }
         toast.success('Membership created successfully')
       }
 
@@ -195,22 +252,24 @@ export default function BillingPage() {
       fetchBillingData()
     } catch (error) {
       console.error('Error saving membership:', error)
-      toast.error('Failed to save membership')
+      toast.error(error instanceof Error ? error.message : 'Failed to save membership')
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const toggleMembershipActive = async (membership: Membership) => {
-    const supabase = createClient()
-
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.from('memberships') as any)
-        .update({ is_active: !membership.is_active })
-        .eq('id', membership.id)
+      const response = await fetch(`/api/memberships/${membership.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: !membership.is_active }),
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to update membership')
+      }
 
       toast.success(membership.is_active ? 'Membership deactivated' : 'Membership activated')
       fetchBillingData()
@@ -223,15 +282,15 @@ export default function BillingPage() {
   const deleteMembership = async (id: string) => {
     if (!confirm('Are you sure you want to delete this membership plan?')) return
 
-    const supabase = createClient()
-
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.from('memberships') as any)
-        .delete()
-        .eq('id', id)
+      const response = await fetch(`/api/memberships/${id}`, {
+        method: 'DELETE',
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to delete membership')
+      }
 
       toast.success('Membership deleted')
       fetchBillingData()
@@ -245,41 +304,115 @@ export default function BillingPage() {
     setChargeForm({
       description: '',
       amount: '',
-      family_id: '',
       due_date: '',
     })
+    setRecipientFilter('all')
+    setSelectedBeltFilter('')
+    setSelectedRecipients([])
+    setShowBeltDropdown(false)
     setIsChargeModalOpen(true)
+  }
+
+  // Get filtered recipients based on current filter
+  const getFilteredRecipients = (): Recipient[] => {
+    // Helper to check if profile is a student
+    // Check: role is 'student', is_student flag, has student_profile, or family_member.is_student
+    const isStudent = (p: Profile) =>
+      p.role === 'student' ||
+      p.is_student ||
+      !!p.student_profile ||
+      p.family_member?.is_student
+
+    switch (recipientFilter) {
+      case 'students':
+        return profiles
+          .filter(p => isStudent(p))
+          .map(p => ({ id: p.id, name: p.full_name, type: 'profile' as const, beltId: p.student_profile?.belt_rank_id }))
+      case 'parents':
+        return profiles
+          .filter(p => p.account_type === 'adult' && !isStudent(p))
+          .map(p => ({ id: p.id, name: p.full_name, type: 'profile' as const }))
+      case 'belts':
+        // Filter students by selected belt
+        if (selectedBeltFilter) {
+          return profiles
+            .filter(p => isStudent(p) && p.student_profile?.belt_rank_id === selectedBeltFilter)
+            .map(p => ({ id: p.id, name: p.full_name, type: 'profile' as const, beltId: p.student_profile?.belt_rank_id }))
+        }
+        // Show all students if no belt selected
+        return profiles
+          .filter(p => isStudent(p))
+          .map(p => ({ id: p.id, name: p.full_name, type: 'profile' as const, beltId: p.student_profile?.belt_rank_id }))
+      case 'all':
+      default:
+        // Show families and all profiles
+        const familyRecipients: Recipient[] = families.map(f => ({ id: f.id, name: f.name, type: 'family' as const }))
+        const profileRecipients: Recipient[] = profiles.map(p => ({ id: p.id, name: p.full_name, type: 'profile' as const, beltId: p.student_profile?.belt_rank_id }))
+        return [...familyRecipients, ...profileRecipients]
+    }
+  }
+
+  const toggleRecipient = (recipient: Recipient) => {
+    setSelectedRecipients(prev => {
+      const exists = prev.find(r => r.id === recipient.id && r.type === recipient.type)
+      if (exists) {
+        return prev.filter(r => !(r.id === recipient.id && r.type === recipient.type))
+      }
+      return [...prev, recipient]
+    })
+  }
+
+  const selectAllRecipients = () => {
+    const filtered = getFilteredRecipients()
+    setSelectedRecipients(filtered)
+  }
+
+  const clearRecipients = () => {
+    setSelectedRecipients([])
+  }
+
+  const isRecipientSelected = (recipient: Recipient) => {
+    return selectedRecipients.some(r => r.id === recipient.id && r.type === recipient.type)
   }
 
   const handleChargeSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!schoolId || !chargeForm.family_id) return
+    if (!schoolId || selectedRecipients.length === 0) {
+      toast.error('Please select at least one recipient')
+      return
+    }
 
     setIsSubmitting(true)
-    const supabase = createClient()
 
     try {
       const amountInCents = Math.round(parseFloat(chargeForm.amount) * 100)
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.from('custom_charges') as any)
-        .insert({
-          school_id: schoolId,
-          family_id: chargeForm.family_id,
+      const response = await fetch('/api/custom-charges', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipients: selectedRecipients.map(r => ({
+            id: r.id,
+            type: r.type,
+          })),
           description: chargeForm.description,
           amount: amountInCents,
           due_date: chargeForm.due_date || null,
-          status: 'pending',
-        })
+        }),
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to create charges')
+      }
 
-      toast.success('Custom charge created')
+      const data = await response.json()
+      toast.success(`Created ${data.count || selectedRecipients.length} charge(s)`)
       setIsChargeModalOpen(false)
       fetchBillingData()
     } catch (error) {
-      console.error('Error creating charge:', error)
-      toast.error('Failed to create charge')
+      console.error('Error creating charges:', error)
+      toast.error('Failed to create charges')
     } finally {
       setIsSubmitting(false)
     }
@@ -436,7 +569,10 @@ export default function BillingPage() {
                   >
                     <div>
                       <h3 className="font-medium text-gray-900 dark:text-white">{charge.description}</h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{charge.family?.name}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {charge.family?.name || charge.profile?.full_name || 'Unknown'}
+                        {charge.family_id && <span className="text-xs ml-1">(Family)</span>}
+                      </p>
                       {charge.due_date && (
                         <p className="text-xs text-gray-400 dark:text-gray-500">
                           Due: {new Date(charge.due_date).toLocaleDateString()}
@@ -580,20 +716,168 @@ export default function BillingPage() {
         title="Add Custom Charge"
       >
         <form onSubmit={handleChargeSubmit} className="space-y-4">
+          {/* Recipient Filter Tabs */}
           <div className="space-y-2">
-            <Label htmlFor="charge_family">Family *</Label>
-            <select
-              id="charge_family"
-              value={chargeForm.family_id}
-              onChange={(e) => setChargeForm({ ...chargeForm, family_id: e.target.value })}
-              className="w-full h-11 min-h-[44px] px-3 py-2 border dark:border-gray-700 rounded-lg text-base touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              required
-            >
-              <option value="">Select a family</option>
-              {families.map((family) => (
-                <option key={family.id} value={family.id}>{family.name}</option>
-              ))}
-            </select>
+            <Label>Select Recipients</Label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => { setRecipientFilter('all'); setSelectedBeltFilter(''); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  recipientFilter === 'all'
+                    ? 'bg-red-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                <Users className="h-4 w-4" />
+                All
+              </button>
+              <button
+                type="button"
+                onClick={() => { setRecipientFilter('students'); setSelectedBeltFilter(''); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  recipientFilter === 'students'
+                    ? 'bg-red-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                <GraduationCap className="h-4 w-4" />
+                Students
+              </button>
+              <button
+                type="button"
+                onClick={() => { setRecipientFilter('parents'); setSelectedBeltFilter(''); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  recipientFilter === 'parents'
+                    ? 'bg-red-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                <UserCheck className="h-4 w-4" />
+                Parents
+              </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => { setRecipientFilter('belts'); setShowBeltDropdown(!showBeltDropdown); }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    recipientFilter === 'belts'
+                      ? 'bg-red-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  <Award className="h-4 w-4" />
+                  Belts
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+                {showBeltDropdown && recipientFilter === 'belts' && (
+                  <div className="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 z-10 py-1">
+                    <button
+                      type="button"
+                      onClick={() => { setSelectedBeltFilter(''); setShowBeltDropdown(false); }}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                        !selectedBeltFilter ? 'bg-gray-100 dark:bg-gray-700' : ''
+                      }`}
+                    >
+                      All Belts
+                    </button>
+                    {beltRanks.map((belt) => (
+                      <button
+                        key={belt.id}
+                        type="button"
+                        onClick={() => { setSelectedBeltFilter(belt.id); setShowBeltDropdown(false); }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 ${
+                          selectedBeltFilter === belt.id ? 'bg-gray-100 dark:bg-gray-700' : ''
+                        }`}
+                      >
+                        <span
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: belt.color }}
+                        />
+                        {belt.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            {selectedBeltFilter && recipientFilter === 'belts' && (
+              <p className="text-xs text-gray-500">
+                Filtered by: {beltRanks.find(b => b.id === selectedBeltFilter)?.name}
+              </p>
+            )}
+          </div>
+
+          {/* Recipient List with Multi-select */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <Label>
+                Recipients ({selectedRecipients.length} selected)
+              </Label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={selectAllRecipients}
+                  className="text-xs text-red-600 hover:text-red-700"
+                >
+                  Select All
+                </button>
+                <button
+                  type="button"
+                  onClick={clearRecipients}
+                  className="text-xs text-gray-500 hover:text-gray-700"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+            <div className="max-h-48 overflow-y-auto border dark:border-gray-700 rounded-lg">
+              {getFilteredRecipients().length === 0 ? (
+                <p className="text-center py-4 text-sm text-gray-500">No recipients found</p>
+              ) : (
+                getFilteredRecipients().map((recipient) => {
+                  const beltInfo = recipient.beltId ? beltRanks.find(b => b.id === recipient.beltId) : null
+                  return (
+                    <label
+                      key={`${recipient.type}-${recipient.id}`}
+                      className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 border-b dark:border-gray-700 last:border-b-0 ${
+                        isRecipientSelected(recipient) ? 'bg-red-50 dark:bg-red-900/20' : ''
+                      }`}
+                    >
+                      <div
+                        className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                          isRecipientSelected(recipient)
+                            ? 'bg-red-600 border-red-600'
+                            : 'border-gray-300 dark:border-gray-600'
+                        }`}
+                        onClick={() => toggleRecipient(recipient)}
+                      >
+                        {isRecipientSelected(recipient) && (
+                          <Check className="h-3 w-3 text-white" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm text-gray-900 dark:text-white truncate block">
+                          {recipient.name}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {recipient.type === 'family' ? 'Family' : 'Individual'}
+                          {beltInfo && (
+                            <span className="ml-2 inline-flex items-center gap-1">
+                              <span
+                                className="w-2 h-2 rounded-full inline-block"
+                                style={{ backgroundColor: beltInfo.color }}
+                              />
+                              {beltInfo.name}
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    </label>
+                  )
+                })
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -637,8 +921,8 @@ export default function BillingPage() {
             <Button type="button" variant="outline" onClick={() => setIsChargeModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" isLoading={isSubmitting}>
-              Create Charge
+            <Button type="submit" isLoading={isSubmitting} disabled={selectedRecipients.length === 0}>
+              Create {selectedRecipients.length > 1 ? `${selectedRecipients.length} Charges` : 'Charge'}
             </Button>
           </div>
         </form>

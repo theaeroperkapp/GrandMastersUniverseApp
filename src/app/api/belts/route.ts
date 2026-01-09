@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    const { school_id, name, color, display_order, stripe_count, stripe_color } = await request.json()
+    const { school_id, name, color, display_order, stripe_count, stripe_color, parent_belt_id } = await request.json()
 
     if (!school_id || !name || !color) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
         is_default: false,
         stripe_count: stripe_count || 0,
         stripe_color: stripe_color || '#000000',
+        parent_belt_id: parent_belt_id || null,
       })
       .select()
       .single()
