@@ -5,9 +5,9 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Avatar } from '@/components/ui/avatar'
+import { NotificationDropdown } from '@/components/ui/notification-dropdown'
 import {
   Swords,
-  Bell,
   MessageSquare,
   Menu,
   X,
@@ -21,6 +21,7 @@ import {
   TrendingUp,
   CreditCard,
   HelpCircle,
+  Flame,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/types/database'
@@ -42,7 +43,7 @@ export function Navbar({ user, unreadNotifications: initialUnreadNotifications, 
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [notificationCount, setNotificationCount] = useState(initialUnreadNotifications)
+  const [messageShake, setMessageShake] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
 
@@ -51,75 +52,6 @@ export function Navbar({ user, unreadNotifications: initialUnreadNotifications, 
     setIsMenuOpen(false)
     setIsProfileOpen(false)
   }, [pathname])
-
-  // Subscribe to real-time notification updates
-  useEffect(() => {
-    const supabase = createClient()
-
-    // Subscribe to new notifications
-    const channel = supabase
-      .channel('notifications-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          // New notification received - increment count
-          setNotificationCount(prev => prev + 1)
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          // Notification updated - refresh count if marked as read
-          const newData = payload.new as { is_read: boolean }
-          if (newData.is_read) {
-            setNotificationCount(prev => Math.max(0, prev - 1))
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          // Notification deleted - decrement if it was unread
-          // We can't know if it was unread, so refresh from server
-          fetchNotificationCount()
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [user.id])
-
-  // Fetch current notification count
-  const fetchNotificationCount = async () => {
-    const supabase = createClient()
-    const { count } = await supabase
-      .from('notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .eq('is_read', false)
-
-    setNotificationCount(count || 0)
-  }
 
   // Handle Escape key to close menus
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -219,25 +151,20 @@ export function Navbar({ user, unreadNotifications: initialUnreadNotifications, 
               )}
             </Link>
 
-            {/* Notifications */}
-            <Link
-              href="/notifications"
-              className="relative flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-full hover:bg-gray-100 transition-colors touch-manipulation"
-              aria-label="Notifications"
-            >
-              <Bell className="h-5 w-5 text-gray-600" />
-              {notificationCount > 0 && (
-                <span className="absolute top-1 right-1 h-5 w-5 bg-red-600 text-white text-xs rounded-full flex items-center justify-center font-medium">
-                  {notificationCount > 9 ? '9+' : notificationCount}
-                </span>
-              )}
-            </Link>
+            {/* Notifications - Premium Dropdown */}
+            <NotificationDropdown
+              userId={user.id}
+              initialCount={initialUnreadNotifications}
+            />
 
-            {/* Profile Dropdown */}
+            {/* Profile Dropdown - Premium */}
             <div className="relative">
               <button
                 onClick={toggleProfileMenu}
-                className="flex items-center gap-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                className={cn(
+                  'flex items-center gap-2 p-1 rounded-full transition-all',
+                  isProfileOpen ? 'bg-gray-100 ring-2 ring-red-100' : 'hover:bg-gray-100'
+                )}
                 aria-expanded={isProfileOpen}
                 aria-haspopup="true"
               >
@@ -247,7 +174,7 @@ export function Navbar({ user, unreadNotifications: initialUnreadNotifications, 
                   size="sm"
                 />
                 <ChevronDown className={cn(
-                  'h-4 w-4 text-gray-600 hidden sm:block transition-transform',
+                  'h-4 w-4 text-gray-600 hidden sm:block transition-transform duration-200',
                   isProfileOpen && 'rotate-180'
                 )} />
               </button>
@@ -259,79 +186,115 @@ export function Navbar({ user, unreadNotifications: initialUnreadNotifications, 
                     onClick={() => setIsProfileOpen(false)}
                     aria-hidden="true"
                   />
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-50 py-1">
-                    <div className="px-4 py-2 border-b">
-                      <p className="font-medium text-sm truncate">{user.full_name}</p>
-                      <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+                  <div className="absolute right-0 mt-2 w-64 glass shadow-glass rounded-xl z-50 overflow-hidden animate-dropdown">
+                    {/* User Header */}
+                    <div className="px-4 py-3 bg-gradient-to-r from-red-50 to-orange-50 border-b border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <Avatar
+                          src={user.avatar_url}
+                          name={user.full_name}
+                          size="md"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm text-gray-900 truncate">{user.full_name}</p>
+                          <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+                        </div>
+                      </div>
                     </div>
-                    <Link
-                      href="/profile"
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => setIsProfileOpen(false)}
-                    >
-                      <User className="h-4 w-4" />
-                      Profile
-                    </Link>
-                    <Link
-                      href="/my-classes"
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => setIsProfileOpen(false)}
-                    >
-                      <BookOpen className="h-4 w-4" />
-                      My Classes
-                    </Link>
-                    <Link
-                      href="/my-progress"
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => setIsProfileOpen(false)}
-                    >
-                      <TrendingUp className="h-4 w-4" />
-                      My Progress
-                    </Link>
-                    <Link
-                      href="/my-family"
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => setIsProfileOpen(false)}
-                    >
-                      <Users className="h-4 w-4" />
-                      My Family
-                    </Link>
-                    <Link
-                      href="/payments"
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => setIsProfileOpen(false)}
-                    >
-                      <CreditCard className="h-4 w-4" />
-                      Payments
-                    </Link>
-                    <Link
-                      href="/help"
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => setIsProfileOpen(false)}
-                    >
-                      <HelpCircle className="h-4 w-4" />
-                      Help
-                    </Link>
-                    <Link
-                      href="/settings"
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => setIsProfileOpen(false)}
-                    >
-                      <Settings className="h-4 w-4" />
-                      Settings
-                    </Link>
-                    <button
-                      onClick={handleLogout}
-                      disabled={isLoggingOut}
-                      className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100 disabled:opacity-50"
-                    >
-                      {isLoggingOut ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <LogOut className="h-4 w-4" />
-                      )}
-                      {isLoggingOut ? 'Logging out...' : 'Log Out'}
-                    </button>
+
+                    {/* Menu Items */}
+                    <div className="py-1">
+                      <Link
+                        href="/profile"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        onClick={() => setIsProfileOpen(false)}
+                      >
+                        <div className="p-1.5 bg-blue-100 rounded-lg">
+                          <User className="h-4 w-4 text-blue-600" />
+                        </div>
+                        Profile
+                      </Link>
+                      <Link
+                        href="/my-classes"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        onClick={() => setIsProfileOpen(false)}
+                      >
+                        <div className="p-1.5 bg-purple-100 rounded-lg">
+                          <BookOpen className="h-4 w-4 text-purple-600" />
+                        </div>
+                        My Classes
+                      </Link>
+                      <Link
+                        href="/my-progress"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        onClick={() => setIsProfileOpen(false)}
+                      >
+                        <div className="p-1.5 bg-green-100 rounded-lg">
+                          <TrendingUp className="h-4 w-4 text-green-600" />
+                        </div>
+                        My Progress
+                      </Link>
+                      <Link
+                        href="/my-family"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        onClick={() => setIsProfileOpen(false)}
+                      >
+                        <div className="p-1.5 bg-amber-100 rounded-lg">
+                          <Users className="h-4 w-4 text-amber-600" />
+                        </div>
+                        My Family
+                      </Link>
+                      <Link
+                        href="/payments"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        onClick={() => setIsProfileOpen(false)}
+                      >
+                        <div className="p-1.5 bg-emerald-100 rounded-lg">
+                          <CreditCard className="h-4 w-4 text-emerald-600" />
+                        </div>
+                        Payments
+                      </Link>
+
+                      <div className="my-1 border-t border-gray-100" />
+
+                      <Link
+                        href="/help"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        onClick={() => setIsProfileOpen(false)}
+                      >
+                        <div className="p-1.5 bg-gray-100 rounded-lg">
+                          <HelpCircle className="h-4 w-4 text-gray-600" />
+                        </div>
+                        Help
+                      </Link>
+                      <Link
+                        href="/settings"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        onClick={() => setIsProfileOpen(false)}
+                      >
+                        <div className="p-1.5 bg-gray-100 rounded-lg">
+                          <Settings className="h-4 w-4 text-gray-600" />
+                        </div>
+                        Settings
+                      </Link>
+
+                      <div className="my-1 border-t border-gray-100" />
+
+                      <button
+                        onClick={handleLogout}
+                        disabled={isLoggingOut}
+                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                      >
+                        <div className="p-1.5 bg-red-100 rounded-lg">
+                          {isLoggingOut ? (
+                            <Loader2 className="h-4 w-4 text-red-600 animate-spin" />
+                          ) : (
+                            <LogOut className="h-4 w-4 text-red-600" />
+                          )}
+                        </div>
+                        {isLoggingOut ? 'Logging out...' : 'Log Out'}
+                      </button>
+                    </div>
                   </div>
                 </>
               )}

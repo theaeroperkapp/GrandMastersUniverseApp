@@ -39,11 +39,11 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="border-b bg-white">
+      <header className="border-b bg-white dark:bg-gray-950">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Swords className="h-8 w-8 text-red-600" />
-            <span className="text-xl font-bold">GrandMastersUniverse</span>
+            <span className="text-xl font-bold text-gray-900 dark:text-white">GrandMastersUniverse</span>
           </Link>
           <div className="flex items-center gap-4">
             <Link href="/login">
@@ -57,13 +57,13 @@ export default function HomePage() {
       </header>
 
       {/* Hero */}
-      <section className="bg-gradient-to-b from-red-50 to-white py-20">
+      <section className="bg-gradient-to-b from-red-50 to-white dark:from-gray-900 dark:to-gray-950 py-20">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6 text-gray-900 dark:text-white">
             Manage Your Martial Arts School<br />
             <span className="text-red-600">Like a Grandmaster</span>
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-8">
             The complete platform for martial arts schools. Manage students, families, classes, events, and billing all in one place.
           </p>
           <div className="flex items-center justify-center gap-4">
@@ -74,30 +74,30 @@ export default function HomePage() {
               <Button size="lg" variant="outline">Learn More</Button>
             </Link>
           </div>
-          <p className="mt-4 text-sm text-gray-500">
+          <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
             30-day free trial. No credit card required.
           </p>
         </div>
       </section>
 
       {/* Features */}
-      <section className="py-20">
+      <section className="py-20 bg-white dark:bg-gray-950">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-4">
+          <h2 className="text-3xl font-bold text-center mb-4 text-gray-900 dark:text-white">
             Everything You Need to Run Your School
           </h2>
-          <p className="text-gray-600 text-center max-w-2xl mx-auto mb-12">
+          <p className="text-gray-600 dark:text-gray-300 text-center max-w-2xl mx-auto mb-12">
             From student enrollment to belt promotions, we've got you covered.
           </p>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature) => (
               <div
                 key={feature.title}
-                className="p-6 rounded-xl border bg-white hover:shadow-lg transition-shadow"
+                className="p-6 rounded-xl border bg-white dark:bg-gray-900 dark:border-gray-800 hover:shadow-lg transition-shadow"
               >
                 <div className="text-red-600 mb-4">{feature.icon}</div>
-                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                <p className="text-gray-600">{feature.description}</p>
+                <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">{feature.title}</h3>
+                <p className="text-gray-600 dark:text-gray-300">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -105,17 +105,17 @@ export default function HomePage() {
       </section>
 
       {/* Pricing */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-4">Simple, Transparent Pricing</h2>
-          <p className="text-gray-600 mb-12">One plan, everything included.</p>
+          <h2 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">Simple, Transparent Pricing</h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-12">One plan, everything included.</p>
 
-          <div className="max-w-md mx-auto bg-white rounded-2xl shadow-lg border p-8">
+          <div className="max-w-md mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-lg border dark:border-gray-700 p-8">
             <div className="text-red-600 font-semibold mb-2">SCHOOL PLAN</div>
-            <div className="text-5xl font-bold mb-2">
-              $99<span className="text-xl text-gray-500">/month</span>
+            <div className="text-5xl font-bold mb-2 text-gray-900 dark:text-white">
+              $99<span className="text-xl text-gray-500 dark:text-gray-400">/month</span>
             </div>
-            <p className="text-gray-500 mb-6">per school</p>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">per school</p>
 
             <ul className="text-left space-y-3 mb-8">
               {[
@@ -129,7 +129,7 @@ export default function HomePage() {
                 'Contracts & waivers',
                 'Email support',
               ].map((item) => (
-                <li key={item} className="flex items-center gap-2">
+                <li key={item} className="flex items-center gap-2 text-gray-700 dark:text-gray-200">
                   <CheckCircle className="h-5 w-5 text-green-500" />
                   {item}
                 </li>

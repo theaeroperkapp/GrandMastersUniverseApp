@@ -650,23 +650,23 @@ export default function MessagesPage() {
                         <div
                           className={`
                             max-w-[85%] sm:max-w-[75%] md:max-w-[70%]
-                            rounded-2xl px-4 py-2.5
+                            px-4 py-2.5 shadow-sm
                             ${isOwn
-                              ? 'bg-red-500 text-white rounded-br-md'
-                              : 'bg-white text-gray-900 rounded-bl-md shadow-sm'
+                              ? 'message-sent text-white'
+                              : 'message-received text-gray-900'
                             }
                           `}
                         >
                           <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">
                             {message.content}
                           </p>
-                          <div className={`flex items-center gap-1 mt-1 text-xs ${
-                            isOwn ? 'text-red-100 justify-end' : 'text-gray-500'
+                          <div className={`flex items-center gap-1.5 mt-1.5 text-xs ${
+                            isOwn ? 'text-white/70 justify-end' : 'text-gray-400'
                           }`}>
                             <span>{formatTime(message.created_at)}</span>
                             {isOwn && (
                               message.is_read ? (
-                                <CheckCheck className="h-3.5 w-3.5" />
+                                <CheckCheck className="h-3.5 w-3.5 text-blue-300" />
                               ) : (
                                 <Check className="h-3.5 w-3.5" />
                               )
@@ -680,30 +680,31 @@ export default function MessagesPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Message Input */}
+              {/* Message Input - Premium */}
               <form onSubmit={sendMessage} className="p-3 md:p-4 border-t bg-white safe-bottom">
                 <div className="flex gap-2 items-end">
-                  <Input
-                    ref={messageInputRef}
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Type a message..."
-                    disabled={sendingMessage}
-                    className="flex-1"
-                    enterKeyHint="send"
-                  />
-                  <Button
+                  <div className="flex-1 relative">
+                    <Input
+                      ref={messageInputRef}
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      placeholder="Type a message..."
+                      disabled={sendingMessage}
+                      className="pr-4 rounded-full border-gray-200 focus:border-red-300 focus:ring-red-100"
+                      enterKeyHint="send"
+                    />
+                  </div>
+                  <button
                     type="submit"
                     disabled={sendingMessage || !newMessage.trim()}
-                    size="icon"
-                    className="shrink-0"
+                    className="shrink-0 h-10 w-10 rounded-full btn-gradient-red text-white flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed press-scale transition-all shadow-lg shadow-red-200 hover:shadow-red-300"
                   >
                     {sendingMessage ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <Send className="h-4 w-4" />
                     )}
-                  </Button>
+                  </button>
                 </div>
               </form>
             </>
