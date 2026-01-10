@@ -22,32 +22,39 @@ export async function POST(request: NextRequest) {
     const { payment_id, payment_method_id, save_card } = body
 
     const adminClient = createAdminClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const anyAdminClient = adminClient as any
 
-    // Get user profile
+    // Get user profile with stripe_customer_id for individual billing
     const { data: profile } = await adminClient
       .from('profiles')
-      .select('family_id')
+      .select('id, family_id, full_name, email, stripe_customer_id')
       .eq('id', user.id)
-      .single() as { data: { family_id: string | null } | null }
+      .single() as { data: { id: string; family_id: string | null; full_name: string; email: string; stripe_customer_id: string | null } | null }
 
-    if (!profile?.family_id) {
-      return NextResponse.json({ error: 'No family account found' }, { status: 400 })
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 400 })
     }
 
+    const hasFamilyBilling = !!profile.family_id
+
     // Get the event registration with event and school info
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: registration } = await (adminClient as any)
+    let registrationQuery = anyAdminClient
       .from('event_registrations')
-      .select('*, event:events(title, fee, school_id, school:schools(id, stripe_account_id, subscription_plan))')
+      .select('*, event:events(title, fee, school_id, school:schools(id, stripe_account_id, subscription_plan)), student_profile:student_profiles(profile_id)')
       .eq('id', payment_id)
-      .eq('family_id', profile.family_id)
       .eq('payment_status', 'pending')
-      .single()
+
+    if (hasFamilyBilling) {
+      registrationQuery = registrationQuery.eq('family_id', profile.family_id)
+    }
+
+    const { data: registration } = await registrationQuery.single()
 
     type RegistrationType = {
       id: string
       event_id: string
-      family_id: string
+      family_id: string | null
       payment_status: string
       payment_intent_id: string | null
       event: {
@@ -56,11 +63,17 @@ export async function POST(request: NextRequest) {
         school_id: string
         school: { id: string; stripe_account_id: string | null; subscription_plan: string | null } | null
       } | null
+      student_profile: { profile_id: string } | null
     }
 
     const typedRegistration = registration as RegistrationType | null
 
     if (!typedRegistration) {
+      return NextResponse.json({ error: 'Registration not found or already paid' }, { status: 404 })
+    }
+
+    // For individual billing, verify the registration belongs to this user
+    if (!hasFamilyBilling && typedRegistration.student_profile?.profile_id !== user.id) {
       return NextResponse.json({ error: 'Registration not found or already paid' }, { status: 404 })
     }
 
@@ -87,45 +100,76 @@ export async function POST(request: NextRequest) {
       typedRegistration.event.school.subscription_plan
     )
 
-    // Get family for customer info
-    const { data: family } = await adminClient
-      .from('families')
-      .select('id, stripe_customer_id, name, billing_email')
-      .eq('id', profile.family_id)
-      .single() as { data: { id: string; stripe_customer_id: string | null; name: string; billing_email: string | null } | null }
+    let validCustomerId: string
+    let metadata: Record<string, string>
 
-    if (!family) {
-      return NextResponse.json({ error: 'Family not found' }, { status: 404 })
-    }
-
-    // Get or create Stripe customer
-    let customerId = family.stripe_customer_id
-    if (!customerId) {
-      const customer = await createCustomer(
-        family.billing_email || user.email || '',
-        family.name,
-        { family_id: family.id, type: 'family' }
-      )
-      customerId = customer.id
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (adminClient as any)
+    if (hasFamilyBilling) {
+      // Family billing flow
+      const { data: family } = await adminClient
         .from('families')
-        .update({ stripe_customer_id: customerId })
-        .eq('id', family.id)
-    }
+        .select('id, stripe_customer_id, name, billing_email')
+        .eq('id', profile.family_id!)
+        .single() as { data: { id: string; stripe_customer_id: string | null; name: string; billing_email: string | null } | null }
 
-    // TypeScript type narrowing - customerId is definitely a string after the above logic
-    const validCustomerId: string = customerId!
+      if (!family) {
+        return NextResponse.json({ error: 'Family not found' }, { status: 404 })
+      }
 
-    const metadata = {
-      type: 'event_registration',
-      registration_id: typedRegistration.id,
-      event_id: typedRegistration.event_id,
-      family_id: family.id,
-      user_id: user.id,
-      school_id: typedRegistration.event.school_id,
-      platform_fee: platformFee.toString(),
+      // Get or create Stripe customer for family
+      let customerId = family.stripe_customer_id
+      if (!customerId) {
+        const customer = await createCustomer(
+          family.billing_email || user.email || '',
+          family.name,
+          { family_id: family.id, type: 'family' }
+        )
+        customerId = customer.id
+
+        await anyAdminClient
+          .from('families')
+          .update({ stripe_customer_id: customerId })
+          .eq('id', family.id)
+      }
+
+      validCustomerId = customerId!
+
+      metadata = {
+        type: 'event_registration',
+        registration_id: typedRegistration.id,
+        event_id: typedRegistration.event_id,
+        family_id: family.id,
+        user_id: user.id,
+        school_id: typedRegistration.event.school_id,
+        platform_fee: platformFee.toString(),
+      }
+    } else {
+      // Individual student billing flow
+      let customerId = profile.stripe_customer_id
+      if (!customerId) {
+        const customer = await createCustomer(
+          profile.email || user.email || '',
+          profile.full_name,
+          { profile_id: profile.id, type: 'individual' }
+        )
+        customerId = customer.id
+
+        await anyAdminClient
+          .from('profiles')
+          .update({ stripe_customer_id: customerId })
+          .eq('id', profile.id)
+      }
+
+      validCustomerId = customerId!
+
+      metadata = {
+        type: 'event_registration',
+        registration_id: typedRegistration.id,
+        event_id: typedRegistration.event_id,
+        profile_id: profile.id,
+        user_id: user.id,
+        school_id: typedRegistration.event.school_id,
+        platform_fee: platformFee.toString(),
+      }
     }
 
     if (payment_method_id) {

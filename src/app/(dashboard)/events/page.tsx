@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { PaymentModal } from '@/components/payments/payment-modal'
 import {
   Calendar as CalendarIcon,
   MapPin,
@@ -56,6 +57,13 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   other: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200',
 }
 
+interface PaymentModalState {
+  isOpen: boolean
+  registrationId: string
+  amount: number
+  eventTitle: string
+}
+
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([])
   const [myRegistrations, setMyRegistrations] = useState<Registration[]>([])
@@ -65,6 +73,12 @@ export default function EventsPage() {
   const [registering, setRegistering] = useState(false)
   const [userProfile, setUserProfile] = useState<{ id: string; role: string; family_id: string | null; school_id: string | null } | null>(null)
   const [studentProfileId, setStudentProfileId] = useState<string | null>(null)
+  const [paymentModal, setPaymentModal] = useState<PaymentModalState>({
+    isOpen: false,
+    registrationId: '',
+    amount: 0,
+    eventTitle: '',
+  })
 
   useEffect(() => {
     fetchData()
@@ -252,6 +266,7 @@ export default function EventsPage() {
 
     setRegistering(true)
     try {
+      // First, create/get pending registration
       const response = await fetch('/api/events/payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -268,13 +283,38 @@ export default function EventsPage() {
         throw new Error(data.error || 'Failed to create payment')
       }
 
-      // Redirect to Stripe checkout
-      if (data.url) {
-        window.location.href = data.url
-      }
+      // Close event modal and open payment modal
+      setShowModal(false)
+      setPaymentModal({
+        isOpen: true,
+        registrationId: data.registration_id,
+        amount: selectedEvent.fee || 0,
+        eventTitle: selectedEvent.title,
+      })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to process payment')
+    } finally {
       setRegistering(false)
+    }
+  }
+
+  const handlePaymentSuccess = () => {
+    setPaymentModal(prev => ({ ...prev, isOpen: false }))
+    fetchData() // Refresh data to show updated registration status
+    toast.success('Payment successful! You are now registered.')
+  }
+
+  const openPaymentModalForPending = (eventId: string) => {
+    const event = events.find(e => e.id === eventId)
+    const registration = myRegistrations.find(r => r.event_id === eventId && r.payment_status === 'pending')
+
+    if (event && registration) {
+      setPaymentModal({
+        isOpen: true,
+        registrationId: registration.id,
+        amount: event.fee || 0,
+        eventTitle: event.title,
+      })
     }
   }
 
@@ -458,9 +498,7 @@ export default function EventsPage() {
                 </Button>
               ) : hasPendingPayment(selectedEvent.id) ? (
                 <Button
-                  onClick={handlePayment}
-                  disabled={registering}
-                  isLoading={registering}
+                  onClick={() => openPaymentModalForPending(selectedEvent.id)}
                 >
                   Complete Payment ({formatPrice(selectedEvent.fee || 0)})
                 </Button>
@@ -491,6 +529,17 @@ export default function EventsPage() {
           </div>
         )}
       </Modal>
+
+      {/* In-App Payment Modal */}
+      <PaymentModal
+        isOpen={paymentModal.isOpen}
+        onClose={() => setPaymentModal(prev => ({ ...prev, isOpen: false }))}
+        amount={paymentModal.amount}
+        description={paymentModal.eventTitle}
+        paymentType="event"
+        paymentId={paymentModal.registrationId}
+        onSuccess={handlePaymentSuccess}
+      />
     </div>
   )
 }
