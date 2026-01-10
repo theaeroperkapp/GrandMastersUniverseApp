@@ -1,10 +1,31 @@
 import { v2 as cloudinary } from 'cloudinary'
 
-cloudinary.config({
-  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+// CLOUDINARY_URL auto-configures everything if set
+const cloudinaryUrl = process.env.CLOUDINARY_URL
+const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+const apiKey = process.env.CLOUDINARY_API_KEY
+const apiSecret = process.env.CLOUDINARY_API_SECRET
+
+// Log config status (not the actual values) for debugging
+console.log('Cloudinary config status:', {
+  hasCloudinaryUrl: !!cloudinaryUrl,
+  hasCloudName: !!cloudName,
+  hasApiKey: !!apiKey,
+  hasApiSecret: !!apiSecret,
 })
+
+if (cloudinaryUrl) {
+  // CLOUDINARY_URL format auto-configures the SDK
+  console.log('Using CLOUDINARY_URL for configuration')
+} else if (cloudName && apiKey && apiSecret) {
+  cloudinary.config({
+    cloud_name: cloudName,
+    api_key: apiKey,
+    api_secret: apiSecret,
+  })
+} else {
+  console.error('Missing Cloudinary environment variables!')
+}
 
 export { cloudinary }
 

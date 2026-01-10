@@ -87,12 +87,48 @@ export async function POST(request: NextRequest) {
     // Upload image if provided
     let imageUrl = null
     if (image) {
-      const buffer = await image.arrayBuffer()
-      const base64 = Buffer.from(buffer).toString('base64')
-      const dataUri = `data:${image.type};base64,${base64}`
+      try {
+        // Log image details for debugging
+        console.log('Image upload attempt:', {
+          name: image.name,
+          type: image.type,
+          size: image.size,
+        })
 
-      const result = await uploadImage(dataUri, 'posts')
-      imageUrl = result.url
+        const buffer = await image.arrayBuffer()
+        const base64 = Buffer.from(buffer).toString('base64')
+        const dataUri = `data:${image.type};base64,${base64}`
+
+        console.log('Uploading to Cloudinary...')
+        const result = await uploadImage(dataUri, 'posts')
+        imageUrl = result.url
+        console.log('Upload successful:', imageUrl)
+      } catch (uploadError: any) {
+        console.error('Image upload error:', {
+          message: uploadError?.message,
+          name: uploadError?.name,
+          stack: uploadError?.stack,
+          httpCode: uploadError?.http_code,
+          errorDetails: uploadError?.error,
+        })
+
+        // Extract meaningful error message
+        let errorDetails = 'Unknown error'
+        if (uploadError?.message) {
+          errorDetails = uploadError.message
+        } else if (uploadError?.error?.message) {
+          errorDetails = uploadError.error.message
+        } else if (typeof uploadError?.error === 'string') {
+          errorDetails = uploadError.error
+        }
+
+        return NextResponse.json({
+          error: 'Failed to upload image. Please try again.',
+          details: errorDetails,
+          code: uploadError?.http_code || uploadError?.error?.http_code,
+          fullError: JSON.stringify(uploadError, Object.getOwnPropertyNames(uploadError))
+        }, { status: 500 })
+      }
     }
 
     // Create post (use null for empty content to allow image-only posts)

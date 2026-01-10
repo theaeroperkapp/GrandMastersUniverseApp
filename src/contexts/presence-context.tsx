@@ -146,6 +146,8 @@ export function PresenceProvider({ children, schoolId, userId, userName }: Prese
     }
 
     const supabase = supabaseRef.current
+    let realtimeWorking = false
+    let pollInterval: NodeJS.Timeout | null = null
 
     // Initial presence update and fetch
     updatePresence('online')
@@ -194,8 +196,34 @@ export function PresenceProvider({ children, schoolId, userId, userName }: Prese
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           setIsConnected(true)
+          realtimeWorking = true
+          // Clear polling if realtime is working
+          if (pollInterval) {
+            clearInterval(pollInterval)
+            pollInterval = null
+          }
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          realtimeWorking = false
+          // Start polling fallback
+          if (!pollInterval) {
+            console.log('[Presence] Realtime failed, starting polling fallback')
+            pollInterval = setInterval(fetchOnlineUsers, 10000) // Poll every 10 seconds
+          }
         }
       })
+
+    // Start polling fallback after 3 seconds if realtime hasn't connected
+    const fallbackTimeout = setTimeout(() => {
+      if (!realtimeWorking && !pollInterval) {
+        console.log('[Presence] Realtime not connected, starting polling fallback')
+        pollInterval = setInterval(fetchOnlineUsers, 10000)
+      }
+    }, 3000)
+
+    // Also refresh presence periodically to catch any missed updates
+    const refreshInterval = setInterval(() => {
+      fetchOnlineUsers()
+    }, 30000) // Refresh every 30 seconds regardless
 
     // Heartbeat - update presence every 30 seconds
     heartbeatRef.current = setInterval(() => {
@@ -252,6 +280,11 @@ export function PresenceProvider({ children, schoolId, userId, userName }: Prese
         clearInterval(heartbeatRef.current)
       }
       clearInterval(cleanupInterval)
+      clearInterval(refreshInterval)
+      clearTimeout(fallbackTimeout)
+      if (pollInterval) {
+        clearInterval(pollInterval)
+      }
 
       supabase.removeChannel(channel)
 

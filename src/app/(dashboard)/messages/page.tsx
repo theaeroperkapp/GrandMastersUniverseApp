@@ -70,15 +70,8 @@ export default function MessagesPage() {
   const [sendingMessage, setSendingMessage] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
-  // Real-time presence tracking - use onlineUsers directly to trigger re-renders
-  const { onlineUsers, isConnected, presenceCount } = usePresenceContext()
-
-  // Helper to get user status
-  const getUserStatus = (targetUserId: string): 'online' | 'away' | 'offline' => {
-    const user = onlineUsers.get(targetUserId)
-    if (!user) return 'offline'
-    return user.status
-  }
+  // Real-time presence tracking
+  const { onlineUsers, getUserStatus, isConnected, presenceCount } = usePresenceContext()
   const [schoolId, setSchoolId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
 

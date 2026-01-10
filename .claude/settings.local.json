@@ -41,7 +41,8 @@
       "Bash(stripe products list:*)",
       "Bash(stripe prices list:*)",
       "Bash(git reset:*)",
-      "Bash(stripe config:*)"
+      "Bash(stripe config:*)",
+      "WebFetch(domain:www.grandmastersuniverse.app)"
     ]
   }
 }

@@ -82,12 +82,32 @@ export function NotificationDropdown({ userId, initialCount }: NotificationDropd
   const dropdownRef = useRef<HTMLDivElement>(null)
   const prevCountRef = useRef(initialCount)
 
+  // Fetch unread count - defined early so it can be used in useEffects
+  const fetchUnreadCount = async () => {
+    const supabase = createClient()
+    const { count: unreadCount } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_read', false)
+
+    if (unreadCount !== null) {
+      setCount(unreadCount)
+    }
+  }
+
   // Fetch notifications when dropdown opens
   useEffect(() => {
     if (isOpen) {
       fetchNotifications()
     }
   }, [isOpen])
+
+  // Fetch current unread count on mount to ensure badge is accurate
+  useEffect(() => {
+    fetchUnreadCount()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId])
 
   // Bell shake animation when count increases
   useEffect(() => {
@@ -98,9 +118,11 @@ export function NotificationDropdown({ userId, initialCount }: NotificationDropd
     prevCountRef.current = count
   }, [count])
 
-  // Real-time subscription
+  // Real-time subscription with polling fallback
   useEffect(() => {
     const supabase = createClient()
+    let realtimeWorking = false
+    let pollInterval: NodeJS.Timeout | null = null
 
     const channel = supabase
       .channel('notification-dropdown')
@@ -113,9 +135,13 @@ export function NotificationDropdown({ userId, initialCount }: NotificationDropd
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          setCount(prev => prev + 1)
+          const newNotification = payload.new as Notification
+          // Only increment if notification is unread
+          if (!newNotification.is_read) {
+            setCount(prev => prev + 1)
+          }
           if (isOpen) {
-            setNotifications(prev => [payload.new as Notification, ...prev.slice(0, 4)])
+            setNotifications(prev => [newNotification, ...prev.slice(0, 4)])
           }
         }
       )
@@ -137,9 +163,39 @@ export function NotificationDropdown({ userId, initialCount }: NotificationDropd
           )
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          realtimeWorking = true
+          // Clear polling if realtime is working
+          if (pollInterval) {
+            clearInterval(pollInterval)
+            pollInterval = null
+          }
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          realtimeWorking = false
+          // Start polling fallback
+          if (!pollInterval) {
+            pollInterval = setInterval(fetchUnreadCount, 10000) // Poll every 10 seconds
+          }
+        }
+      })
+
+    // Start polling fallback after 3 seconds if realtime hasn't connected
+    const fallbackTimeout = setTimeout(() => {
+      if (!realtimeWorking && !pollInterval) {
+        pollInterval = setInterval(fetchUnreadCount, 10000)
+      }
+    }, 3000)
+
+    // Also refresh count periodically to catch any missed updates
+    const refreshInterval = setInterval(fetchUnreadCount, 30000) // Refresh every 30 seconds
 
     return () => {
+      clearTimeout(fallbackTimeout)
+      clearInterval(refreshInterval)
+      if (pollInterval) {
+        clearInterval(pollInterval)
+      }
       supabase.removeChannel(channel)
     }
   }, [userId, isOpen])
