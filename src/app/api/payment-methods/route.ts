@@ -69,16 +69,22 @@ export async function GET(request: NextRequest) {
     }
 
     // Get payment methods from Stripe
-    const paymentMethods = await getCustomerPaymentMethods(customerId)
+    interface PaymentMethodData {
+      id: string
+      card?: {
+        brand?: string
+        last4?: string
+        exp_month?: number
+        exp_year?: number
+      }
+    }
+    const paymentMethods = await getCustomerPaymentMethods(customerId) as { data: PaymentMethodData[] }
 
     // Get default payment method
-    const customer = await getCustomer(customerId)
-    const defaultPaymentMethodId =
-      typeof customer !== 'string' && 'invoice_settings' in customer
-        ? customer.invoice_settings?.default_payment_method
-        : null
+    const customer = await getCustomer(customerId) as { invoice_settings?: { default_payment_method?: string } }
+    const defaultPaymentMethodId = customer.invoice_settings?.default_payment_method || null
 
-    const methods = paymentMethods.data.map((pm) => ({
+    const methods = paymentMethods.data.map((pm: PaymentMethodData) => ({
       id: pm.id,
       brand: pm.card?.brand || 'unknown',
       last4: pm.card?.last4 || '****',

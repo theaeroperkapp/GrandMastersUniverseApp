@@ -59,9 +59,9 @@ export async function POST(
     }
 
     // Verify the payment method belongs to this customer
-    const paymentMethods = await getCustomerPaymentMethods(customerId)
+    const paymentMethods = await getCustomerPaymentMethods(customerId) as { data: Array<{ id: string }> }
     const belongsToCustomer = paymentMethods.data.some(
-      (pm) => pm.id === paymentMethodId
+      (pm: { id: string }) => pm.id === paymentMethodId
     )
 
     if (!belongsToCustomer) {
