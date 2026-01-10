@@ -28,8 +28,7 @@ const MONTHS = [
 const EVENT_COLORS: Record<string, string> = {
   tournament: 'bg-red-500',
   seminar: 'bg-blue-500',
-  belt_test: 'bg-yellow-500',
-  workshop: 'bg-purple-500',
+  belt_testing: 'bg-yellow-500',
   social: 'bg-green-500',
   other: 'bg-gray-500',
 }

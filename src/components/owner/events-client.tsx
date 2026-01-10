@@ -57,8 +57,7 @@ interface EventsClientProps {
 const EVENT_TYPES = [
   { value: 'tournament', label: 'Tournament' },
   { value: 'seminar', label: 'Seminar' },
-  { value: 'belt_test', label: 'Belt Test' },
-  { value: 'workshop', label: 'Workshop' },
+  { value: 'belt_testing', label: 'Belt Test' },
   { value: 'social', label: 'Social Event' },
   { value: 'other', label: 'Other' },
 ]
@@ -246,7 +245,7 @@ export function EventsClient({ initialEvents, students, schoolId }: EventsClient
     switch (type) {
       case 'tournament':
         return <Trophy className="h-5 w-5" />
-      case 'belt_test':
+      case 'belt_testing':
         return <Users className="h-5 w-5" />
       default:
         return <Calendar className="h-5 w-5" />

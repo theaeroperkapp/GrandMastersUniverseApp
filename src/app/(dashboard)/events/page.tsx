@@ -43,8 +43,7 @@ interface Registration {
 const EVENT_TYPE_LABELS: Record<string, string> = {
   tournament: 'Tournament',
   seminar: 'Seminar',
-  belt_test: 'Belt Test',
-  workshop: 'Workshop',
+  belt_testing: 'Belt Test',
   social: 'Social Event',
   other: 'Other',
 }
@@ -52,8 +51,7 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
 const EVENT_TYPE_COLORS: Record<string, string> = {
   tournament: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200',
   seminar: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200',
-  belt_test: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200',
-  workshop: 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200',
+  belt_testing: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200',
   social: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
   other: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200',
 }
