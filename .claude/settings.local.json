@@ -40,7 +40,8 @@
       "WebFetch(domain:supabase.com)",
       "Bash(stripe products list:*)",
       "Bash(stripe prices list:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(stripe config:*)"
     ]
   }
 }

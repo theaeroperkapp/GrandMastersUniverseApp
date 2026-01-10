@@ -60,7 +60,10 @@ export function BeltTestFees({ schoolId }: BeltTestFeesProps) {
       // Fetch belts for the school
       const beltsRes = await fetch(`/api/belts?school_id=${schoolId}`)
       const beltsData = await beltsRes.json()
-      if (beltsData.belts) {
+      // API returns array directly, not { belts: [...] }
+      if (Array.isArray(beltsData)) {
+        setBelts(beltsData)
+      } else if (beltsData.belts) {
         setBelts(beltsData.belts)
       }
     } catch (error) {

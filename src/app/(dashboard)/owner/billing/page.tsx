@@ -157,7 +157,7 @@ export default function BillingPage() {
       supabase
         .from('belt_ranks')
         .select('id, name, color, display_order')
-        .eq('school_id', userProfile.school_id)
+        .or(`school_id.eq.${userProfile.school_id},is_default.eq.true`)
         .order('display_order'),
     ])
 
