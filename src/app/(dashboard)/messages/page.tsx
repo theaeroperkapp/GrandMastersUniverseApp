@@ -114,10 +114,44 @@ export default function MessagesPage() {
   }, [messages])
 
   // Real-time subscription for new messages and read status updates
+  // Also includes polling fallback when WebSocket fails
   useEffect(() => {
     if (!currentUserId) return
 
     const supabase = createClient()
+    let isSubscribed = false
+    let pollInterval: NodeJS.Timeout | null = null
+
+    // Polling fallback function
+    const pollForMessages = async () => {
+      if (selectedConversation) {
+        // Fetch latest messages
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: latestMsgs } = await (supabase.from('messages') as any)
+          .select('*')
+          .eq('conversation_id', selectedConversation.id)
+          .order('created_at', { ascending: true })
+
+        if (latestMsgs && Array.isArray(latestMsgs)) {
+          const typedMsgs = latestMsgs as Message[]
+          setMessages(prev => {
+            // Only update if there are new messages
+            if (typedMsgs.length !== prev.length) {
+              return typedMsgs
+            }
+            // Check if last message is different
+            const lastNew = typedMsgs[typedMsgs.length - 1]
+            const lastPrev = prev[prev.length - 1]
+            if (lastNew && lastPrev && lastNew.id !== lastPrev.id) {
+              return typedMsgs
+            }
+            return prev
+          })
+        }
+      }
+      // Also refresh conversations
+      fetchConversations()
+    }
 
     const channel = supabase
       .channel('messages-realtime')
@@ -173,9 +207,37 @@ export default function MessagesPage() {
           fetchConversations()
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          isSubscribed = true
+          // Clear polling if WebSocket connected
+          if (pollInterval) {
+            clearInterval(pollInterval)
+            pollInterval = null
+          }
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          isSubscribed = false
+          // Start polling as fallback when WebSocket fails
+          if (!pollInterval) {
+            console.log('[Messages] WebSocket failed, starting polling fallback')
+            pollInterval = setInterval(pollForMessages, 5000) // Poll every 5 seconds
+          }
+        }
+      })
+
+    // Start polling immediately as well (in case WebSocket never connects)
+    const initialPollTimeout = setTimeout(() => {
+      if (!isSubscribed && !pollInterval) {
+        console.log('[Messages] WebSocket not connected, starting polling fallback')
+        pollInterval = setInterval(pollForMessages, 5000)
+      }
+    }, 3000) // Wait 3 seconds for WebSocket to connect
 
     return () => {
+      clearTimeout(initialPollTimeout)
+      if (pollInterval) {
+        clearInterval(pollInterval)
+      }
       supabase.removeChannel(channel)
     }
   }, [currentUserId, selectedConversation?.id])
