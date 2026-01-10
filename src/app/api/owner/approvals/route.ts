@@ -130,6 +130,22 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `Failed to approve user: ${updateError.message}` }, { status: 500 })
       }
 
+      // If user is a student, create a student_profiles record
+      if (userRole === 'student') {
+        const { error: studentProfileError } = await anyAdminClient
+          .from('student_profiles')
+          .insert({
+            profile_id: user_id,
+            school_id: school_id || pendingUserData.school_id,
+            enrollment_date: new Date().toISOString().split('T')[0],
+          })
+
+        if (studentProfileError) {
+          console.error('Student profile creation error:', studentProfileError)
+          // Don't fail the approval if student profile creation fails
+        }
+      }
+
       // Send approval email
       try {
         const emailContent = getApprovalEmail(pendingUserData.full_name, schoolName)
