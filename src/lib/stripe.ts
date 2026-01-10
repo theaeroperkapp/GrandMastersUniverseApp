@@ -130,10 +130,8 @@ export async function getCustomerPaymentMethods(customerId: string) {
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured')
   }
-  return stripe.paymentMethods.list({
-    customer: customerId,
-    type: 'card',
-  })
+  // Use direct fetch to avoid SDK connection issues
+  return stripeApiFetch(`/payment_methods?customer=${customerId}&type=card`, 'GET')
 }
 
 export async function attachPaymentMethod(paymentMethodId: string, customerId: string) {
@@ -191,7 +189,8 @@ export async function getCustomer(customerId: string) {
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured')
   }
-  return stripe.customers.retrieve(customerId)
+  // Use direct fetch to avoid SDK connection issues
+  return stripeApiFetch(`/customers/${customerId}`, 'GET')
 }
 
 // Create PaymentIntent with immediate confirmation using saved card
