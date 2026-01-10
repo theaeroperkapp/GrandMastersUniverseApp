@@ -99,16 +99,15 @@ export async function createPaymentIntent(
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured')
   }
-  return stripe.paymentIntents.create({
+  // Use direct fetch to avoid SDK connection issues
+  const body: Record<string, unknown> = {
     amount,
     currency,
-    customer: customerId,
-    metadata,
-    automatic_payment_methods: {
-      enabled: true,
-      allow_redirects: 'never',
-    },
-  })
+    automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
+  }
+  if (customerId) body.customer = customerId
+  if (metadata) body.metadata = metadata
+  return stripeApiFetch('/payment_intents', 'POST', body)
 }
 
 export async function createRefund(
@@ -138,7 +137,8 @@ export async function attachPaymentMethod(paymentMethodId: string, customerId: s
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured')
   }
-  return stripe.paymentMethods.attach(paymentMethodId, {
+  // Use direct fetch to avoid SDK connection issues
+  return stripeApiFetch(`/payment_methods/${paymentMethodId}/attach`, 'POST', {
     customer: customerId,
   })
 }
@@ -147,10 +147,9 @@ export async function setDefaultPaymentMethod(customerId: string, paymentMethodI
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured')
   }
-  return stripe.customers.update(customerId, {
-    invoice_settings: {
-      default_payment_method: paymentMethodId,
-    },
+  // Use direct fetch to avoid SDK connection issues
+  return stripeApiFetch(`/customers/${customerId}`, 'POST', {
+    invoice_settings: { default_payment_method: paymentMethodId },
   })
 }
 
@@ -204,15 +203,17 @@ export async function createAndConfirmPayment(
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured')
   }
-  return stripe.paymentIntents.create({
+  // Use direct fetch to avoid SDK connection issues
+  const body: Record<string, unknown> = {
     amount,
     currency,
     customer: customerId,
     payment_method: paymentMethodId,
     confirm: true,
     off_session: true,
-    metadata,
-  })
+  }
+  if (metadata) body.metadata = metadata
+  return stripeApiFetch('/payment_intents', 'POST', body)
 }
 
 // Confirm an existing PaymentIntent
@@ -223,7 +224,8 @@ export async function confirmPaymentIntent(
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured')
   }
-  return stripe.paymentIntents.confirm(paymentIntentId, {
+  // Use direct fetch to avoid SDK connection issues
+  return stripeApiFetch(`/payment_intents/${paymentIntentId}/confirm`, 'POST', {
     payment_method: paymentMethodId,
   })
 }
@@ -242,13 +244,15 @@ export async function createSubscriptionWithPaymentMethod(
   // Set default payment method first
   await setDefaultPaymentMethod(customerId, paymentMethodId)
 
-  return stripe.subscriptions.create({
+  // Use direct fetch to avoid SDK connection issues
+  const body: Record<string, unknown> = {
     customer: customerId,
     items: [{ price: priceId }],
-    trial_period_days: trialDays,
     default_payment_method: paymentMethodId,
-    expand: ['latest_invoice.payment_intent'],
-  })
+    'expand[]': 'latest_invoice.payment_intent',
+  }
+  if (trialDays) body.trial_period_days = trialDays
+  return stripeApiFetch('/subscriptions', 'POST', body)
 }
 
 // =====================
@@ -319,19 +323,17 @@ export async function createConnectPaymentIntent(
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured')
   }
-  return stripe.paymentIntents.create({
+  // Use direct fetch to avoid SDK connection issues
+  const body: Record<string, unknown> = {
     amount,
     currency,
-    customer: customerId,
-    metadata,
-    automatic_payment_methods: {
-      enabled: true,
-    },
+    automatic_payment_methods: { enabled: true },
     application_fee_amount: applicationFeeAmount,
-    transfer_data: {
-      destination: connectedAccountId,
-    },
-  })
+    transfer_data: { destination: connectedAccountId },
+  }
+  if (customerId) body.customer = customerId
+  if (metadata) body.metadata = metadata
+  return stripeApiFetch('/payment_intents', 'POST', body)
 }
 
 // Create and confirm payment with Connect destination using saved card
@@ -347,17 +349,17 @@ export async function createAndConfirmConnectPayment(
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured')
   }
-  return stripe.paymentIntents.create({
+  // Use direct fetch to avoid SDK connection issues
+  const body: Record<string, unknown> = {
     amount,
     currency,
     customer: customerId,
     payment_method: paymentMethodId,
     confirm: true,
     off_session: true,
-    metadata,
     application_fee_amount: applicationFeeAmount,
-    transfer_data: {
-      destination: connectedAccountId,
-    },
-  })
+    transfer_data: { destination: connectedAccountId },
+  }
+  if (metadata) body.metadata = metadata
+  return stripeApiFetch('/payment_intents', 'POST', body)
 }
