@@ -154,7 +154,12 @@ export default function EventsPage() {
   }
 
   const isRegistered = (eventId: string) => {
-    return myRegistrations.some(r => r.event_id === eventId)
+    // Only consider paid registrations as "registered"
+    return myRegistrations.some(r => r.event_id === eventId && r.payment_status === 'paid')
+  }
+
+  const hasPendingPayment = (eventId: string) => {
+    return myRegistrations.some(r => r.event_id === eventId && r.payment_status === 'pending')
   }
 
   const getRegistration = (eventId: string) => {
@@ -303,6 +308,7 @@ export default function EventsPage() {
       <div className="grid gap-4 md:grid-cols-3">
         {events.slice(0, 3).map(event => {
           const registered = isRegistered(event.id)
+          const pendingPayment = hasPendingPayment(event.id)
           return (
             <Card
               key={event.id}
@@ -314,12 +320,17 @@ export default function EventsPage() {
                   <Badge className={EVENT_TYPE_COLORS[event.event_type]}>
                     {EVENT_TYPE_LABELS[event.event_type]}
                   </Badge>
-                  {registered && (
+                  {registered ? (
                     <Badge variant="outline" className="text-green-600 border-green-600">
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Registered
                     </Badge>
-                  )}
+                  ) : pendingPayment ? (
+                    <Badge variant="outline" className="text-amber-600 border-amber-600">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Pending Payment
+                    </Badge>
+                  ) : null}
                 </div>
                 <h3 className="font-semibold mb-1 text-gray-900 dark:text-white">{event.title}</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
@@ -359,12 +370,17 @@ export default function EventsPage() {
               <Badge className={EVENT_TYPE_COLORS[selectedEvent.event_type]}>
                 {EVENT_TYPE_LABELS[selectedEvent.event_type]}
               </Badge>
-              {isRegistered(selectedEvent.id) && (
+              {isRegistered(selectedEvent.id) ? (
                 <Badge variant="outline" className="text-green-600 border-green-600">
                   <CheckCircle className="h-3 w-3 mr-1" />
                   Registered
                 </Badge>
-              )}
+              ) : hasPendingPayment(selectedEvent.id) ? (
+                <Badge variant="outline" className="text-amber-600 border-amber-600">
+                  <Clock className="h-3 w-3 mr-1" />
+                  Pending Payment
+                </Badge>
+              ) : null}
               {selectedEvent.fee && selectedEvent.fee > 0 ? (
                 <Badge variant="outline" className="text-green-600 border-green-600">
                   <DollarSign className="h-3 w-3 mr-1" />
@@ -435,7 +451,20 @@ export default function EventsPage() {
               <Button variant="outline" onClick={() => setShowModal(false)}>
                 Close
               </Button>
-              {!isRegistered(selectedEvent.id) ? (
+              {isRegistered(selectedEvent.id) ? (
+                <Button disabled variant="outline" className="text-green-600">
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Already Registered
+                </Button>
+              ) : hasPendingPayment(selectedEvent.id) ? (
+                <Button
+                  onClick={handlePayment}
+                  disabled={registering}
+                  isLoading={registering}
+                >
+                  Complete Payment ({formatPrice(selectedEvent.fee || 0)})
+                </Button>
+              ) : (
                 <Button
                   onClick={handleRegister}
                   disabled={
@@ -450,11 +479,6 @@ export default function EventsPage() {
                     ? `Pay & Register (${formatPrice(selectedEvent.fee)})`
                     : 'Register for Free'
                   }
-                </Button>
-              ) : (
-                <Button disabled variant="outline" className="text-green-600">
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Already Registered
                 </Button>
               )}
             </div>

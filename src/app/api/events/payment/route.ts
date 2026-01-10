@@ -72,33 +72,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Event is at full capacity' }, { status: 400 })
     }
 
-    // Check if already registered
+    // Check if already registered (paid)
     const { data: existingReg } = await anyAdminClient
       .from('event_registrations')
-      .select('id')
+      .select('id, payment_status')
       .eq('event_id', event_id)
       .eq('student_profile_id', student_profile_id)
       .single()
 
-    if (existingReg) {
+    if (existingReg && existingReg.payment_status === 'paid') {
       return NextResponse.json({ error: 'Already registered for this event' }, { status: 400 })
     }
 
-    // Create a pending registration
-    const { data: registration, error: regError } = await anyAdminClient
-      .from('event_registrations')
-      .insert({
-        event_id,
-        student_profile_id,
-        family_id: family_id || null,
-        payment_status: 'pending',
-      })
-      .select()
-      .single()
+    // Reuse existing pending registration or create new one
+    let registration = existingReg
+    if (!existingReg) {
+      const { data: newReg, error: regError } = await anyAdminClient
+        .from('event_registrations')
+        .insert({
+          event_id,
+          student_profile_id,
+          family_id: family_id || null,
+          payment_status: 'pending',
+        })
+        .select()
+        .single()
 
-    if (regError) {
-      console.error('Registration error:', regError)
-      return NextResponse.json({ error: 'Failed to create registration' }, { status: 500 })
+      if (regError) {
+        console.error('Registration error:', regError)
+        return NextResponse.json({ error: 'Failed to create registration' }, { status: 500 })
+      }
+      registration = newReg
     }
 
     // Create Stripe Checkout Session
