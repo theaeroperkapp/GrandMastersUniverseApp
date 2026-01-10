@@ -62,15 +62,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Also create a notification in the database for the owner
-    await adminClient
-      .from('notifications')
-      .insert({
-        user_id: owner.id,
-        type: 'new_member',
-        title: 'New Member Request',
-        message: `${memberName} (${memberRole}) has requested to join your school.`,
-        link: '/owner/approvals',
-      })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (adminClient as any).from('notifications').insert({
+      user_id: owner.id,
+      type: 'approval',
+      title: 'New Member Request',
+      content: `${memberName} (${memberRole}) has requested to join your school.`,
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {
