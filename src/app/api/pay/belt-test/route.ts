@@ -22,21 +22,25 @@ export async function POST(request: NextRequest) {
     const { payment_id, payment_method_id, save_card } = body
 
     const adminClient = createAdminClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const anyAdminClient = adminClient as any
 
-    // Get user profile
+    // Get user profile with stripe_customer_id for individual billing
     const { data: profile } = await adminClient
       .from('profiles')
-      .select('family_id')
+      .select('id, family_id, full_name, email, stripe_customer_id')
       .eq('id', user.id)
-      .single() as { data: { family_id: string | null } | null }
+      .single() as { data: { id: string; family_id: string | null; full_name: string; email: string; stripe_customer_id: string | null } | null }
 
-    if (!profile?.family_id) {
-      return NextResponse.json({ error: 'No family account found' }, { status: 400 })
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 400 })
     }
 
+    const hasFamilyBilling = !!profile.family_id
+
     // Get the belt test payment with school info
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: beltTestPayment } = await (adminClient as any)
+    // For family billing, filter by family_id; for individual, filter by student_profile_id
+    let beltTestPaymentQuery = anyAdminClient
       .from('belt_test_payments')
       .select(`
         *,
@@ -45,17 +49,22 @@ export async function POST(request: NextRequest) {
           from_belt:belt_ranks!belt_test_fees_from_belt_id_fkey(name),
           to_belt:belt_ranks!belt_test_fees_to_belt_id_fkey(name)
         ),
-        school:schools(id, stripe_account_id, subscription_plan)
+        school:schools(id, stripe_account_id, subscription_plan),
+        student_profile:student_profiles(profile_id)
       `)
       .eq('id', payment_id)
-      .eq('family_id', profile.family_id)
       .eq('status', 'pending')
-      .single()
+
+    if (hasFamilyBilling) {
+      beltTestPaymentQuery = beltTestPaymentQuery.eq('family_id', profile.family_id)
+    }
+
+    const { data: beltTestPayment } = await beltTestPaymentQuery.single()
 
     type BeltTestPaymentType = {
       id: string
       school_id: string
-      family_id: string
+      family_id: string | null
       student_profile_id: string
       amount: number
       status: string
@@ -66,11 +75,17 @@ export async function POST(request: NextRequest) {
         to_belt: { name: string } | null
       } | null
       school: { id: string; stripe_account_id: string | null; subscription_plan: string | null } | null
+      student_profile: { profile_id: string } | null
     }
 
     const typedPayment = beltTestPayment as BeltTestPaymentType | null
 
     if (!typedPayment) {
+      return NextResponse.json({ error: 'Belt test payment not found or already paid' }, { status: 404 })
+    }
+
+    // For individual billing, verify the payment belongs to this user
+    if (!hasFamilyBilling && typedPayment.student_profile?.profile_id !== user.id) {
       return NextResponse.json({ error: 'Belt test payment not found or already paid' }, { status: 404 })
     }
 
@@ -98,44 +113,74 @@ export async function POST(request: NextRequest) {
       description = typedPayment.belt_test_fee.description
     }
 
-    // Get family for customer info
-    const { data: family } = await adminClient
-      .from('families')
-      .select('id, stripe_customer_id, name, billing_email')
-      .eq('id', profile.family_id)
-      .single() as { data: { id: string; stripe_customer_id: string | null; name: string; billing_email: string | null } | null }
+    let validCustomerId: string
+    let metadata: Record<string, string>
 
-    if (!family) {
-      return NextResponse.json({ error: 'Family not found' }, { status: 404 })
-    }
-
-    // Get or create Stripe customer
-    let customerId = family.stripe_customer_id
-    if (!customerId) {
-      const customer = await createCustomer(
-        family.billing_email || user.email || '',
-        family.name,
-        { family_id: family.id, type: 'family' }
-      )
-      customerId = customer.id
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (adminClient as any)
+    if (hasFamilyBilling) {
+      // Family billing flow
+      const { data: family } = await adminClient
         .from('families')
-        .update({ stripe_customer_id: customerId })
-        .eq('id', family.id)
-    }
+        .select('id, stripe_customer_id, name, billing_email')
+        .eq('id', profile.family_id!)
+        .single() as { data: { id: string; stripe_customer_id: string | null; name: string; billing_email: string | null } | null }
 
-    // TypeScript type narrowing - customerId is definitely a string after the above logic
-    const validCustomerId: string = customerId!
+      if (!family) {
+        return NextResponse.json({ error: 'Family not found' }, { status: 404 })
+      }
 
-    const metadata = {
-      type: 'belt_test',
-      belt_test_payment_id: typedPayment.id,
-      family_id: family.id,
-      user_id: user.id,
-      school_id: typedPayment.school_id,
-      platform_fee: platformFee.toString(),
+      // Get or create Stripe customer for family
+      let customerId = family.stripe_customer_id
+      if (!customerId) {
+        const customer = await createCustomer(
+          family.billing_email || user.email || '',
+          family.name,
+          { family_id: family.id, type: 'family' }
+        )
+        customerId = customer.id
+
+        await anyAdminClient
+          .from('families')
+          .update({ stripe_customer_id: customerId })
+          .eq('id', family.id)
+      }
+
+      validCustomerId = customerId!
+
+      metadata = {
+        type: 'belt_test',
+        belt_test_payment_id: typedPayment.id,
+        family_id: family.id,
+        user_id: user.id,
+        school_id: typedPayment.school_id,
+        platform_fee: platformFee.toString(),
+      }
+    } else {
+      // Individual student billing flow
+      let customerId = profile.stripe_customer_id
+      if (!customerId) {
+        const customer = await createCustomer(
+          profile.email || user.email || '',
+          profile.full_name,
+          { profile_id: profile.id, type: 'individual' }
+        )
+        customerId = customer.id
+
+        await anyAdminClient
+          .from('profiles')
+          .update({ stripe_customer_id: customerId })
+          .eq('id', profile.id)
+      }
+
+      validCustomerId = customerId!
+
+      metadata = {
+        type: 'belt_test',
+        belt_test_payment_id: typedPayment.id,
+        profile_id: profile.id,
+        user_id: user.id,
+        school_id: typedPayment.school_id,
+        platform_fee: platformFee.toString(),
+      }
     }
 
     if (payment_method_id) {
