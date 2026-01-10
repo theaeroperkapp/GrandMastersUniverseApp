@@ -2,18 +2,13 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { RealtimeChannel } from '@supabase/supabase-js'
 
 interface PresenceUser {
   userId: string
   full_name?: string
-  online_at: string
-  status: 'online' | 'away'
-  presence_ref?: string
+  status: 'online' | 'away' | 'offline'
+  last_seen_at: string
 }
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type PresencePayload = any
 
 interface PresenceContextType {
   onlineUsers: Map<string, PresenceUser>
@@ -42,167 +37,229 @@ interface PresenceProviderProps {
   userName?: string
 }
 
+// Consider users online if seen within last 2 minutes
+const ONLINE_THRESHOLD_MS = 2 * 60 * 1000
+// Heartbeat interval - update presence every 30 seconds
+const HEARTBEAT_INTERVAL_MS = 30 * 1000
+
 export function PresenceProvider({ children, schoolId, userId, userName }: PresenceProviderProps) {
   const [onlineUsers, setOnlineUsers] = useState<Map<string, PresenceUser>>(new Map())
   const [isConnected, setIsConnected] = useState(false)
-  const channelRef = useRef<RealtimeChannel | null>(null)
   const supabaseRef = useRef(createClient())
   const userNameRef = useRef(userName)
+  const heartbeatRef = useRef<NodeJS.Timeout | null>(null)
 
   // Keep userName ref updated
   userNameRef.current = userName
 
   const isUserOnline = useCallback((targetUserId: string) => {
     const user = onlineUsers.get(targetUserId)
-    return user?.status === 'online'
+    if (!user) return false
+    // Check if last seen is within threshold
+    const lastSeen = new Date(user.last_seen_at).getTime()
+    const now = Date.now()
+    return (now - lastSeen) < ONLINE_THRESHOLD_MS && user.status === 'online'
   }, [onlineUsers])
 
   const getUserStatus = useCallback((targetUserId: string): 'online' | 'away' | 'offline' => {
     const user = onlineUsers.get(targetUserId)
     if (!user) return 'offline'
+    // Check if last seen is within threshold
+    const lastSeen = new Date(user.last_seen_at).getTime()
+    const now = Date.now()
+    if ((now - lastSeen) >= ONLINE_THRESHOLD_MS) return 'offline'
     return user.status
   }, [onlineUsers])
 
+  // Update user's presence in database
+  const updatePresence = useCallback(async (status: 'online' | 'away') => {
+    if (!userId || !schoolId) return
+
+    const supabase = supabaseRef.current
+
+    try {
+      // Upsert presence record
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from('user_presence') as any)
+        .upsert({
+          user_id: userId,
+          school_id: schoolId,
+          status,
+          last_seen_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id',
+        })
+    } catch (error) {
+      console.error('[Presence] Error updating presence:', error)
+    }
+  }, [userId, schoolId])
+
+  // Fetch all online users in the school
+  const fetchOnlineUsers = useCallback(async () => {
+    if (!schoolId) return
+
+    const supabase = supabaseRef.current
+    const threshold = new Date(Date.now() - ONLINE_THRESHOLD_MS).toISOString()
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from('user_presence') as any)
+        .select('user_id, status, last_seen_at, profiles:user_id(full_name)')
+        .eq('school_id', schoolId)
+        .gte('last_seen_at', threshold)
+
+      if (error) {
+        console.error('[Presence] Error fetching online users:', error)
+        return
+      }
+
+      const users = new Map<string, PresenceUser>()
+
+      if (data) {
+        data.forEach((record: {
+          user_id: string
+          status: string
+          last_seen_at: string
+          profiles: { full_name: string } | null
+        }) => {
+          users.set(record.user_id, {
+            userId: record.user_id,
+            full_name: record.profiles?.full_name,
+            status: record.status as 'online' | 'away' | 'offline',
+            last_seen_at: record.last_seen_at,
+          })
+        })
+      }
+
+      setOnlineUsers(users)
+      setIsConnected(true)
+    } catch (error) {
+      console.error('[Presence] Error fetching online users:', error)
+    }
+  }, [schoolId])
+
+  // Set up presence tracking and realtime subscription
   useEffect(() => {
     if (!schoolId || !userId) {
-      console.log('[Presence] Missing schoolId or userId:', { schoolId, userId })
       setIsConnected(false)
       return
     }
 
     const supabase = supabaseRef.current
-    const channelName = `presence:school:${schoolId}`
-    console.log('[Presence] Setting up channel:', channelName, 'for user:', userId)
 
-    // Clean up existing channel if any
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current)
-    }
+    // Initial presence update and fetch
+    updatePresence('online')
+    fetchOnlineUsers()
 
-    const channel = supabase.channel(channelName, {
-      config: {
-        presence: {
-          key: userId,
+    // Subscribe to presence changes in the school
+    const channel = supabase
+      .channel('user-presence-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_presence',
+          filter: `school_id=eq.${schoolId}`,
         },
-      },
-    })
+        (payload) => {
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const record = payload.new as {
+              user_id: string
+              status: string
+              last_seen_at: string
+            }
 
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState()
-        const users = new Map<string, PresenceUser>()
-
-        Object.entries(state).forEach(([key, presences]) => {
-          // Get the most recent presence for this user
-          const presence = (presences as PresencePayload[])[0]
-          if (presence) {
-            users.set(key, {
-              userId: key,
-              full_name: presence.full_name,
-              online_at: presence.online_at,
-              status: presence.status || 'online',
+            setOnlineUsers((prev) => {
+              const next = new Map(prev)
+              const existing = next.get(record.user_id)
+              next.set(record.user_id, {
+                userId: record.user_id,
+                full_name: existing?.full_name,
+                status: record.status as 'online' | 'away' | 'offline',
+                last_seen_at: record.last_seen_at,
+              })
+              return next
+            })
+          } else if (payload.eventType === 'DELETE') {
+            const record = payload.old as { user_id: string }
+            setOnlineUsers((prev) => {
+              const next = new Map(prev)
+              next.delete(record.user_id)
+              return next
             })
           }
-        })
-
-        console.log('[Presence] Sync - Online users:', users.size, Array.from(users.keys()))
-        setOnlineUsers(users)
-      })
-      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        const presence = (newPresences as PresencePayload[])[0]
-        if (presence) {
-          setOnlineUsers((prev) => {
-            const next = new Map(prev)
-            next.set(key, {
-              userId: key,
-              full_name: presence.full_name,
-              online_at: presence.online_at,
-              status: presence.status || 'online',
-            })
-            return next
-          })
         }
-      })
-      .on('presence', { event: 'leave' }, ({ key }) => {
-        setOnlineUsers((prev) => {
-          const next = new Map(prev)
-          next.delete(key)
-          return next
-        })
-      })
-      .subscribe(async (status, err) => {
-        console.log('[Presence] Channel status:', status, err ? `Error: ${err.message}` : '')
+      )
+      .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           setIsConnected(true)
-          // Track this user's presence
-          try {
-            await channel.track({
-              userId,
-              full_name: userNameRef.current,
-              online_at: new Date().toISOString(),
-              status: 'online',
-            })
-            console.log('[Presence] Successfully tracked user:', userId)
-          } catch (trackError) {
-            console.error('[Presence] Error tracking user:', trackError)
-          }
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.error('[Presence] Channel disconnected:', status)
-          setIsConnected(false)
         }
       })
 
-    channelRef.current = channel
-
-    // Handle visibility change (user switches tabs)
-    const handleVisibilityChange = async () => {
-      if (channelRef.current) {
-        const newStatus = document.visibilityState === 'visible' ? 'online' : 'away'
-        await channelRef.current.track({
-          userId,
-          full_name: userNameRef.current,
-          online_at: new Date().toISOString(),
-          status: newStatus,
-        })
+    // Heartbeat - update presence every 30 seconds
+    heartbeatRef.current = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        updatePresence('online')
       }
+    }, HEARTBEAT_INTERVAL_MS)
+
+    // Handle visibility change
+    const handleVisibilityChange = () => {
+      const newStatus = document.visibilityState === 'visible' ? 'online' : 'away'
+      updatePresence(newStatus)
     }
 
-    // Handle before unload (user closes tab/browser)
+    // Handle before unload - mark as offline
     const handleBeforeUnload = () => {
-      if (channelRef.current) {
-        channelRef.current.untrack()
+      // Use sendBeacon for reliable delivery on page close
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+      if (supabaseUrl && supabaseKey) {
+        navigator.sendBeacon(
+          `${supabaseUrl}/rest/v1/user_presence?user_id=eq.${userId}`,
+          JSON.stringify({ status: 'offline', last_seen_at: new Date().toISOString() })
+        )
       }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('beforeunload', handleBeforeUnload)
 
-    // Heartbeat to keep presence alive (every 30 seconds)
-    const heartbeat = setInterval(async () => {
-      if (channelRef.current && document.visibilityState === 'visible') {
-        await channelRef.current.track({
-          userId,
-          full_name: userNameRef.current,
-          online_at: new Date().toISOString(),
-          status: 'online',
+    // Periodically clean up stale users from local state
+    const cleanupInterval = setInterval(() => {
+      setOnlineUsers((prev) => {
+        const next = new Map(prev)
+        const threshold = Date.now() - ONLINE_THRESHOLD_MS
+
+        next.forEach((user, key) => {
+          const lastSeen = new Date(user.last_seen_at).getTime()
+          if (lastSeen < threshold) {
+            next.delete(key)
+          }
         })
-      }
-    }, 30000)
+
+        return next
+      })
+    }, 60000) // Clean up every minute
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('beforeunload', handleBeforeUnload)
-      clearInterval(heartbeat)
-      if (channelRef.current) {
-        channelRef.current.untrack()
-        supabase.removeChannel(channelRef.current)
-        channelRef.current = null
+
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current)
       }
+      clearInterval(cleanupInterval)
+
+      supabase.removeChannel(channel)
+
+      // Mark as offline on unmount
+      updatePresence('away')
       setIsConnected(false)
     }
-  // Note: userName is intentionally excluded from deps to prevent reconnection on name changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schoolId, userId])
+  }, [schoolId, userId, updatePresence, fetchOnlineUsers])
 
   return (
     <PresenceContext.Provider
