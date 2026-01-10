@@ -22,6 +22,7 @@ import {
   CreditCard,
   HelpCircle,
   Flame,
+  FileText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/types/database'
@@ -325,6 +326,16 @@ export function Navbar({ user, unreadNotifications: initialUnreadNotifications, 
                           <CreditCard className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                         </div>
                         Payments
+                      </Link>
+                      <Link
+                        href="/contracts"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                        onClick={() => setIsProfileOpen(false)}
+                      >
+                        <div className="p-1.5 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
+                          <FileText className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                        </div>
+                        Contracts
                       </Link>
 
                       <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
