@@ -220,9 +220,21 @@ export function EventsClient({ initialEvents, students, schoolId, registrations 
   const handleRegister = async () => {
     if (!selectedEvent || selectedStudents.length === 0) return
 
+    // For paid events, show confirmation first
+    const isPaidEvent = selectedEvent.fee && selectedEvent.fee > 0
+    if (isPaidEvent && !confirm(
+      `This is a paid event ($${(selectedEvent.fee! / 100).toFixed(2)} per student).\n\n` +
+      `The selected student(s) will be registered with "Pending Payment" status.\n` +
+      `They will need to complete payment from their account.\n\n` +
+      `Continue with registration?`
+    )) {
+      return
+    }
+
     setIsLoading(true)
     try {
-      const response = await fetch('/api/events/register', {
+      // Use owner-specific endpoint that allows registering for paid events
+      const response = await fetch('/api/events/register-by-owner', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -237,15 +249,20 @@ export function EventsClient({ initialEvents, students, schoolId, registrations 
         throw new Error(data.error || 'Failed to register')
       }
 
-      const registeredCount = data.registered || selectedStudents.length
-      const alreadyCount = data.already_registered || 0
-
-      if (alreadyCount > 0 && registeredCount > 0) {
-        toast.success(`${registeredCount} student(s) registered. ${alreadyCount} already registered.`)
-      } else if (alreadyCount > 0) {
-        toast.error(`All selected students are already registered for this event.`)
+      // Show detailed message from API
+      if (data.message) {
+        toast.success(data.message)
       } else {
-        toast.success(`${registeredCount} student(s) registered successfully`)
+        const registeredCount = data.registered || selectedStudents.length
+        const alreadyCount = data.already_registered || 0
+
+        if (alreadyCount > 0 && registeredCount > 0) {
+          toast.success(`${registeredCount} student(s) registered. ${alreadyCount} already registered.`)
+        } else if (alreadyCount > 0) {
+          toast.error(`All selected students are already registered for this event.`)
+        } else {
+          toast.success(`${registeredCount} student(s) registered successfully`)
+        }
       }
 
       setIsRegisterModalOpen(false)
