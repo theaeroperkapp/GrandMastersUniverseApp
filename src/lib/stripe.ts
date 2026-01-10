@@ -267,15 +267,19 @@ export async function createConnectAccount(
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured')
   }
-  return stripe.accounts.create({
+  // Use direct fetch to avoid SDK connection issues in serverless
+  const body: Record<string, unknown> = {
     type: 'express',
     email,
-    metadata,
-    capabilities: {
-      card_payments: { requested: true },
-      transfers: { requested: true },
-    },
-  })
+    'capabilities[card_payments][requested]': true,
+    'capabilities[transfers][requested]': true,
+  }
+  if (metadata) {
+    for (const [key, value] of Object.entries(metadata)) {
+      body[`metadata[${key}]`] = value
+    }
+  }
+  return stripeApiFetch('/accounts', 'POST', body)
 }
 
 // Create an account link for Connect onboarding
@@ -287,7 +291,8 @@ export async function createConnectAccountLink(
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured')
   }
-  return stripe.accountLinks.create({
+  // Use direct fetch to avoid SDK connection issues in serverless
+  return stripeApiFetch('/account_links', 'POST', {
     account: accountId,
     refresh_url: refreshUrl,
     return_url: returnUrl,
@@ -300,7 +305,8 @@ export async function getConnectAccount(accountId: string) {
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured')
   }
-  return stripe.accounts.retrieve(accountId)
+  // Use direct fetch to avoid SDK connection issues in serverless
+  return stripeApiFetch(`/accounts/${accountId}`, 'GET')
 }
 
 // Create a login link for Connect dashboard
@@ -308,7 +314,8 @@ export async function createConnectLoginLink(accountId: string) {
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured')
   }
-  return stripe.accounts.createLoginLink(accountId)
+  // Use direct fetch to avoid SDK connection issues in serverless
+  return stripeApiFetch(`/accounts/${accountId}/login_links`, 'POST', {})
 }
 
 // Create PaymentIntent with Connect destination (for school payments)
