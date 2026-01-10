@@ -486,7 +486,7 @@ export interface Database {
           id: string
           event_id: string
           student_profile_id: string
-          family_id: string
+          family_id: string | null
           payment_status: 'pending' | 'paid' | 'refunded'
           payment_intent_id: string | null
           registered_at: string
@@ -495,7 +495,7 @@ export interface Database {
           id?: string
           event_id: string
           student_profile_id: string
-          family_id: string
+          family_id?: string | null
           payment_status?: 'pending' | 'paid' | 'refunded'
           payment_intent_id?: string | null
           registered_at?: string
@@ -504,7 +504,7 @@ export interface Database {
           id?: string
           event_id?: string
           student_profile_id?: string
-          family_id?: string
+          family_id?: string | null
           payment_status?: 'pending' | 'paid' | 'refunded'
           payment_intent_id?: string | null
           registered_at?: string
