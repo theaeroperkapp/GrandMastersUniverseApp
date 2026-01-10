@@ -97,6 +97,23 @@ function SignupForm() {
         return
       }
 
+      // Notify the school owner about the new signup
+      try {
+        await fetch('/api/auth/notify-signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            schoolId: schoolData.id,
+            memberName: fullName,
+            memberEmail: email,
+            memberRole: accountType,
+          }),
+        })
+      } catch {
+        // Don't fail signup if notification fails
+        console.error('Failed to notify owner')
+      }
+
       toast.success('Account created! Please wait for approval from your school.')
       router.push('/login')
     } catch {
