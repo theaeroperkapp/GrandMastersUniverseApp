@@ -38,14 +38,14 @@ export async function POST(request: NextRequest) {
       .single()
 
     const school = schoolData as { stripe_account_id: string | null } | null
-    let accountId = school?.stripe_account_id
+    let accountId: string = school?.stripe_account_id || ''
 
     // Create Connect account if doesn't exist
     if (!accountId) {
       const account = await createConnectAccount(profile.email, {
         school_id: profile.school_id,
         owner_name: profile.full_name,
-      })
+      }) as { id: string }
       accountId = account.id
 
       // Save to school record
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       accountId,
       `${appUrl}/owner/subscription?connect=refresh`,
       `${appUrl}/owner/subscription?connect=complete`
-    )
+    ) as { url: string }
 
     return NextResponse.json({ url: accountLink.url })
   } catch (error) {

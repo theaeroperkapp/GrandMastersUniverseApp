@@ -39,7 +39,8 @@
       "Bash(node test-two-users.js:*)",
       "WebFetch(domain:supabase.com)",
       "Bash(stripe products list:*)",
-      "Bash(stripe prices list:*)"
+      "Bash(stripe prices list:*)",
+      "Bash(git reset:*)"
     ]
   }
 }
