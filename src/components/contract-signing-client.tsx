@@ -18,8 +18,9 @@ import toast from 'react-hot-toast'
 
 interface PendingContract {
   id: string
-  template_id: string
-  student_id: string
+  template_id?: string
+  student_id?: string
+  contract_id?: string
   created_at: string
   template: {
     title: string
@@ -27,7 +28,7 @@ interface PendingContract {
     content: string
     description: string | null
   }
-  student: {
+  student?: {
     id: string
     profile: {
       full_name: string
@@ -42,7 +43,7 @@ interface SignedContract {
     title: string
     contract_type: string
   }
-  student: {
+  student?: {
     id: string
     profile: {
       full_name: string
@@ -92,7 +93,8 @@ export function ContractSigningClient({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          pending_contract_id: selectedContract.id,
+          contract_id: selectedContract.contract_id || selectedContract.id,
+          pending_contract_id: selectedContract.template_id ? selectedContract.id : undefined,
           signature_data: signatureData,
           agreed_to_terms: agreedToTerms,
         }),
@@ -150,7 +152,7 @@ export function ContractSigningClient({
                         <Badge variant="outline">
                           {CONTRACT_TYPE_LABELS[contract.template.contract_type] || contract.template.contract_type}
                         </Badge>
-                        <span>for {contract.student.profile.full_name}</span>
+                        {contract.student && <span>for {contract.student.profile.full_name}</span>}
                       </div>
                     </div>
                   </div>
@@ -201,9 +203,11 @@ export function ContractSigningClient({
                     <CheckCircle className="h-5 w-5 text-green-500" />
                     <div>
                       <p className="font-medium">{contract.template.title}</p>
-                      <p className="text-sm text-gray-500">
-                        {contract.student.profile.full_name}
-                      </p>
+                      {contract.student && (
+                        <p className="text-sm text-gray-500">
+                          {contract.student.profile.full_name}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <span className="text-sm text-gray-500">
@@ -229,9 +233,11 @@ export function ContractSigningClient({
                 <Badge variant="outline">
                   {CONTRACT_TYPE_LABELS[selectedContract.template.contract_type]}
                 </Badge>
-                <span className="text-sm text-gray-500">
-                  for {selectedContract.student.profile.full_name}
-                </span>
+                {selectedContract.student && (
+                  <span className="text-sm text-gray-500">
+                    for {selectedContract.student.profile.full_name}
+                  </span>
+                )}
               </div>
               {selectedContract.template.description && (
                 <p className="text-sm text-gray-600">{selectedContract.template.description}</p>
