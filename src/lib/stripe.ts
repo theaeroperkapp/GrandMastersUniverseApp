@@ -4,20 +4,66 @@ import Stripe from 'stripe'
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || 'sk_placeholder_for_build'
 
 export const stripe = new Stripe(stripeSecretKey, {
-  apiVersion: '2025-01-27.acacia' as Stripe.LatestApiVersion,
   typescript: true,
   maxNetworkRetries: 3,
 })
+
+// Direct fetch helper for Stripe API (bypasses SDK issues in serverless)
+async function stripeApiFetch(endpoint: string, method: string = 'GET', body?: Record<string, unknown>) {
+  const key = process.env.STRIPE_SECRET_KEY
+  if (!key) {
+    throw new Error('STRIPE_SECRET_KEY is not configured')
+  }
+
+  const headers: Record<string, string> = {
+    'Authorization': `Bearer ${key}`,
+    'Content-Type': 'application/x-www-form-urlencoded',
+  }
+
+  let formBody: string | undefined
+  if (body) {
+    const params = new URLSearchParams()
+    const flatten = (obj: Record<string, unknown>, prefix = '') => {
+      for (const [key, value] of Object.entries(obj)) {
+        const fullKey = prefix ? `${prefix}[${key}]` : key
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          flatten(value as Record<string, unknown>, fullKey)
+        } else if (value !== undefined && value !== null) {
+          params.append(fullKey, String(value))
+        }
+      }
+    }
+    flatten(body)
+    formBody = params.toString()
+  }
+
+  const response = await fetch(`https://api.stripe.com/v1${endpoint}`, {
+    method,
+    headers,
+    body: formBody,
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(data.error?.message || 'Stripe API error')
+  }
+
+  return data
+}
 
 export async function createCustomer(email: string, name: string, metadata?: Record<string, string>) {
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured')
   }
-  return stripe.customers.create({
-    email,
-    name,
-    metadata,
-  })
+
+  // Use direct fetch to avoid SDK connection issues
+  const body: Record<string, unknown> = { email, name }
+  if (metadata) {
+    body.metadata = metadata
+  }
+
+  return stripeApiFetch('/customers', 'POST', body)
 }
 
 export async function createSubscription(
@@ -123,7 +169,9 @@ export async function createSetupIntent(customerId: string) {
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured')
   }
-  return stripe.setupIntents.create({
+
+  // Use direct fetch to avoid SDK connection issues
+  return stripeApiFetch('/setup_intents', 'POST', {
     customer: customerId,
     usage: 'off_session',
     automatic_payment_methods: { enabled: true },

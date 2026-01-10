@@ -69,6 +69,9 @@ export async function POST(request: NextRequest) {
         .eq('id', school.id)
     }
 
+    // TypeScript type narrowing
+    const validCustomerId: string = customerId!
+
     const amount = 9900 // $99.00 in cents
     const now = new Date()
 
@@ -86,7 +89,7 @@ export async function POST(request: NextRequest) {
       const paymentIntent = await createPaymentIntent(
         amount,
         'usd',
-        customerId,
+        validCustomerId,
         {
           type: 'monthly_subscription',
           school_id: school.id,

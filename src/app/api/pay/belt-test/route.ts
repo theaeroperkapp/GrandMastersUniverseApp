@@ -126,6 +126,9 @@ export async function POST(request: NextRequest) {
         .eq('id', family.id)
     }
 
+    // TypeScript type narrowing - customerId is definitely a string after the above logic
+    const validCustomerId: string = customerId!
+
     const metadata = {
       type: 'belt_test',
       belt_test_payment_id: typedPayment.id,
@@ -143,7 +146,7 @@ export async function POST(request: NextRequest) {
           'usd',
           connectedAccountId,
           platformFee,
-          customerId,
+          validCustomerId,
           payment_method_id,
           metadata
         )
@@ -208,7 +211,7 @@ export async function POST(request: NextRequest) {
         'usd',
         connectedAccountId,
         platformFee,
-        customerId,
+        validCustomerId,
         {
           ...metadata,
           save_card: save_card ? 'true' : 'false',

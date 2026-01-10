@@ -166,6 +166,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Could not create customer' }, { status: 400 })
     }
 
+    // TypeScript type narrowing - customerId is definitely a string now
+    const validCustomerId: string = customerId
+
     const metadata = {
       type: 'custom_charge',
       charge_id: charge.id,
@@ -184,7 +187,7 @@ export async function POST(request: NextRequest) {
           'usd',
           connectedAccountId,
           platformFee,
-          customerId,
+          validCustomerId,
           payment_method_id,
           metadata
         )
@@ -248,7 +251,7 @@ export async function POST(request: NextRequest) {
         'usd',
         connectedAccountId,
         platformFee,
-        customerId,
+        validCustomerId,
         {
           ...metadata,
           save_card: save_card ? 'true' : 'false',

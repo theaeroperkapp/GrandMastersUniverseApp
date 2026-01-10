@@ -77,13 +77,16 @@ export async function POST(request: NextRequest) {
         .eq('id', school.id)
     }
 
+    // TypeScript type narrowing
+    const validCustomerId: string = customerId!
+
     // Attach payment method and set as default
     try {
-      await attachPaymentMethod(payment_method_id, customerId)
+      await attachPaymentMethod(payment_method_id, validCustomerId)
     } catch {
       // Payment method might already be attached
     }
-    await setDefaultPaymentMethod(customerId, payment_method_id)
+    await setDefaultPaymentMethod(validCustomerId, payment_method_id)
 
     const priceId = process.env.STRIPE_PRICE_ID
     if (!priceId) {
@@ -96,7 +99,7 @@ export async function POST(request: NextRequest) {
     // Create subscription with 30-day trial
     try {
       const subscription = await createSubscriptionWithPaymentMethod(
-        customerId,
+        validCustomerId,
         priceId,
         payment_method_id,
         30 // 30 day trial
