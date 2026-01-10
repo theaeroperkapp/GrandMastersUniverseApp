@@ -65,12 +65,14 @@ export function PresenceProvider({ children, schoolId, userId, userName }: Prese
 
   useEffect(() => {
     if (!schoolId || !userId) {
+      console.log('[Presence] Missing schoolId or userId:', { schoolId, userId })
       setIsConnected(false)
       return
     }
 
     const supabase = supabaseRef.current
     const channelName = `presence:school:${schoolId}`
+    console.log('[Presence] Setting up channel:', channelName, 'for user:', userId)
 
     // Clean up existing channel if any
     if (channelRef.current) {
@@ -103,6 +105,7 @@ export function PresenceProvider({ children, schoolId, userId, userName }: Prese
           }
         })
 
+        console.log('[Presence] Sync - Online users:', users.size, Array.from(users.keys()))
         setOnlineUsers(users)
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
@@ -127,17 +130,24 @@ export function PresenceProvider({ children, schoolId, userId, userName }: Prese
           return next
         })
       })
-      .subscribe(async (status) => {
+      .subscribe(async (status, err) => {
+        console.log('[Presence] Channel status:', status, err ? `Error: ${err.message}` : '')
         if (status === 'SUBSCRIBED') {
           setIsConnected(true)
           // Track this user's presence
-          await channel.track({
-            userId,
-            full_name: userNameRef.current,
-            online_at: new Date().toISOString(),
-            status: 'online',
-          })
+          try {
+            await channel.track({
+              userId,
+              full_name: userNameRef.current,
+              online_at: new Date().toISOString(),
+              status: 'online',
+            })
+            console.log('[Presence] Successfully tracked user:', userId)
+          } catch (trackError) {
+            console.error('[Presence] Error tracking user:', trackError)
+          }
         } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('[Presence] Channel disconnected:', status)
           setIsConnected(false)
         }
       })

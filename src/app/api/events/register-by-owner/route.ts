@@ -198,9 +198,8 @@ export async function POST(request: NextRequest) {
               user_id: studentProfile.profile_id,
               type: 'payment',
               title: 'Event Registration - Payment Required',
-              content: `You have been registered for "${event.title}". Please complete your payment of $${(event.fee / 100).toFixed(2)} to confirm your registration.`,
-              related_type: 'event',
-              related_id: event_id,
+              message: `You have been registered for "${event.title}". Please complete your payment of $${(event.fee / 100).toFixed(2)} to confirm your registration.`,
+              is_read: false,
             })
 
           results.notified++

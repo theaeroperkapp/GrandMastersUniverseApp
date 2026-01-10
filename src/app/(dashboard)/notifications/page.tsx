@@ -124,6 +124,75 @@ export default function NotificationsPage() {
     fetchNotifications(currentPage)
   }, [currentPage, fetchNotifications])
 
+  // Real-time subscription for notifications
+  useEffect(() => {
+    const supabase = createClient()
+
+    const setupRealtimeSubscription = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const channel = supabase
+        .channel('notifications-page-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const newNotification = payload.new as Notification
+            // Add new notification at the beginning if on first page
+            if (currentPage === 1) {
+              setNotifications(prev => [newNotification, ...prev.slice(0, ITEMS_PER_PAGE - 1)])
+            }
+            setTotalCount(prev => prev + 1)
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const updated = payload.new as Notification
+            setNotifications(prev =>
+              prev.map(n => (n.id === updated.id ? updated : n))
+            )
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const deleted = payload.old as { id: string }
+            setNotifications(prev => prev.filter(n => n.id !== deleted.id))
+            setTotalCount(prev => Math.max(0, prev - 1))
+          }
+        )
+        .subscribe()
+
+      return () => {
+        supabase.removeChannel(channel)
+      }
+    }
+
+    const cleanup = setupRealtimeSubscription()
+    return () => {
+      cleanup.then(fn => fn?.())
+    }
+  }, [currentPage])
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
   }
