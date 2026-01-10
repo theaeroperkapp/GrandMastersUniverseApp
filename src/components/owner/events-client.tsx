@@ -48,10 +48,17 @@ interface Student {
   }
 }
 
+interface EventRegistration {
+  event_id: string
+  student_profile_id: string
+  payment_status: string
+}
+
 interface EventsClientProps {
   initialEvents: Event[]
   students: Student[]
   schoolId: string
+  registrations: EventRegistration[]
 }
 
 const EVENT_TYPES = [
@@ -62,7 +69,7 @@ const EVENT_TYPES = [
   { value: 'other', label: 'Other' },
 ]
 
-export function EventsClient({ initialEvents, students, schoolId }: EventsClientProps) {
+export function EventsClient({ initialEvents, students, schoolId, registrations }: EventsClientProps) {
   const [events, setEvents] = useState(initialEvents)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false)
@@ -71,6 +78,21 @@ export function EventsClient({ initialEvents, students, schoolId }: EventsClient
   const [isLoading, setIsLoading] = useState(false)
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
   const router = useRouter()
+
+  // Helper to check if a student is already registered for an event
+  const isStudentRegistered = (eventId: string, studentProfileId: string) => {
+    return registrations.some(
+      r => r.event_id === eventId && r.student_profile_id === studentProfileId
+    )
+  }
+
+  // Get registration status for a student in an event
+  const getStudentRegistrationStatus = (eventId: string, studentProfileId: string) => {
+    const reg = registrations.find(
+      r => r.event_id === eventId && r.student_profile_id === studentProfileId
+    )
+    return reg?.payment_status
+  }
 
   const [formData, setFormData] = useState({
     title: '',
@@ -205,16 +227,27 @@ export function EventsClient({ initialEvents, students, schoolId }: EventsClient
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           event_id: selectedEvent.id,
-          student_ids: selectedStudents,
+          student_profile_ids: selectedStudents,
         }),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const data = await response.json()
         throw new Error(data.error || 'Failed to register')
       }
 
-      toast.success(`${selectedStudents.length} student(s) registered successfully`)
+      const registeredCount = data.registered || selectedStudents.length
+      const alreadyCount = data.already_registered || 0
+
+      if (alreadyCount > 0 && registeredCount > 0) {
+        toast.success(`${registeredCount} student(s) registered. ${alreadyCount} already registered.`)
+      } else if (alreadyCount > 0) {
+        toast.error(`All selected students are already registered for this event.`)
+      } else {
+        toast.success(`${registeredCount} student(s) registered successfully`)
+      }
+
       setIsRegisterModalOpen(false)
       router.refresh()
     } catch (error) {
@@ -548,40 +581,74 @@ export function EventsClient({ initialEvents, students, schoolId }: EventsClient
           </p>
 
           <div className="max-h-64 overflow-y-auto space-y-2">
-            {students.map(student => (
-              <label
-                key={student.id}
-                className="flex items-center gap-3 p-2 border rounded-lg cursor-pointer hover:bg-gray-50"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedStudents.includes(student.id)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedStudents([...selectedStudents, student.id])
-                    } else {
-                      setSelectedStudents(selectedStudents.filter(id => id !== student.id))
-                    }
-                  }}
-                  className="rounded"
-                />
-                <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                  {student.profile.avatar_url ? (
-                    <img
-                      src={student.profile.avatar_url}
-                      alt={student.profile.full_name}
-                      className="h-8 w-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-sm font-medium text-gray-600">
-                      {student.profile.full_name.charAt(0)}
-                    </span>
+            {students.map(student => {
+              const isRegistered = selectedEvent ? isStudentRegistered(selectedEvent.id, student.id) : false
+              const paymentStatus = selectedEvent ? getStudentRegistrationStatus(selectedEvent.id, student.id) : null
+
+              return (
+                <label
+                  key={student.id}
+                  className={`flex items-center gap-3 p-2 border rounded-lg ${
+                    isRegistered
+                      ? 'bg-gray-100 cursor-not-allowed opacity-75'
+                      : 'cursor-pointer hover:bg-gray-50'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedStudents.includes(student.id)}
+                    disabled={isRegistered}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedStudents([...selectedStudents, student.id])
+                      } else {
+                        setSelectedStudents(selectedStudents.filter(id => id !== student.id))
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                    {student.profile.avatar_url ? (
+                      <img
+                        src={student.profile.avatar_url}
+                        alt={student.profile.full_name}
+                        className="h-8 w-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-sm font-medium text-gray-600">
+                        {student.profile.full_name.charAt(0)}
+                      </span>
+                    )}
+                  </div>
+                  <span className="flex-1">{student.profile.full_name}</span>
+                  {isRegistered && (
+                    <Badge
+                      variant="outline"
+                      className={
+                        paymentStatus === 'paid'
+                          ? 'text-green-600 border-green-600'
+                          : 'text-amber-600 border-amber-600'
+                      }
+                    >
+                      {paymentStatus === 'paid' ? 'Registered' : 'Pending Payment'}
+                    </Badge>
                   )}
-                </div>
-                <span>{student.profile.full_name}</span>
-              </label>
-            ))}
+                </label>
+              )
+            })}
           </div>
+
+          {students.length === 0 && (
+            <div className="text-center py-4 text-gray-500">
+              No students found. Add students to your school first.
+            </div>
+          )}
+
+          {students.length > 0 && students.every(s => selectedEvent && isStudentRegistered(selectedEvent.id, s.id)) && (
+            <div className="text-center py-4 text-green-600 bg-green-50 rounded-lg">
+              All students are already registered for this event.
+            </div>
+          )}
 
           {selectedStudents.length > 0 && selectedEvent?.fee && (
             <div className="p-3 bg-gray-100 rounded-lg">

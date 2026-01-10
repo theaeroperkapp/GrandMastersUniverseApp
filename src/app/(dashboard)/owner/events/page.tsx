@@ -42,6 +42,15 @@ export default async function EventsPage() {
     .select('*, profile:profiles(id, full_name, avatar_url)')
     .eq('school_id', profileData.school_id)
 
+  // Get all registrations for this school's events
+  const eventIds = (events || []).map((e: { id: string }) => e.id)
+  const { data: registrations } = eventIds.length > 0
+    ? await supabase
+        .from('event_registrations')
+        .select('event_id, student_profile_id, payment_status')
+        .in('event_id', eventIds)
+    : { data: [] }
+
   return (
     <div className="p-4 md:p-8 space-y-6">
       <div>
@@ -53,6 +62,7 @@ export default async function EventsPage() {
         initialEvents={events || []}
         students={students || []}
         schoolId={profileData.school_id}
+        registrations={registrations || []}
       />
     </div>
   )
