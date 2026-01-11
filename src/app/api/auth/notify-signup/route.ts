@@ -67,7 +67,8 @@ export async function POST(request: NextRequest) {
       user_id: owner.id,
       type: 'approval',
       title: 'New Member Request',
-      content: `${memberName} (${memberRole}) has requested to join your school.`,
+      message: `${memberName} (${memberRole}) has requested to join your school.`,
+      is_read: false,
     })
 
     return NextResponse.json({ success: true })
